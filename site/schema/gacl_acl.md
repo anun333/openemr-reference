@@ -1,0 +1,32 @@
+# `gacl_acl`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no | `0` |  |  |
+| `section_value` | `varchar(150)` | no | `'system'` |  |  |
+| `allow` | `int(11)` | no | `0` |  |  |
+| `enabled` | `int(11)` | no | `0` |  |  |
+| `return_value` | `text` | yes | `NULL` |  |  |
+| `note` | `text` | yes | `NULL` |  |  |
+| `updated_date` | `int(11)` | no | `0` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `gacl_enabled_acl` |  | `enabled` |
+| `gacl_section_value_acl` |  | `section_value` |
+| `gacl_updated_date_acl` |  | `updated_date` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

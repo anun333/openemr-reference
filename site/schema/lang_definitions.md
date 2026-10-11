@@ -1,0 +1,28 @@
+# `lang_definitions`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `def_id` | `int(11)` | no |  | auto_increment |  |
+| `cons_id` | `int(11)` | no | `0` |  |  |
+| `lang_id` | `int(11)` | no | `0` |  |  |
+| `definition` | `mediumtext` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `cons_id` |  | `cons_id` |
+| `def_id` | yes | `def_id` |
+| `lang_cons` |  | `lang_id`, `cons_id` |
+
+## Changes since 7.0.0
+
+- **8.0.0:** index `lang_cons` added (lang_id, cons_id)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

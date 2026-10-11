@@ -1,0 +1,39 @@
+# `pnotes`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `body` | `longtext` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `activity` | `tinyint(4)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(4)` | yes | `NULL` |  |  |
+| `title` | `varchar(255)` | yes | `NULL` |  |  |
+| `assigned_to` | `varchar(255)` | yes | `NULL` |  |  |
+| `deleted` | `tinyint(4)` | yes | `0` |  | flag indicates note is deleted |
+| `message_status` | `varchar(20)` | no | `'New'` |  |  |
+| `portal_relation` | `varchar(100)` | yes | `NULL` |  |  |
+| `is_msg_encrypted` | `tinyint(2)` | yes | `0` |  | Whether messsage encrypted 0-Not encrypted, 1-Encrypted |
+| `update_by` | `bigint(20)` | yes | `NULL` |  |  |
+| `update_date` | `datetime` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `pid` |  | `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

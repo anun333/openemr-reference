@@ -1,0 +1,4861 @@
+{
+ "release": "8.1.0",
+ "sections": {
+  "Appearance": {
+   "theme_tabs_layout": {
+    "label": "Tabs Layout Theme*",
+    "type": "tabs_css",
+    "options": null,
+    "default": "tabs_style_full.css",
+    "description": "Theme of the tabs layout (need to logout and then login to see this new setting).",
+    "line": 189
+   },
+   "css_header": {
+    "label": "General Theme*",
+    "type": "css",
+    "options": null,
+    "default": "style_light.css",
+    "description": "Pick a general theme (need to logout/login after changing this setting).",
+    "line": 196
+   },
+   "hide_dashboard_cards": {
+    "label": "Hide selected cards on patient dashboard",
+    "type": "m_dashboard_cards",
+    "options": null,
+    "default": "",
+    "description": "Multi (Shift or CTRL) Select the cards you want to hide on the patient dashboard.",
+    "line": 203
+   },
+   "window_title_add_patient_name": {
+    "label": "Add Patient Name To Window Title",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Adds the patient name to the end of the window title.",
+    "line": 209
+   },
+   "enable_compact_mode": {
+    "label": "Enable Compact Mode",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Changes the current theme to be more compact.",
+    "line": 216
+   },
+   "search_any_patient": {
+    "label": "Search Patient By Any Demographics",
+    "type": "select",
+    "options": {
+     "dual": "Dual",
+     "comprehensive": "Comprehensive",
+     "fixed": "Fixed",
+     "none": "None"
+    },
+    "default": "dual",
+    "description": "Search Patient By Any Demographics, Dual additionally lets direct access to Patient Finder, Comprehensive has collapsed input box, Fixed is similar to Dual with fixed size, None is do not show",
+    "line": 223
+   },
+   "default_encounter_view": {
+    "label": "Default Encounter View",
+    "type": "select",
+    "options": [
+     "Clinical View",
+     "Billing View"
+    ],
+    "default": "0",
+    "description": "Choose your default encounter view",
+    "line": 235
+   },
+   "enable_group_therapy": {
+    "label": "Enable Group Therapy",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enables groups module in system.",
+    "line": 245
+   },
+   "full_new_patient_form": {
+    "label": "New Patient Form",
+    "type": "select",
+    "options": [
+     "Old-style static form without search or duplication check",
+     "All demographics fields, with search and duplication check",
+     "Mandatory or specified fields only, search and dup check",
+     "Mandatory or specified fields only, dup check, no search",
+     "Mandatory or specified fields only, use patient validation Zend module"
+    ],
+    "default": "1",
+    "description": "Style of form used for adding new patients",
+    "line": 252
+   },
+   "gbl_edit_patient_form": {
+    "label": "Modify Patient Form",
+    "type": "select",
+    "options": [
+     "Standard check",
+     "Zend Module check in addition to standard check"
+    ],
+    "default": "0",
+    "description": "Validation mechanism for when modifying patient demographics.",
+    "line": 266
+   },
+   "patient_search_results_style": {
+    "label": "Patient Search Results Style",
+    "type": "select",
+    "options": [
+     "Encounter statistics",
+     "Mandatory and specified fields"
+    ],
+    "default": "0",
+    "description": "Type of columns displayed for patient search results",
+    "line": 277
+   },
+   "simplified_prescriptions": {
+    "label": "Simplified Prescriptions",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Omit form, route and interval which then become part of dosage",
+    "line": 287
+   },
+   "simplified_copay": {
+    "label": "Simplified Co-Pay",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Omit method of payment from the co-pay panel",
+    "line": 294
+   },
+   "use_charges_panel": {
+    "label": "Use Charges Panel",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enables the old Charges panel for entering billing codes and payments. Not recommended, use the Fee Sheet instead.",
+    "line": 301
+   },
+   "enable_fees_in_left_menu": {
+    "label": "Enable Fees Submenu",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Fees Submenu",
+    "line": 309
+   },
+   "enable_batch_payment": {
+    "label": "Enable Batch Payment",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Batch Payment",
+    "line": 315
+   },
+   "enable_posting": {
+    "label": "Enable Posting",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Posting",
+    "line": 321
+   },
+   "enable_edihistory_in_left_menu": {
+    "label": "Enable EDI History",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "EDI History (under Fees) for storing and interpreting EDI claim response files",
+    "line": 328
+   },
+   "encounter_page_size": {
+    "label": "Encounter Page Size",
+    "type": "select",
+    "options": {
+     "0": "Show All",
+     "5": "5",
+     "10": "10",
+     "15": "15",
+     "20": "20",
+     "25": "25",
+     "50": "50"
+    },
+    "default": "20",
+    "description": "Number of encounters to display per page.",
+    "line": 335
+   },
+   "gbl_pt_list_page_size": {
+    "label": "Patient List Page Size",
+    "type": "select",
+    "options": {
+     "10": "10",
+     "25": "25",
+     "50": "50",
+     "100": "100"
+    },
+    "default": "10",
+    "description": "Number of patients to display per page in the patient list.",
+    "line": 350
+   },
+   "gbl_pt_list_new_window": {
+    "label": "Patient List New Window",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Default state of New Window checkbox in the patient list.",
+    "line": 362
+   },
+   "right_justify_labels_demographics": {
+    "label": "Right Justify Labels in Demographics",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Right justify labels in Demographics for easier readability.",
+    "line": 369
+   },
+   "num_of_messages_displayed": {
+    "label": "Number of Messages Displayed in Patient Summary",
+    "type": "num",
+    "options": null,
+    "default": "3",
+    "description": "This is the number of messages that will be displayed in the messages widget in the patient summary screen.",
+    "line": 376
+   },
+   "recent_patient_count": {
+    "label": "Maximum number of patients on Recent Patient list",
+    "type": "num",
+    "options": null,
+    "default": "20",
+    "description": "The maximum number of patients on the Recent Patient list",
+    "line": 383
+   },
+   "gbl_vitals_options": {
+    "label": "Vitals Form Options",
+    "type": "select",
+    "options": [
+     "Standard",
+     "Omit circumferences"
+    ],
+    "default": "0",
+    "description": "Special treatment for the Vitals form",
+    "line": 390
+   },
+   "gbl_vitals_max_history_cols": {
+    "label": "Vitals Form Max Historical Columns To Display",
+    "type": "num",
+    "options": null,
+    "default": "2",
+    "description": "The number of historical vital columns to display on medium to large screen displays",
+    "line": 400
+   },
+   "gb_how_sort_list": {
+    "label": "How to sort a drop-lists",
+    "type": "select",
+    "options": [
+     "Sort by seq",
+     "Sort alphabetically"
+    ],
+    "default": "0",
+    "description": "What kind of sorting will be in the drop lists.",
+    "line": 407
+   },
+   "prevent_browser_refresh": {
+    "label": "Prevent Web Browser Refresh*",
+    "type": "select",
+    "options": [
+     "Do not warn or prevent web browser refresh",
+     "Warn, but do not prevent web browser refresh",
+     "Warn and prevent web browser refresh"
+    ],
+    "default": "2",
+    "description": "Recommended setting is warn and prevent web browser refresh. Only use other settings if needed and use at own risk.",
+    "line": 417
+   },
+   "form_actionbar_position": {
+    "label": "Form ActionBar (save, cancel, etc) position",
+    "type": {
+     "expr": "FormActionBarSettings::getGlobalSettingsList()"
+    },
+    "options": null,
+    "default": {
+     "expr": "FormActionBarSettings::getDefaultSetting()"
+    },
+    "description": "Placement of the save/cancel, and other buttons where supported (Demographics, Encounter Forms, etc).",
+    "line": 428
+   }
+  },
+  "Branding": {
+   "openemr_name": {
+    "label": "Application Title",
+    "type": "text",
+    "options": null,
+    "default": "OpenEMR",
+    "description": "Application name used throughout the user interface.",
+    "line": 437
+   },
+   "display_main_menu_logo": {
+    "label": "Display main menu logo",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Display main menu logo",
+    "line": 444
+   },
+   "main_menu_logo_link": {
+    "label": "Main menu logo link URL",
+    "type": "text",
+    "options": null,
+    "default": "https://www.open-emr.org/",
+    "description": "URL the main menu logo links to. Leave blank to make the logo non-clickable.",
+    "line": 451
+   },
+   "main_menu_logo_title": {
+    "label": "Main menu logo link title",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Tooltip shown when hovering over the main menu logo. Leave blank to use the default (OpenEMR Website).",
+    "line": 458
+   },
+   "online_support_link": {
+    "label": "Online Support Link",
+    "type": "text",
+    "options": null,
+    "default": "http://open-emr.org/",
+    "description": "URL to a support page.",
+    "line": 465
+   },
+   "user_manual_link": {
+    "label": "User Manual Link Override",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Point to a custom user manual. Leave blank for the default, auto-generated URL for specific version of application",
+    "line": 472
+   },
+   "support_phone_number": {
+    "label": "Support Phone Number",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Phone Number for Vendor Support that Appears on the About Page.",
+    "line": 479
+   },
+   "display_acknowledgements": {
+    "label": "Display links to the acknowledgements page",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Used on the login and about pages",
+    "line": 486
+   },
+   "display_review_link": {
+    "label": "Display the Review link on the About page",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Display the Review link on the About page",
+    "line": 493
+   },
+   "display_donations_link": {
+    "label": "Display the Donations link on the About page",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Display the Donations link on the About page",
+    "line": 500
+   }
+  },
+  "Login Page": {
+   "login_page_layout": {
+    "label": "Login Page Layout*",
+    "type": "select",
+    "options": {
+     "login/layouts/vertical_box.html.twig": "Vertical Box",
+     "login/layouts/horizontal_box_left_logo.html.twig": "Horizontal Box, Logo on Left",
+     "login/layouts/horizontal_box_right_logo.html.twig": "Horizontal Box, Logo on Right",
+     "login/layouts/horizontal_band_right_logo.html.twig": "Horizontal Band, Logo on Right",
+     "login/layouts/horizontal_band_left_logo.html.twig": "Horizontal Band, Logo on Left",
+     "login/layouts/vertical_band.html.twig": "Vertical Band"
+    },
+    "default": "login/layouts/vertical_band.html.twig",
+    "description": "Changes the layout of the login page.",
+    "line": 510
+   },
+   "primary_logo_width": {
+    "label": "Width of primary logo compared to the container",
+    "type": "select",
+    "options": {
+     "w-25": "25%",
+     "w-50": "50%",
+     "w-75": "75%",
+     "w-100": "100%"
+    },
+    "default": "w-50",
+    "description": "Determine the width of the primary logo compared to the container",
+    "line": 524
+   },
+   "secondary_logo_width": {
+    "label": "Width of secondary logo compared to the container",
+    "type": "select",
+    "options": {
+     "w-25": "25%",
+     "w-50": "50%",
+     "w-75": "75%",
+     "w-100": "100%"
+    },
+    "default": "w-50",
+    "description": "Determine the width of the secondary logo compared to the container",
+    "line": 536
+   },
+   "logo_position": {
+    "label": "Logo Positioning",
+    "type": "select",
+    "options": {
+     "flex-column": "Stacked",
+     "flex-row": "Side by Side"
+    },
+    "default": "flex-column",
+    "description": "How the logos will be rendered relative to each other",
+    "line": 548
+   },
+   "display_acknowledgements_on_login": {
+    "label": "Display links to the acknowledgements page",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Used on the login screen",
+    "line": 558
+   },
+   "show_tagline_on_login": {
+    "label": "Show Tagline on Login Page*",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Show the tagline from the login screen",
+    "line": 565
+   },
+   "login_tagline_text": {
+    "label": "Login Page Tagline*",
+    "type": "text",
+    "options": null,
+    "default": "The most popular open-source Electronic Health Record and Medical Practice Management solution.",
+    "description": "Tagline text on the login page",
+    "line": 572
+   },
+   "show_labels_on_login_form": {
+    "label": "Show Username and Password Labels on Login Page*",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Show labels on the login form",
+    "line": 579
+   },
+   "show_label_login": {
+    "label": "Show Title on Login",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Show Title on Login",
+    "line": 586
+   },
+   "show_primary_logo": {
+    "label": "Show primary logo on login",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Show primary logo on login",
+    "line": 593
+   },
+   "extra_logo_login": {
+    "label": "Show Secondary Logo on Login",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Show Secondary Logo on Login",
+    "line": 600
+   },
+   "secondary_logo_position": {
+    "label": "Order of the Secondary logo",
+    "type": "select",
+    "options": {
+     "first": "First Position",
+     "second": "Second Position"
+    },
+    "default": "second",
+    "description": "Place the secondary logo first, or second",
+    "line": 607
+   },
+   "tiny_logo_1": {
+    "label": "Show Mini Logo 1",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Show Mini Logo 1",
+    "line": 617
+   },
+   "tiny_logo_2": {
+    "label": "Show Mini Logo 2",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Show Mini Logo 2",
+    "line": 624
+   }
+  },
+  "Locale": {
+   "language_default": {
+    "label": "Default Language",
+    "type": "lang",
+    "options": null,
+    "default": "English (Standard)",
+    "description": "Default language if no other is allowed or chosen.",
+    "line": 636
+   },
+   "language_menu_showall": {
+    "label": "All Languages Allowed",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Allow all available languages as choices on menu at login.",
+    "line": 643
+   },
+   "language_menu_other": {
+    "label": "Allowed Languages",
+    "type": "m_lang",
+    "options": null,
+    "default": "",
+    "description": "Select which languages, if any, may be chosen at login. (only pertinent if above All Languages Allowed is turned off)",
+    "line": 650
+   },
+   "allow_debug_language": {
+    "label": "Allow Debugging Language",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will allow selection of the debugging ('dummy') language.",
+    "line": 657
+   },
+   "translate_no_safe_apostrophe": {
+    "label": "Do Not Use Safe Apostrophe",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will turn off use of safe apostrophe, which is done by converting ' and \" to `.(it is highly recommended that this setting is turned off and that safe apostrophe's are used)",
+    "line": 664
+   },
+   "disable_translation": {
+    "label": "Disable Translation Engine",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Completely disable the translation engine. When enabled, xl() returns the input string unchanged. Use this for English-only deployments to eliminate translation overhead.",
+    "line": 671
+   },
+   "translation_preload_cache": {
+    "label": "Preload Translation Cache",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Load all translations into memory at the start of each request. This uses more memory but eliminates database queries for translations, improving performance for sites with many translated strings.",
+    "line": 678
+   },
+   "translate_layout": {
+    "label": "Translate Layouts",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Is text from form layouts to be translated?",
+    "line": 685
+   },
+   "translate_lists": {
+    "label": "Translate Lists",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Is text from lists to be translated?",
+    "line": 692
+   },
+   "translate_gacl_groups": {
+    "label": "Translate Access Control Groups",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Are access control group names to be translated?",
+    "line": 699
+   },
+   "translate_form_titles": {
+    "label": "Translate Patient Note Titles",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Are patient note titles to be translated?",
+    "line": 706
+   },
+   "translate_document_categories": {
+    "label": "Translate Document Categories",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Are document category names to be translated?",
+    "line": 713
+   },
+   "translate_appt_categories": {
+    "label": "Translate Appointment Categories",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Are appointment category names to be translated?",
+    "line": 720
+   },
+   "units_of_measurement": {
+    "label": "Units for Visit Forms",
+    "type": "select",
+    "options": {
+     "1": "Show both US and metric (main unit is US)",
+     "2": "Show both US and metric (main unit is metric)",
+     "3": "Show US only",
+     "4": "Show metric only"
+    },
+    "default": "1",
+    "description": "Applies to the Vitals form and Growth Chart",
+    "line": 727
+   },
+   "us_weight_format": {
+    "label": "Display Format for US Weights",
+    "type": "select",
+    "options": {
+     "1": "Show pounds as decimal value",
+     "2": "Show pounds and ounces"
+    },
+    "default": "1",
+    "description": "Applies to Vitals form",
+    "line": 739
+   },
+   "phone_country_code": {
+    "label": "Telephone Country Code",
+    "type": "num",
+    "options": null,
+    "default": "1",
+    "description": "1 = North America. See http://www.wtng.info/ for a list of other country codes.",
+    "line": 749
+   },
+   "date_display_format": {
+    "label": "Date Display Format",
+    "type": "select",
+    "options": [
+     "YYYY-MM-DD",
+     "MM/DD/YYYY",
+     "DD/MM/YYYY"
+    ],
+    "default": "0",
+    "description": "Format used to display most dates.",
+    "line": 756
+   },
+   "time_display_format": {
+    "label": "Time Display Format",
+    "type": "select",
+    "options": [
+     "24 hr",
+     "12 hr"
+    ],
+    "default": "0",
+    "description": "Format used to display most times.",
+    "line": 767
+   },
+   "gbl_time_zone": {
+    "label": "Time Zone",
+    "type": {
+     "expr": "gblTimeZones()"
+    },
+    "options": null,
+    "default": "",
+    "description": "If unassigned will default to php.ini setting for date.timezone.",
+    "line": 777
+   },
+   "currency_decimals": {
+    "label": "Currency Decimal Places",
+    "type": "select",
+    "options": [
+     "0",
+     "1",
+     "2"
+    ],
+    "default": "2",
+    "description": "Number of digits after decimal point for currency, usually 0 or 2.",
+    "line": 784
+   },
+   "currency_dec_point": {
+    "label": "Currency Decimal Point Symbol",
+    "type": "select",
+    "options": {
+     ".": "Period",
+     ",": "Comma"
+    },
+    "default": ".",
+    "description": "Symbol used as the decimal point for currency. Not used if Decimal Places is 0.",
+    "line": 795
+   },
+   "currency_thousands_sep": {
+    "label": "Currency Thousands Separator",
+    "type": "select",
+    "options": {
+     ",": "Comma",
+     ".": "Period",
+     " ": "Space",
+     "": "None"
+    },
+    "default": ",",
+    "description": "Symbol used to separate thousands for currency.",
+    "line": 805
+   },
+   "gbl_currency_symbol": {
+    "label": "Currency Designator",
+    "type": "text",
+    "options": null,
+    "default": "$",
+    "description": "Code or symbol to indicate currency",
+    "line": 817
+   },
+   "age_display_format": {
+    "label": "Age Display Format",
+    "type": "select",
+    "options": [
+     "Years or months",
+     "Years, months and days"
+    ],
+    "default": "0",
+    "description": "Format for age display",
+    "line": 823
+   },
+   "age_display_limit": {
+    "label": "Age in Years for Display Format Change",
+    "type": "num",
+    "options": null,
+    "default": "3",
+    "description": "If YMD is selected for age display, switch to just Years when patients older than this value in years",
+    "line": 831
+   },
+   "weekend_days": {
+    "label": "Your weekend days",
+    "type": "select",
+    "options": {
+     "6,0": {
+      "expr": "DayOfWeek::Saturday->label() . ' - ' . DayOfWeek::Sunday->label()"
+     },
+     "0": {
+      "expr": "DayOfWeek::Sunday->label()"
+     },
+     "5": {
+      "expr": "DayOfWeek::Friday->label()"
+     },
+     "6": {
+      "expr": "DayOfWeek::Saturday->label()"
+     },
+     "5,6": {
+      "expr": "DayOfWeek::Friday->label() . ' - ' . DayOfWeek::Saturday->label()"
+     }
+    },
+    "default": "6,0",
+    "description": "which days are your weekend days?",
+    "line": 838
+   }
+  },
+  "Features": {
+   "specific_application": {
+    "label": "Specific Application",
+    "type": "select",
+    "options": {
+     "0": "None",
+     "2": "IPPF",
+     "3": "Weight loss clinic"
+    },
+    "default": "0",
+    "description": "Indicator for specialized usage",
+    "line": 857
+   },
+   "inhouse_pharmacy": {
+    "label": "Drugs and Products",
+    "type": "select",
+    "options": [
+     "Do not inventory and sell any products",
+     "Inventory and sell drugs only",
+     "Inventory and sell both drugs and non-drug products",
+     "Products but no prescription drugs and no templates"
+    ],
+    "default": "0",
+    "description": "Option to support inventory and sales of products",
+    "line": 868
+   },
+   "disable_chart_tracker": {
+    "label": "Disable Chart Tracker",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Removes the Chart Tracker feature",
+    "line": 880
+   },
+   "disable_immunizations": {
+    "label": "Disable Immunizations",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Removes support for immunizations",
+    "line": 887
+   },
+   "disable_prescriptions": {
+    "label": "Disable Prescriptions",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Removes support for prescriptions",
+    "line": 894
+   },
+   "text_templates_enabled": {
+    "label": "Enable Text Templates in Encounter Forms",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Allow Double Click to select Nation Note text template from any encounter form text area",
+    "line": 901
+   },
+   "omit_employers": {
+    "label": "Omit Employers",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Omit employer information in patient demographics",
+    "line": 908
+   },
+   "select_multi_providers": {
+    "label": "Support Multi-Provider Events",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Support calendar events that apply to multiple providers",
+    "line": 915
+   },
+   "disable_non_default_groups": {
+    "label": "Disable User Groups",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Normally this should be checked. Not related to access control.",
+    "line": 922
+   },
+   "ignore_pnotes_authorization": {
+    "label": "Skip Authorization of Patient Notes",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Do not require patient notes to be authorized",
+    "line": 929
+   },
+   "support_encounter_claims": {
+    "label": "Allow Encounter Claims",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow creation of claims containing diagnoses but not procedures or charges. Most clinics do not want this.",
+    "line": 936
+   },
+   "advance_directives_warning": {
+    "label": "Advance Directives Warning",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Display advance directives in the demographics page.",
+    "line": 943
+   },
+   "configuration_import_export": {
+    "label": "Configuration Export/Import",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Support export/import of configuration data via the Backup page.",
+    "line": 950
+   },
+   "restrict_user_facility": {
+    "label": "Restrict Users to Facilities",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Restrict non-authorized users to the Schedule Facilities set in User admin.",
+    "line": 957
+   },
+   "set_facility_cookie": {
+    "label": "Remember Selected Facility",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Set a facility cookie to remember the selected facility between logins.",
+    "line": 964
+   },
+   "login_into_facility": {
+    "label": "Login Into Facility",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Select your current facility in the login page",
+    "line": 971
+   },
+   "receipts_by_provider": {
+    "label": "Print Receipts by Provider",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Causes Receipts to Print Encounter/Primary Provider Info",
+    "line": 978
+   },
+   "discount_by_money": {
+    "label": "Discounts as Monetary Amounts",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Discounts at checkout time are entered as money amounts, as opposed to percentage.",
+    "line": 985
+   },
+   "gbl_form_save_close": {
+    "label": "Display Save and Close Visit button in LBFs",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This is helpful if visits usually do not have charges.",
+    "line": 993
+   },
+   "gbl_mask_patient_id": {
+    "label": "Mask for Patient IDs",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Specifies formatting for the external patient ID.  # = digit, @ = alpha, * = any character.  Empty if not used.",
+    "line": 1000
+   },
+   "gbl_mask_invoice_number": {
+    "label": "Mask for Invoice Numbers",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Specifies formatting for invoice reference numbers.  # = digit, @ = alpha, * = any character.  Empty if not used.",
+    "line": 1007
+   },
+   "gbl_mask_product_id": {
+    "label": "Mask for Product IDs",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Specifies formatting for product NDC fields.  # = digit, @ = alpha, * = any character.  Empty if not used.",
+    "line": 1014
+   },
+   "activate_ccr_ccd_report": {
+    "label": "Activate CCR/CCD Reporting",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This will activate the CCR(Continuity of Care Record) and CCD(Continuity of Care Document) reporting.",
+    "line": 1021
+   },
+   "drive_encryption": {
+    "label": "Enable Encryption of Items Stored on Drive (Strongly recommend keeping this on)",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This will enable encryption of items that are stored on the drive. Strongly recommend keeping this setting on for security purposes.",
+    "line": 1028
+   },
+   "couchdb_encryption": {
+    "label": "Enable Encryption of Items Stored on CouchDB",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This will enable encryption of items that are stored on CouchDB.",
+    "line": 1035
+   },
+   "hide_document_encryption": {
+    "label": "Hide Encryption/Decryption Options In Document Management",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will deactivate document the encryption and decryption features, and hide them in the UI.",
+    "line": 1042
+   },
+   "use_custom_immun_list": {
+    "label": "Use Custom Immunization List",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will use the custom immunizations list rather than the standard CVX immunization list.",
+    "line": 1049
+   },
+   "amendments": {
+    "label": "Amendments",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable amendments feature",
+    "line": 1056
+   },
+   "allow_pat_delete": {
+    "label": "Allow Administrators to Delete Patients",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow Administrators to Delete Patients",
+    "line": 1063
+   },
+   "observation_results_immunization": {
+    "label": "Immunization Observation Results",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Observation Results in Immunization",
+    "line": 1071
+   },
+   "enable_help": {
+    "label": "Enable Help Modal",
+    "type": "select",
+    "options": [
+     "Hide Help Modal",
+     "Show Help Modal",
+     "Disable Help Modal"
+    ],
+    "default": "1",
+    "description": "This will allow the display of help modal on help enabled pages",
+    "line": 1078
+   },
+   "messages_due_date": {
+    "label": "Messages - due date",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enables choose due date to message",
+    "line": 1088
+   },
+   "expand_form": {
+    "label": "Expand Form",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Open all expandable forms in expanded state",
+    "line": 1095
+   },
+   "graph_data_warning": {
+    "label": "Graphing Data Warning",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Warn if not enough data to graph",
+    "line": 1102
+   }
+  },
+  "Report": {
+   "use_custom_daysheet": {
+    "label": "Use Custom End of Day Report",
+    "type": "select",
+    "options": [
+     "None",
+     "Print End of Day Report 1",
+     "Print End of Day Report 2",
+     "Print End of Day Report 3"
+    ],
+    "default": "1",
+    "description": "This will allow the use of the custom End of Day report and indicate which report to use.",
+    "line": 1114
+   },
+   "daysheet_provider_totals": {
+    "label": "End of Day by Provider or allow Totals Only",
+    "type": "select",
+    "options": [
+     "Provider",
+     "Totals Only"
+    ],
+    "default": "1",
+    "description": "This specifies the Printing of the Custom End of Day Report grouped Provider or allow the Printing of Totals Only",
+    "line": 1126
+   },
+   "ledger_begin_date": {
+    "label": "Beginning Date for Ledger Report",
+    "type": "select",
+    "options": {
+     "Y1": "One Year Ago",
+     "Y2": "Two Years Ago",
+     "M6": "Six Months Ago",
+     "M3": "Three Months Ago",
+     "M1": "One Month Ago",
+     "D1": "One Day Ago"
+    },
+    "default": "Y1",
+    "description": "This is the Beginning date for the Ledger Report.",
+    "line": 1136
+   },
+   "print_next_appointment_on_ledger": {
+    "label": "Print the Next Appointment on the Bottom of the Ledger",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This Will Print the Next Appointment on the Bottom of the Patient Ledger",
+    "line": 1150
+   },
+   "sales_report_invoice": {
+    "label": "Display Invoice Number or Patient Name or Both in the Sales Report",
+    "type": "select",
+    "options": [
+     "Invoice Number",
+     "Patient Name and ID",
+     "Patient Name and Invoice"
+    ],
+    "default": "2",
+    "description": "This will Display the Invoice Number in the Sales Report or the Patient Name and ID or Patient Name and Invoice Number.",
+    "line": 1157
+   },
+   "cash_receipts_report_invoice": {
+    "label": "Display Invoice Number or Patient Name in the Cash Receipt Report",
+    "type": "select",
+    "options": [
+     "Invoice Number",
+     "Patient Name"
+    ],
+    "default": "0",
+    "description": "Display Invoice Number or Patient Name in the Cash Receipt Report",
+    "line": 1168
+   }
+  },
+  "Billing": {
+   "hide_billing_widget": {
+    "label": "Hide Billing features",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will hide billing features throughout the program.",
+    "line": 1185
+   },
+   "force_billing_widget_open": {
+    "label": "Force Billing Widget Open",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will force the Billing Widget in the Patient Summary screen to always be open.",
+    "line": 1192
+   },
+   "ub04_support": {
+    "label": "Activate UB04/837I Claim Support",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow institutional claims support.",
+    "line": 1200
+   },
+   "top_ubmargin_default": {
+    "label": "Default top print margin for UB04",
+    "type": "num",
+    "options": null,
+    "default": "14",
+    "description": "This is the default top print margin for UB04. It will adjust the final printed output up or down.",
+    "line": 1207
+   },
+   "left_ubmargin_default": {
+    "label": "Default left print margin for UB04",
+    "type": "num",
+    "options": null,
+    "default": "11",
+    "description": "This is the default left print margin for UB04. It will adjust the final printed output left or right.",
+    "line": 1214
+   },
+   "cms_top_margin_default": {
+    "label": "Default top print margin for CMS 1500",
+    "type": "num",
+    "options": null,
+    "default": "24",
+    "description": "This is the default top print margin for CMS 1500. It will adjust the final printed output up or down.",
+    "line": 1221
+   },
+   "cms_left_margin_default": {
+    "label": "Default left print margin for CMS 1500",
+    "type": "num",
+    "options": null,
+    "default": "20",
+    "description": "This is the default left print margin for CMS 1500. It will adjust the final printed output left or right.",
+    "line": 1228
+   },
+   "preprinted_cms_1500": {
+    "label": "Prints the CMS 1500 on the Preprinted form",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Overlay CMS 1500 on the Preprinted form",
+    "line": 1235
+   },
+   "cms_1500_box_31_format": {
+    "label": "CMS 1500: Box 31 Format",
+    "type": "select",
+    "options": [
+     "Signature on File",
+     "Firstname Lastname",
+     "None"
+    ],
+    "default": "0",
+    "description": "This specifies whether to include date in Box 31.",
+    "line": 1242
+   },
+   "cms_1500_box_31_date": {
+    "label": "CMS 1500: Date in Box 31 (Signature)",
+    "type": "select",
+    "options": [
+     "None",
+     "Date of Service",
+     "Today"
+    ],
+    "default": "0",
+    "description": "This specifies whether to include date in Box 31.",
+    "line": 1253
+   },
+   "default_search_code_type": {
+    "label": "Default Search Code Type",
+    "type": "all_code_types",
+    "options": null,
+    "default": "ICD10",
+    "description": "The default code type to search for in the Fee Sheet.",
+    "line": 1264
+   },
+   "default_rendering_provider": {
+    "label": "Default Rendering Provider in Fee Sheet",
+    "type": "select",
+    "options": [
+     "Logged in User if provider, otherwise Current Provider",
+     "Current Provider",
+     "Current Logged in User"
+    ],
+    "default": "1",
+    "description": "Default selection for rendering provider in fee sheet.",
+    "line": 1271
+   },
+   "posting_adj_disable": {
+    "label": "Disable Auto Adjustment Calculations in EOB Posting",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Turn off auto calculations of adjustments in EOB",
+    "line": 1282
+   },
+   "force_claim_balancing": {
+    "label": "Force claim balancing in EOB Posting",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Force claim balancing in EOB Posting",
+    "line": 1289
+   },
+   "show_payment_history": {
+    "label": "Show all payment history in Patient Ledger",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Turn on to show all payment history in Patient Ledger",
+    "line": 1296
+   },
+   "void_checkout_reopen": {
+    "label": "Void Checkout and Reopen in Fee Sheet",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Void Checkout and Reopen in Fee Sheet",
+    "line": 1303
+   },
+   "support_fee_sheet_line_item_provider": {
+    "label": "Support provider in line item in fee sheet",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This Enables provider in line item in the fee sheet",
+    "line": 1310
+   },
+   "default_fee_sheet_line_item_provider": {
+    "label": "Default to a provider for line item in the fee sheet",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Default to a provider for line item in the fee sheet.(only applicable if Support line item billing in option above)",
+    "line": 1317
+   },
+   "include_inactive_providers": {
+    "label": "Include inactive providers in the fee sheet",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Include inactive providers in the fee sheet.",
+    "line": 1324
+   },
+   "replicate_justification": {
+    "label": "Automatically replicate justification codes in Fee Sheet",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Automatically replicate justification codes in Fee Sheet (basically fills in the blanks with the justification code above it).",
+    "line": 1331
+   },
+   "display_units_in_billing": {
+    "label": "Display the Units Column on the Billing Screen",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Display the Units Column on the Billing Screen",
+    "line": 1338
+   },
+   "notes_to_display_in_Billing": {
+    "label": "Which notes are to be displayed in the Billing Screen",
+    "type": "select",
+    "options": [
+     "None",
+     "Encounter Billing Note",
+     "Patient Billing Note",
+     "All"
+    ],
+    "default": "3",
+    "description": "Display the Encounter Billing Note or Patient Billing Note or Both in the Billing Screen.",
+    "line": 1345
+   },
+   "MedicareReferrerIsRenderer": {
+    "label": "Medicare Referrer Is Renderer",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "For Medicare only, forces the referring provider to be the same as the rendering provider.",
+    "line": 1357
+   },
+   "statement_logo": {
+    "label": "Statement Logo GIF Filename",
+    "type": "text",
+    "options": null,
+    "default": "practice_logo.gif",
+    "description": "Place your logo in sites/default/images and type the filename including gif extension here.",
+    "line": 1364
+   },
+   "use_custom_statement": {
+    "label": "Use Custom Statement",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will use the custom Statement showing the description instead of the codes.",
+    "line": 1371
+   },
+   "statement_appearance": {
+    "label": "Statement Appearance",
+    "type": "select",
+    "options": [
+     "Plain Text",
+     "Modern/images"
+    ],
+    "default": "1",
+    "description": "Patient statements can be generated as plain text or with a modern graphical appearance.",
+    "line": 1378
+   },
+   "billing_phone_number": {
+    "label": "Custom Billing Phone Number",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Phone number for billing inquiries",
+    "line": 1388
+   },
+   "show_aging_on_custom_statement": {
+    "label": "Show Aging on Custom Statement",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will Show Aging on the custom Statement.",
+    "line": 1395
+   },
+   "use_statement_print_exclusion": {
+    "label": "Allow Statement Exclusions from Printing",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will enable the Ability to Exclude Selected Patient Statements from Printing.",
+    "line": 1402
+   },
+   "minimum_amount_to_print": {
+    "label": "Total Minimum Amount of Statement to Allow Printing",
+    "type": "num",
+    "options": null,
+    "default": "1.00",
+    "description": "Total Minimum Dollar Amount of Statement to Allow Printing.(only applicable if Allow Statement Exclusions from Printing is enabled)",
+    "line": 1409
+   },
+   "statement_bill_note_print": {
+    "label": "Print Patient Billing Note",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will allow printing of the Patient Billing Note on the statements.",
+    "line": 1416
+   },
+   "number_appointments_on_statement": {
+    "label": "Number of Appointments on Statement",
+    "type": "num",
+    "options": null,
+    "default": "0",
+    "description": "The Number of Future Appointments to Display on the Statement.",
+    "line": 1423
+   },
+   "statement_message_to_patient": {
+    "label": "Print Custom Message",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will allow printing of a custom Message on the statements.",
+    "line": 1430
+   },
+   "statement_msg_text": {
+    "label": "Custom Statement message",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Text for Custom statement message.",
+    "line": 1437
+   },
+   "use_dunning_message": {
+    "label": "Use Custom Dunning Messages",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will allow use of the custom Dunning Messages on the statements.",
+    "line": 1444
+   },
+   "first_dun_msg_set": {
+    "label": "Number of days before showing first account message",
+    "type": "num",
+    "options": null,
+    "default": "30",
+    "description": "Number of days before showing first account message.",
+    "line": 1451
+   },
+   "first_dun_msg_text": {
+    "label": "First account message",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Text for first account message.",
+    "line": 1458
+   },
+   "second_dun_msg_set": {
+    "label": "Number of days before showing second account message",
+    "type": "num",
+    "options": null,
+    "default": "60",
+    "description": "Number of days before showing second account message",
+    "line": 1465
+   },
+   "second_dun_msg_text": {
+    "label": "Second account message",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Text for second account message.",
+    "line": 1472
+   },
+   "third_dun_msg_set": {
+    "label": "Number of days before showing third account message",
+    "type": "num",
+    "options": null,
+    "default": "90",
+    "description": "Number of days before showing third account message",
+    "line": 1479
+   },
+   "third_dun_msg_text": {
+    "label": "Third account message",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Text for third account message.",
+    "line": 1486
+   },
+   "fourth_dun_msg_set": {
+    "label": "Number of days before showing fourth account message",
+    "type": "num",
+    "options": null,
+    "default": "120",
+    "description": "Number of days before showing fourth account message",
+    "line": 1493
+   },
+   "fourth_dun_msg_text": {
+    "label": "Fourth account message",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Text for fourth account message.",
+    "line": 1500
+   },
+   "fifth_dun_msg_set": {
+    "label": "Number of days before showing fifth account message",
+    "type": "num",
+    "options": null,
+    "default": "150",
+    "description": "Number of days before showing fifth account message",
+    "line": 1507
+   },
+   "fifth_dun_msg_text": {
+    "label": "Fifth account message",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Text for fifth account message.",
+    "line": 1514
+   },
+   "save_codes_history": {
+    "label": "Save codes history",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Save codes history",
+    "line": 1521
+   },
+   "enable_percent_pricing": {
+    "label": "Enable percent-based price levels",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable percent-based price levels",
+    "line": 1528
+   },
+   "gen_x12_based_on_ins_co": {
+    "label": "Generate X-12 Based On Insurance Company",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "For sending claims directly to insurance company, based on X12 Partner Settings",
+    "line": 1535
+   },
+   "auto_sftp_claims_to_x12_partner": {
+    "label": "Automatically SFTP Claims To X12 Partner",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "For automatically sending claims that are generated in EDI directory to the X12 partner using SFTP credentials X12 Partner Settings",
+    "line": 1542
+   },
+   "enable_swap_secondary_insurance": {
+    "label": "Enable Swap Secondary Insurance Editing Demographics",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable swap secondary insurance",
+    "line": 1549
+   },
+   "add_unmatched_code_from_ins_co_era_to_billing": {
+    "label": "Enable adding unmatched code from insurance company to billing table",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable adding unmatched code from insurance company to billing table",
+    "line": 1556
+   }
+  },
+  "E-Sign": {
+   "esign_all": {
+    "label": "Allows E-Sign on the entire encounter",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will enable signing an entire encounter, rather than individual forms",
+    "line": 1569
+   },
+   "lock_esign_all": {
+    "label": "Lock e-signed encounters and their forms",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will disable the Edit button on all forms whose parent encounter is e-signed",
+    "line": 1576
+   },
+   "esign_individual": {
+    "label": "Allows E-Signing Individual Forms",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This will enable signing individual forms separately",
+    "line": 1583
+   },
+   "lock_esign_individual": {
+    "label": "Lock an e-signed form individually",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This will disable the Edit button on any form that is e-signed",
+    "line": 1590
+   },
+   "esign_lock_toggle": {
+    "label": "Enable lock toggle",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will give the user the option to lock (separate locking and signing)",
+    "line": 1597
+   },
+   "esign_report_show_only_signed": {
+    "label": "Only Include E-Signed Forms On Report",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will hide any encounter forms not E-Signed on the patient report",
+    "line": 1604
+   },
+   "esign_report_hide_empty_sig": {
+    "label": "Hide Empty E-Sign Logs On Report",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This will hide empty e-sign logs on the patient report",
+    "line": 1611
+   },
+   "esign_report_hide_all_sig": {
+    "label": "Exclude All E-Sign Logs On Report",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This will hide any e-sign logs on the patient report",
+    "line": 1618
+   }
+  },
+  "Documents": {
+   "document_storage_method": {
+    "label": "Document Storage Method",
+    "type": "select",
+    "options": [
+     "Hard Disk",
+     "CouchDB"
+    ],
+    "default": "0",
+    "description": "Option to save method of document storage.",
+    "line": 1628
+   },
+   "couchdb_host": {
+    "label": "CouchDB HostName",
+    "type": "text",
+    "options": null,
+    "default": "localhost",
+    "description": "CouchDB host",
+    "line": 1638
+   },
+   "couchdb_user": {
+    "label": "CouchDB UserName",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Username to connect to CouchDB",
+    "line": 1644
+   },
+   "couchdb_pass": {
+    "label": "CouchDB Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Password to connect to CouchDB",
+    "line": 1650
+   },
+   "couchdb_port": {
+    "label": "CouchDB Port",
+    "type": "text",
+    "options": null,
+    "default": "6984",
+    "description": "CouchDB port",
+    "line": 1656
+   },
+   "couchdb_dbase": {
+    "label": "CouchDB Database",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "CouchDB database name",
+    "line": 1662
+   },
+   "couchdb_connection_ssl": {
+    "label": "CouchDB Connection SSL",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Use SSL (encrypted) connection to CouchDB",
+    "line": 1668
+   },
+   "couchdb_ssl_allow_selfsigned": {
+    "label": "CouchDB SSL Allow Selfsigned Certificate",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow self-signed certificate for SSL (encrypted) connection to CouchDB",
+    "line": 1674
+   },
+   "couchdb_log": {
+    "label": "CouchDB Log Enable",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable log for document uploads/downloads to CouchDB",
+    "line": 1680
+   },
+   "expand_document_tree": {
+    "label": "Expand All Document Categories",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Expand All Document Categories by Default",
+    "line": 1687
+   },
+   "patient_id_category_name": {
+    "label": "Patient ID Category Name",
+    "type": "text",
+    "options": null,
+    "default": "Patient ID card",
+    "description": "Optional category name for an ID Card image that can be viewed from the patient summary page.",
+    "line": 1694
+   },
+   "patient_photo_category_name": {
+    "label": "Patient Photo Category Name",
+    "type": "text",
+    "options": null,
+    "default": "Patient Photograph",
+    "description": "Optional category name for photo images that can be viewed from the patient summary page.",
+    "line": 1701
+   },
+   "lab_results_category_name": {
+    "label": "Lab Results Category Name",
+    "type": "text",
+    "options": null,
+    "default": "Lab Report",
+    "description": "Document category name for storage of electronically received lab results.",
+    "line": 1708
+   },
+   "gbl_mdm_category_name": {
+    "label": "MDM Document Category Name",
+    "type": "text",
+    "options": null,
+    "default": "Lab Report",
+    "description": "Document category name for storage of electronically received MDM documents.",
+    "line": 1715
+   },
+   "generate_doc_thumb": {
+    "label": "Generate thumbnail",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Generate thumbnail images",
+    "line": 1721
+   },
+   "thumb_doc_max_size": {
+    "label": "Thumbnail size",
+    "type": "text",
+    "options": null,
+    "default": "100",
+    "description": "Maximum size of thumbnail file",
+    "line": 1727
+   }
+  },
+  "Calendar": {
+   "disable_calendar": {
+    "label": "Disable Calendar",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Do not display the calendar.",
+    "line": 1739
+   },
+   "schedule_start": {
+    "label": "Calendar Starting Hour",
+    "type": "hour",
+    "options": null,
+    "default": "8",
+    "description": "Beginning hour of day for calendar events.",
+    "line": 1746
+   },
+   "schedule_end": {
+    "label": "Calendar Ending Hour",
+    "type": "hour",
+    "options": null,
+    "default": "17",
+    "description": "Ending hour of day for calendar events.",
+    "line": 1753
+   },
+   "calendar_interval": {
+    "label": "Calendar Interval",
+    "type": "select",
+    "options": {
+     "5": "5",
+     "10": "10",
+     "15": "15",
+     "20": "20",
+     "30": "30",
+     "60": "60"
+    },
+    "default": "15",
+    "description": "The time granularity of the calendar and the smallest interval in minutes for an appointment slot.",
+    "line": 1760
+   },
+   "calendar_view_type": {
+    "label": "Default Calendar View",
+    "type": "select",
+    "options": {
+     "day": "Day",
+     "week": "Week",
+     "month": "Month"
+    },
+    "default": "day",
+    "description": "This sets the Default Calendar View, Default is Day.",
+    "line": 1774
+   },
+   "first_day_week": {
+    "label": "First day in the week",
+    "type": "select",
+    "options": {
+     "1": {
+      "expr": "DayOfWeek::Monday->label()"
+     },
+     "0": {
+      "expr": "DayOfWeek::Sunday->label()"
+     },
+     "6": {
+      "expr": "DayOfWeek::Saturday->label()"
+     }
+    },
+    "default": "1",
+    "description": "Your first day of the week.",
+    "line": 1785
+   },
+   "calendar_appt_style": {
+    "label": "Appointment Display Style",
+    "type": "select",
+    "options": {
+     "1": "Last name",
+     "2": "Last name, first name",
+     "3": "Last name, first name (title)",
+     "4": "Last name, first name (title: comments)",
+     "5": "Last name, first name, address (title: comments)"
+    },
+    "default": "2",
+    "description": "This determines how appointments display on the calendar.",
+    "line": 1796
+   },
+   "event_color": {
+    "label": "Appointment/Event Color",
+    "type": "select",
+    "options": {
+     "1": "Category Color Schema",
+     "2": "Facility Color Schema"
+    },
+    "default": "1",
+    "description": "This determines which color schema used for appointment",
+    "line": 1809
+   },
+   "number_of_appts_to_show": {
+    "label": "Appointments - Patient Summary - Number to Display",
+    "type": "num",
+    "options": null,
+    "default": "10",
+    "description": "Number of Appointments to display in the Patient Summary",
+    "line": 1819
+   },
+   "number_of_group_appts_to_show": {
+    "label": "Appointments - Group Summary - Number to Display",
+    "type": "num",
+    "options": null,
+    "default": "10",
+    "description": "Number of Appointments to display in the Group Summary",
+    "line": 1826
+   },
+   "number_of_ex_appts_to_show": {
+    "label": "Excluded Appointments - Tooltip - Number to Display",
+    "type": "num",
+    "options": null,
+    "default": "15",
+    "description": "Number of Excluded Appointments to display in the Tooltip",
+    "line": 1833
+   },
+   "appt_display_sets_option": {
+    "label": "Appointment Display Sets - Ignore Display Limit (Last Set)",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Override (if necessary) the appointment display limit to allow all appointments to be displayed for the last set",
+    "line": 1840
+   },
+   "appt_display_sets_color_1": {
+    "label": "Appointment Display Sets - Color 1",
+    "type": "color_code",
+    "options": null,
+    "default": "#FFFFFF",
+    "description": "Color for odd sets (except when last set is odd and all member appointments are displayed and at least one subsequent scheduled appointment exists (not displayed) or not all member appointments are displayed).",
+    "line": 1847
+   },
+   "appt_display_sets_color_2": {
+    "label": "Appointment Display Sets - Color 2",
+    "type": "color_code",
+    "options": null,
+    "default": "#E6E6FF",
+    "description": "Color for even sets (except when last set is even and all member appointments are displayed and at least one subsequent scheduled appointment exists (not displayed) or not all member appointments are displayed).",
+    "line": 1854
+   },
+   "appt_display_sets_color_3": {
+    "label": "Appointment Display Sets - Color 3",
+    "type": "color_code",
+    "options": null,
+    "default": "#E6FFE6",
+    "description": "Color for the last set when all member appointments are displayed and at least one subsequent scheduled appointment exists (not displayed).",
+    "line": 1861
+   },
+   "appt_display_sets_color_4": {
+    "label": "Appointment Display Sets - Color 4",
+    "type": "color_code",
+    "options": null,
+    "default": "#FFE6FF",
+    "description": "Color for the last set when not all member appointments are displayed.",
+    "line": 1868
+   },
+   "appt_recurrences_widget": {
+    "label": "Recurrent Appointment Display Widget",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Display the recurrent appointment widget in the patient summary.",
+    "line": 1875
+   },
+   "num_past_appointments_to_show": {
+    "label": "Past Appointment Display Widget",
+    "type": "num",
+    "options": null,
+    "default": "0",
+    "description": "A positive number will show that many past appointments on a Widget in the Patient Summary screen (a negative number will show the past appointments in descending order)",
+    "line": 1882
+   },
+   "docs_see_entire_calendar": {
+    "label": "Providers See Entire Calendar",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Check this if you want providers to see all appointments by default and not just their own.",
+    "line": 1889
+   },
+   "auto_create_new_encounters": {
+    "label": "Auto-Create New Encounters",
+    "type": "select",
+    "options": [
+     "Off",
+     "One Encounter Per Day",
+     "Allow Encounter For Each Appointment"
+    ],
+    "default": "1",
+    "description": "Automatically create a new encounter when an appointment check in status is selected. The Each Appointment option will allow a new encounter regardless of same day visit. The appointment status changes and encounter creations are managed through the Patient Tracker.",
+    "line": 1896
+   },
+   "auto_create_prevent_reason": {
+    "label": "Prevent Appointment Comment as Visit Reason",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Check this if you do not want to allow the appointments comment as the visit reason when auto-creating new encounter for appointment.",
+    "line": 1909
+   },
+   "allow_early_check_in": {
+    "label": "Allow Early Check In",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Allow Check In before the appointment's time.",
+    "line": 1916
+   },
+   "submit_changes_for_all_appts_at_once": {
+    "label": "Submit Changes For All Appts At Once",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enables to submit changes for all appointments of a recurrence at once.",
+    "line": 1923
+   },
+   "disable_pat_trkr": {
+    "label": "Flow Board: Disable",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Completely remove the ability to display the Patient Flow Board.",
+    "line": 1930
+   },
+   "ptkr_visit_reason": {
+    "label": "Flow Board: Show Visit Reason",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "When Checked, Visit Reason Will Show in Patient Flow Board.",
+    "line": 1937
+   },
+   "ptkr_show_pid": {
+    "label": "Flow Board: Show Patient ID",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "When Checked, Patient ID Will Show in Patient Flow Board.",
+    "line": 1944
+   },
+   "ptkr_show_encounter": {
+    "label": "Flow Board: Show Encounter Number",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "When Checked, Patient Encounter Number Will Show in Patient Flow Board.",
+    "line": 1951
+   },
+   "ptkr_show_staff": {
+    "label": "Flow Board: Show Staff Action",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "When Checked, Last Staff to Update Board Will Show in Patient Flow Board.",
+    "line": 1958
+   },
+   "ptkr_date_range": {
+    "label": "Flow Board: Allow Date Range",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "This Allows a Date Range to be Selected in Patient Flow Board.",
+    "line": 1965
+   },
+   "ptkr_start_date": {
+    "label": "Flow Board: Default Starting Date",
+    "type": "select",
+    "options": {
+     "D0": "Current Day",
+     "B0": "Beginning of Current Work Week"
+    },
+    "default": "D0",
+    "description": "This is the default Beginning date for the Patient Flow Board. (only applicable if Allow Date Range in option above is Enabled)",
+    "line": 1972
+   },
+   "ptkr_end_date": {
+    "label": "Flow Board: Default Ending Date",
+    "type": "select",
+    "options": {
+     "Y1": "One Year Ahead",
+     "Y2": "Two Years Ahead",
+     "M6": "Six Months Ahead",
+     "M3": "Three Months Ahead",
+     "M1": "One Month Ahead",
+     "D7": "One Week Ahead",
+     "D1": "One Day Ahead",
+     "D0": "Current Day"
+    },
+    "default": "D0",
+    "description": "This is the default Ending date for the Patient Flow Board. (only applicable if Allow Date Range in option above is Enabled)",
+    "line": 1982
+   },
+   "pat_trkr_timer": {
+    "label": "Flow Board: Timer Refresh Interval",
+    "type": "select",
+    "options": {
+     "0": "No automatic refresh",
+     "0:10": "10",
+     "0:20": "20",
+     "0:30": "30",
+     "0:40": "40",
+     "0:50": "50",
+     "0:59": "60"
+    },
+    "default": "0:20",
+    "description": "The screen refresh time in Seconds for the Patient Flow Board Screen.",
+    "line": 1998
+   },
+   "checkout_roll_off": {
+    "label": "Flow Board: display completed checkouts (minutes)",
+    "type": "num",
+    "options": null,
+    "default": "0",
+    "description": "Flow Board will only display completed checkouts for this many minutes. Zero is continuous display.",
+    "line": 2013
+   },
+   "drug_screen": {
+    "label": "Flow Board: Enable Random Drug Testing",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow Patient Flow Board to Select Patients for Drug Testing.",
+    "line": 2020
+   },
+   "drug_testing_percentage": {
+    "label": "Flow Board: Percentage of Patients to Drug Test",
+    "type": "num",
+    "options": null,
+    "default": "33",
+    "description": "Percentage of Patients to select for Random Drug Testing.",
+    "line": 2027
+   },
+   "maximum_drug_test_yearly": {
+    "label": "Flow Board: Max tests per Patient per year",
+    "type": "num",
+    "options": null,
+    "default": "0",
+    "description": "Maximum number of times a Patient can be tested in a year. Zero is no limit.",
+    "line": 2034
+   },
+   "disable_rcb": {
+    "label": "Recall Board: Disable",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Do not display the Recall Board.",
+    "line": 2041
+   }
+  },
+  "Insurance": {
+   "enable_eligibility_requests": {
+    "label": "Enable Insurance Eligibility",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow insurance eligibility checks using an X12 Partner",
+    "line": 2052
+   },
+   "simplified_demographics": {
+    "label": "Simplified Demographics",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Omit insurance and some other things from the demographics form",
+    "line": 2059
+   },
+   "insurance_information": {
+    "label": "Show Additional Insurance Information",
+    "type": "select",
+    "options": [
+     "None",
+     "Address Only",
+     "Address and Postal Code",
+     "Address and State",
+     "Address, State and Postal Code",
+     "Address, City, State and Postal Code",
+     "Address, City, State, Postal Code, Payer ID",
+     "Postal Code and Box Number"
+    ],
+    "default": "6",
+    "description": "Show Insurance Address Information in the Insurance Panel of Demographics.",
+    "line": 2066
+   },
+   "disable_eligibility_log": {
+    "label": "Disable Insurance Eligibility Reports Download",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Do not allow insurance eligibility report log download",
+    "line": 2082
+   },
+   "insurance_only_one": {
+    "label": "Allow only one insurance",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow more than one insurance",
+    "line": 2089
+   }
+  },
+  "Security": {
+   "sql_string_no_show_screen": {
+    "label": "Mode - Do Not Show SQL Queries",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Do not allow SQL queries to be outputted to screen.",
+    "line": 2099
+   },
+   "timeout": {
+    "label": "Idle Session Timeout Seconds",
+    "type": "num",
+    "options": null,
+    "default": "7200",
+    "description": "Maximum idle time in seconds before logout. Default is 7200 (2 hours).",
+    "line": 2105
+   },
+   "portal_timeout": {
+    "label": "Portal Idle Session Timeout Seconds",
+    "type": "num",
+    "options": null,
+    "default": "1800",
+    "description": "Maximum idle time in seconds before logout. Default is 1800 (30 minutes).",
+    "line": 2111
+   },
+   "secure_upload": {
+    "label": "Secure Upload Files with White List",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Block all files types that are not found in the White List. Can find interface to edit the White List at Administration->Files.",
+    "line": 2117
+   },
+   "secure_password": {
+    "label": "Require Strong Passwords",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Strong password means at least one of each: a number, a lowercase letter, an uppercase letter, a special character.",
+    "line": 2123
+   },
+   "gbl_minimum_password_length": {
+    "label": "Minimum Password Length",
+    "type": "select",
+    "options": {
+     "0": "No Minimum",
+     "4": "4",
+     "5": "5",
+     "6": "6",
+     "7": "7",
+     "8": "8",
+     "9": "9",
+     "10": "10",
+     "11": "11",
+     "12": "12",
+     "13": "13",
+     "14": "14",
+     "15": "15",
+     "16": "16",
+     "17": "17",
+     "18": "18",
+     "19": "19",
+     "20": "20"
+    },
+    "default": "9",
+    "description": "Minimum length of password.",
+    "line": 2130
+   },
+   "gbl_maximum_password_length": {
+    "label": "Maximum Password Length",
+    "type": "select",
+    "options": {
+     "0": "No Maximum",
+     "72": "72"
+    },
+    "default": "72",
+    "description": "Maximum length of password (Recommend using the default value of 72 unless you know what you are doing).",
+    "line": 2156
+   },
+   "password_history": {
+    "label": "Require Unique Passwords",
+    "type": "select",
+    "options": [
+     "No",
+     "1",
+     "2",
+     "3",
+     "4",
+     "5"
+    ],
+    "default": "5",
+    "description": "Set to the number of prior passwords that are not allowed to use when changing a password.",
+    "line": 2166
+   },
+   "password_expiration_days": {
+    "label": "Default Password Expiration Days",
+    "type": "num",
+    "options": null,
+    "default": "180",
+    "description": "Default password expiration period in days. 0 means this feature is disabled.",
+    "line": 2180
+   },
+   "password_grace_time": {
+    "label": "Password Expiration Grace Period",
+    "type": "num",
+    "options": null,
+    "default": "30",
+    "description": "Period in days where a user may login with an expired password.",
+    "line": 2187
+   },
+   "password_max_failed_logins": {
+    "label": "Maximum Failed Login Attempts For User",
+    "type": "num",
+    "options": null,
+    "default": "20",
+    "description": "Maximum Failed Login Attempts For User (0 for no maximum).",
+    "line": 2194
+   },
+   "time_reset_password_max_failed_logins": {
+    "label": "Time (seconds) to Reset Maximum Failed Login Attempts For User",
+    "type": "num",
+    "options": null,
+    "default": "3600",
+    "description": "Time (seconds) to Reset Maximum Failed Login Attempts Counter For User (0 for no reset).",
+    "line": 2201
+   },
+   "ip_max_failed_logins": {
+    "label": "Maximum Failed Login Attempts From IP Address",
+    "type": "num",
+    "options": null,
+    "default": "100",
+    "description": "Maximum Failed Login Attempts From IP Address (0 for no maximum).",
+    "line": 2208
+   },
+   "ip_time_reset_password_max_failed_logins": {
+    "label": "Time (seconds) to Reset Maximum Failed Login Attempts From IP Address",
+    "type": "num",
+    "options": null,
+    "default": "3600",
+    "description": "Time (seconds) to Reset Maximum Failed Login Attempts Counter From IP Address (0 for no reset).",
+    "line": 2215
+   },
+   "gbl_fac_warehouse_restrictions": {
+    "label": "Enable Facility/Warehouse Permissions",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable facility/warehouse restrictions in the user administration form.",
+    "line": 2222
+   },
+   "is_client_ssl_enabled": {
+    "label": "Enable Client SSL",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable client SSL certificate authentication.",
+    "line": 2229
+   },
+   "certificate_authority_crt": {
+    "label": "Path to CA Certificate File",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Set this to the full absolute path. For creating client SSL certificates for HTTPS.",
+    "line": 2236
+   },
+   "certificate_authority_key": {
+    "label": "Path to CA Key File",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Set this to the full absolute path. For creating client SSL certificates for HTTPS.",
+    "line": 2243
+   },
+   "client_certificate_valid_in_days": {
+    "label": "Client Certificate Expiration Days",
+    "type": "num",
+    "options": null,
+    "default": "365",
+    "description": "Number of days that the client certificate is valid.",
+    "line": 2250
+   },
+   "Emergency_Login_email_id": {
+    "label": "Emergency Login Email Address",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Email address, if any, to receive emergency login user activation messages.",
+    "line": 2257
+   },
+   "new_validate": {
+    "label": "New form validation",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "New form validation",
+    "line": 2264
+   },
+   "google_signin_enabled": {
+    "label": "Enable Google Sign-In",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Authentication Using Google Sign-in",
+    "line": 2271
+   },
+   "google_signin_client_id": {
+    "label": "Google Sign-In Client ID",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "This Client ID Is Provided By Google For Your App (Required For Google Sign-in)",
+    "line": 2278
+   },
+   "gbl_ldap_enabled": {
+    "label": "Use LDAP for Authentication",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "If enabled, use LDAP for login and authentication.",
+    "line": 2285
+   },
+   "gbl_ldap_host": {
+    "label": "LDAP - Server Name or URI",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "The hostname or URI of your LDAP or Active Directory server.",
+    "line": 2291
+   },
+   "gbl_ldap_dn": {
+    "label": "LDAP - Distinguished Name of User",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Embed {login} where the OpenEMR login name of the user is to be; for example: uid={login},dc=example,dc=com",
+    "line": 2297
+   },
+   "gbl_ldap_exclusions": {
+    "label": "LDAP - Login Exclusions",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Comma-separated list of login names to use normal authentication instead of LDAP; useful for setup and debugging.",
+    "line": 2303
+   },
+   "gbl_debug_hash_verify_execution_time": {
+    "label": "Debug Hash Verification Time",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "If enabled, this will send the execution time it took to verify hash to the php error log.",
+    "line": 2310
+   },
+   "gbl_auth_hash_algo": {
+    "label": "Hash Algorithm for Authentication",
+    "type": "select",
+    "options": {
+     "DEFAULT": "PHP Default",
+     "BCRYPT": "Bcrypt",
+     "ARGON2I": "Argon2I",
+     "ARGON2ID": "Argon2ID",
+     "SHA512HASH": "SHA512 (ONC 2015)"
+    },
+    "default": "DEFAULT",
+    "description": "Hashing algorithm for authentication. Suggest PHP Default unless you know what you are doing.",
+    "line": 2317
+   },
+   "gbl_auth_bcrypt_hash_cost": {
+    "label": "Authentication Bcrypt Hash Cost",
+    "type": "select",
+    "options": {
+     "DEFAULT": "PHP Default",
+     "5": "5",
+     "6": "6",
+     "7": "7",
+     "8": "8",
+     "9": "9",
+     "10": "10",
+     "11": "11",
+     "12": "12",
+     "13": "13",
+     "14": "14",
+     "15": "15",
+     "16": "16",
+     "17": "17",
+     "18": "18",
+     "19": "19",
+     "20": "20"
+    },
+    "default": "DEFAULT",
+    "description": "Authentication bcrypt hash cost. Suggest PHP Default unless you know what you are doing.",
+    "line": 2330
+   },
+   "gbl_auth_argon_hash_memory_cost": {
+    "label": "Authentication Argon Hash Memory Cost",
+    "type": "select",
+    "options": {
+     "DEFAULT": "PHP Default",
+     "512": "512",
+     "1024": "1024",
+     "2048": "2048",
+     "4096": "4096",
+     "8192": "8192",
+     "16384": "16384",
+     "32768": "32768",
+     "65536": "65536",
+     "131072": "131072",
+     "262144": "262144",
+     "524288": "524288",
+     "1048576": "1048576",
+     "2097152": "2097152"
+    },
+    "default": "DEFAULT",
+    "description": "Authentication argon hash memory cost. Suggest PHP Default unless you know what you are doing.",
+    "line": 2355
+   },
+   "gbl_auth_argon_hash_time_cost": {
+    "label": "Authentication Argon Hash Time Cost",
+    "type": "select",
+    "options": {
+     "DEFAULT": "PHP Default",
+     "1": "1",
+     "2": "2",
+     "3": "3",
+     "4": "4",
+     "5": "5",
+     "6": "6",
+     "7": "7",
+     "8": "8",
+     "9": "9",
+     "10": "10",
+     "11": "11",
+     "12": "12",
+     "13": "13",
+     "14": "14",
+     "15": "15",
+     "16": "16",
+     "17": "17",
+     "18": "18",
+     "19": "19",
+     "20": "20"
+    },
+    "default": "DEFAULT",
+    "description": "Authentication argon hash time cost. Suggest PHP Default unless you know what you are doing.",
+    "line": 2377
+   },
+   "gbl_auth_argon_hash_thread_cost": {
+    "label": "Authentication Argon Hash Thread Number",
+    "type": "select",
+    "options": {
+     "DEFAULT": "PHP Default",
+     "1": "1",
+     "2": "2",
+     "3": "3",
+     "4": "4",
+     "5": "5",
+     "6": "6",
+     "7": "7",
+     "8": "8",
+     "9": "9",
+     "10": "10",
+     "11": "11",
+     "12": "12",
+     "13": "13",
+     "14": "14",
+     "15": "15",
+     "16": "16",
+     "17": "17",
+     "18": "18",
+     "19": "19",
+     "20": "20"
+    },
+    "default": "DEFAULT",
+    "description": "Authentication argon hash thread number. Suggest PHP Default unless you know what you are doing.",
+    "line": 2406
+   },
+   "gbl_auth_sha512_rounds": {
+    "label": "Authentication SHA512 Hash Rounds Number",
+    "type": "select",
+    "options": {
+     "1000": "1000",
+     "5000": "5000",
+     "10000": "10000",
+     "15000": "15000",
+     "20000": "20000",
+     "30000": "30000",
+     "40000": "40000",
+     "50000": "50000",
+     "75000": "75000",
+     "100000": "100000",
+     "200000": "200000",
+     "300000": "300000",
+     "400000": "400000",
+     "500000": "500000",
+     "750000": "750000",
+     "1000000": "1000000",
+     "2000000": "2000000",
+     "3000000": "3000000",
+     "4000000": "4000000",
+     "5000000": "5000000",
+     "6000000": "6000000",
+     "7000000": "7000000",
+     "8000000": "8000000",
+     "9000000": "9000000"
+    },
+    "default": "100000",
+    "description": "Authentication SHA512 hash rounds number.",
+    "line": 2435
+   }
+  },
+  "Notifications": {
+   "patient_reminder_sender_name": {
+    "label": "Patient Reminder Sender Name",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Name of the sender for patient reminders.",
+    "line": 2473
+   },
+   "patient_reminder_sender_email": {
+    "label": "Patient Reminder Sender Email",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Email address of the sender for patient reminders. Replies to patient reminders will be directed to this address. It is important to use an address from your clinic's domain to avoid help prevent patient reminders from going to junk mail folders.",
+    "line": 2480
+   },
+   "practice_return_email_path": {
+    "label": "Notification Email Address",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Email address, if any, to receive administrative notifications.",
+    "line": 2487
+   },
+   "EMAIL_METHOD": {
+    "label": "Email Transport Method",
+    "type": "select",
+    "options": {
+     "PHPMAIL": "PHPMAIL",
+     "SENDMAIL": "SENDMAIL",
+     "SMTP": "SMTP"
+    },
+    "default": "SMTP",
+    "description": "Method for sending outgoing email.",
+    "line": 2494
+   },
+   "SMTP_HOST": {
+    "label": "SMTP Server Hostname",
+    "type": "text",
+    "options": null,
+    "default": "localhost",
+    "description": "If SMTP is used, the server`s hostname or IP address.",
+    "line": 2505
+   },
+   "SMTP_PORT": {
+    "label": "SMTP Server Port Number",
+    "type": "num",
+    "options": null,
+    "default": "25",
+    "description": "If SMTP is used, the server`s TCP port number (usually 25).",
+    "line": 2512
+   },
+   "SMTP_USER": {
+    "label": "SMTP User for Authentication",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Must be empty if SMTP authentication is not used.",
+    "line": 2519
+   },
+   "SMTP_PASS": {
+    "label": "SMTP Password for Authentication",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Must be empty if SMTP authentication is not used.",
+    "line": 2526
+   },
+   "SMTP_SECURE": {
+    "label": "SMTP Security Protocol",
+    "type": "select",
+    "options": {
+     "": "None",
+     "ssl": "SSL",
+     "tls": "TLS"
+    },
+    "default": "",
+    "description": "SMTP security protocol to connect with. Required by some servers such as gmail.",
+    "line": 2533
+   },
+   "EMAIL_NOTIFICATION_HOUR": {
+    "label": "Email Notification Hours",
+    "type": "num",
+    "options": null,
+    "default": "50",
+    "description": "Number of hours in advance to send email notifications.",
+    "line": 2544
+   },
+   "SMS_NOTIFICATION_HOUR": {
+    "label": "SMS Notification Hours",
+    "type": "num",
+    "options": null,
+    "default": "50",
+    "description": "Number of hours in advance to send SMS notifications.",
+    "line": 2551
+   },
+   "SMS_GATEWAY_USENAME": {
+    "label": "SMS Gateway Username",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Username for SMS Gateway.",
+    "line": 2558
+   },
+   "SMS_GATEWAY_PASSWORD": {
+    "label": "SMS Gateway Password",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Password for SMS Gateway.",
+    "line": 2565
+   },
+   "SMS_GATEWAY_APIKEY": {
+    "label": "SMS Gateway API Key",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "API key for SMS Gateway.",
+    "line": 2572
+   },
+   "phone_notification_hour": {
+    "label": "Phone Notification Hour",
+    "type": "num",
+    "options": null,
+    "default": "50",
+    "description": "Number of hours in advance to send Phone notification.",
+    "line": 2579
+   },
+   "phone_gateway_username": {
+    "label": "Phone Gateway Username",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Username for Phone Gateway.",
+    "line": 2586
+   },
+   "phone_gateway_password": {
+    "label": "Phone Gateway Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Password for Phone Gateway.",
+    "line": 2593
+   },
+   "phone_gateway_url": {
+    "label": "Phone Gateway URL",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "URL for Phone Gateway.",
+    "line": 2600
+   }
+  },
+  "CDR": {
+   "enable_cdr": {
+    "label": "Enable Clinical Decisions Rules (CDR)",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Clinical Decisions Rules (CDR)",
+    "line": 2613
+   },
+   "enable_allergy_check": {
+    "label": "Enable Allergy Check",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Allergy Check Against Medications and Prescriptions",
+    "line": 2620
+   },
+   "enable_alert_log": {
+    "label": "Enable Alert Log",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Alert Logging",
+    "line": 2627
+   },
+   "enable_cdr_new_crp": {
+    "label": "Enable Clinical Passive New Reminder(s) Popup",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Clinical Passive New Reminder(s) Popup",
+    "line": 2634
+   },
+   "enable_cdr_crw": {
+    "label": "Enable Clinical Passive Reminder Widget",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Clinical Passive Reminder Widget",
+    "line": 2641
+   },
+   "enable_cdr_crp": {
+    "label": "Enable Clinical Active Reminder Popup",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Clinical Active Reminder Popup",
+    "line": 2648
+   },
+   "enable_cdr_prw": {
+    "label": "Enable Patient Reminder Widget",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Patient Reminder Widget",
+    "line": 2655
+   },
+   "enable_cqm": {
+    "label": "Enable CQM Reporting",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Clinical Quality Measure (CQM) Reporting",
+    "line": 2662
+   },
+   "pqri_registry_name": {
+    "label": "PQRI Registry Name",
+    "type": "text",
+    "options": null,
+    "default": "Model Registry",
+    "description": "PQRI Registry Name",
+    "line": 2669
+   },
+   "pqri_registry_id": {
+    "label": "PQRI Registry ID",
+    "type": "text",
+    "options": null,
+    "default": "125789123",
+    "description": "PQRI Registry ID",
+    "line": 2676
+   },
+   "cqm_performance_period": {
+    "label": "Eligible Clinician eCQM Performance Period",
+    "type": "text",
+    "options": null,
+    "default": "2025",
+    "description": "Enter the eCQM Performance Period year. For example 2025",
+    "line": 2683
+   },
+   "enable_amc": {
+    "label": "Enable AMC Reporting",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Automated Measure Calculations (AMC) Reporting",
+    "line": 2690
+   },
+   "enable_amc_prompting": {
+    "label": "Enable AMC Prompting",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Prompting For Automated Measure Calculations (AMC) Required Data",
+    "line": 2697
+   },
+   "cdr_report_nice": {
+    "label": "CDR Reports Processing Priority",
+    "type": "select",
+    "options": {
+     "": "Default Priority",
+     "5": "Moderate Priority",
+     "10": "Moderate/Low Priority",
+     "15": "Low Priority",
+     "20": "Lowest Priority"
+    },
+    "default": "",
+    "description": "Set processing priority for CDR engine based reports.",
+    "line": 2704
+   },
+   "pat_rem_clin_nice": {
+    "label": "Patient Reminder Creation Processing Priority",
+    "type": "select",
+    "options": {
+     "": "Default Priority",
+     "5": "Moderate Priority",
+     "10": "Moderate/Low Priority",
+     "15": "Low Priority",
+     "20": "Lowest Priority"
+    },
+    "default": "",
+    "description": "Set processing priority for creation of Patient Reminders (in full clinic mode).",
+    "line": 2717
+   },
+   "report_itemizing_standard": {
+    "label": "Enable Standard Report Itemization",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Itemization of Standard Clinical Rules Reports",
+    "line": 2730
+   },
+   "report_itemizing_cqm": {
+    "label": "Enable CQM Report Itemization",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Itemization of CQM Reports",
+    "line": 2737
+   },
+   "report_itemizing_amc": {
+    "label": "Enable AMC Report Itemization",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Itemization of AMC Reports",
+    "line": 2744
+   },
+   "dated_reminders_max_alerts_to_show": {
+    "label": "Dated reminders maximum alerts to show",
+    "type": "num",
+    "options": null,
+    "default": "5",
+    "description": "Dated reminders maximum alerts to show",
+    "line": 2750
+   },
+   "patient_birthday_alert": {
+    "label": "Alert on patient birthday",
+    "type": "select",
+    "options": [
+     "No alert",
+     "Alert only on birthday",
+     "Alert on and after birthday",
+     "Alert on and up to 28 days after birthday"
+    ],
+    "default": "1",
+    "description": "Alert on patient birthday",
+    "line": 2756
+   },
+   "patient_birthday_alert_manual_off": {
+    "label": "Patient birthday alert requires turning off",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Patient birthday alert requires turning off",
+    "line": 2767
+   }
+  },
+  "Logging": {
+   "user_debug": {
+    "label": "User Debugging Options",
+    "type": "select",
+    "options": [
+     "None",
+     "Display Window Errors Only",
+     "Display Application Errors Only",
+     "All"
+    ],
+    "default": "0",
+    "description": "User Debugging Mode.",
+    "line": 2779
+   },
+   "enable_auditlog": {
+    "label": "Enable Audit Logging",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Audit Logging",
+    "line": 2791
+   },
+   "audit_events_patient-record": {
+    "label": "Audit Logging Patient Record",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of patient record modifications. (Note that Audit Logging needs to be enabled above)",
+    "line": 2798
+   },
+   "audit_events_scheduling": {
+    "label": "Audit Logging Scheduling",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of scheduling activities. (Note that Audit Logging needs to be enabled above)",
+    "line": 2805
+   },
+   "audit_events_order": {
+    "label": "Audit Logging Order",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of ordering activities. (Note that Audit Logging needs to be enabled above)",
+    "line": 2812
+   },
+   "audit_events_lab-results": {
+    "label": "Audit Logging Lab Results",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of lab result activities. (Note that Audit Logging needs to be enabled above)",
+    "line": 2818
+   },
+   "audit_events_security-administration": {
+    "label": "Audit Logging Security Administration",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of security and administration activities. (Note that Audit Logging needs to be enabled above)",
+    "line": 2824
+   },
+   "audit_events_backup": {
+    "label": "Audit Logging Backups",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of backup related activities. (Note that Audit Logging needs to be enabled above)",
+    "line": 2831
+   },
+   "audit_events_other": {
+    "label": "Audit Logging Miscellaneous",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of miscellaneous activities. (Note that Audit Logging needs to be enabled above)",
+    "line": 2838
+   },
+   "audit_events_query": {
+    "label": "Audit Logging SELECT Query",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of all SQL SELECT queries. (Note that Audit Logging needs to be enabled above)",
+    "line": 2845
+   },
+   "audit_events_cdr": {
+    "label": "Audit CDR Engine Queries",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable logging of CDR Engine Queries. (Note that Audit Logging needs to be enabled above)",
+    "line": 2852
+   },
+   "audit_events_http-request": {
+    "label": "Audit Logging user page history.",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable logging of HTTP page requests as the user utilizes the web interface. (Note that Audit Logging needs to be enabled above)",
+    "line": 2858
+   },
+   "gbl_force_log_breakglass": {
+    "label": "Audit all Emergency User Queries",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Force logging of all Emergency User (ie. breakglass) activities.",
+    "line": 2864
+   },
+   "enable_atna_audit": {
+    "label": "Enable ATNA Auditing",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Audit Trail and Node Authentication (ATNA).",
+    "line": 2871
+   },
+   "atna_audit_host": {
+    "label": "ATNA audit host",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "The hostname of the ATNA audit repository machine.",
+    "line": 2878
+   },
+   "atna_audit_port": {
+    "label": "ATNA audit port",
+    "type": "text",
+    "options": null,
+    "default": "6514",
+    "description": "Listening port of the RFC 5425 TLS syslog server.",
+    "line": 2885
+   },
+   "atna_audit_localcert": {
+    "label": "ATNA audit local certificate",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Certificate to send to RFC 5425 TLS syslog server.",
+    "line": 2892
+   },
+   "atna_audit_cacert": {
+    "label": "ATNA audit CA certificate",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "CA Certificate for verifying the RFC 5425 TLS syslog server.",
+    "line": 2899
+   },
+   "enable_auditlog_encryption": {
+    "label": "Enable Audit Log Encryption",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Audit Log Encryption",
+    "line": 2906
+   },
+   "api_log_option": {
+    "label": "API Log Option",
+    "type": "select",
+    "options": [
+     "No logging",
+     "Minimal Logging",
+     "Full Logging"
+    ],
+    "default": "2",
+    "description": "API Log Option (Full includes requests and responses).",
+    "line": 2913
+   },
+   "billing_log_option": {
+    "label": "Billing Log Option",
+    "type": "select",
+    "options": {
+     "1": "Billing Log Append",
+     "2": "Billing Log Overwrite"
+    },
+    "default": "1",
+    "description": "Billing log setting to append or overwrite the log file.",
+    "line": 2924
+   },
+   "gbl_print_log_option": {
+    "label": "Printing Log Option",
+    "type": "select",
+    "options": [
+     "No logging",
+     "Hide print feature",
+     "Log entire document"
+    ],
+    "default": "2",
+    "description": "Individual pages can override 2nd and 3rd options by implementing a log message.",
+    "line": 2934
+   },
+   "system_error_logging": {
+    "label": "System Error Logging Options",
+    "type": "select",
+    "options": {
+     "WARNING": "Standard Error Logging",
+     "DEBUG": "Debug Error Logging"
+    },
+    "default": "WARNING",
+    "description": "System Error Logging Options.",
+    "line": 2945
+   }
+  },
+  "Miscellaneous": {
+   "enable_database_connection_pooling": {
+    "label": "Enable Database Connection Pooling",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable Database Connection Pooling",
+    "line": 2961
+   },
+   "mysql_bin_dir": {
+    "label": "Path to MySQL Binaries",
+    "type": "text",
+    "options": null,
+    "default": {
+     "expr": "$mysql_bin_dir"
+    },
+    "description": "Full path to directory containing MySQL executables.",
+    "line": 2968
+   },
+   "perl_bin_dir": {
+    "label": "Path to Perl Binaries",
+    "type": "text",
+    "options": null,
+    "default": {
+     "expr": "$perl_bin_dir"
+    },
+    "description": "Full path to directory containing Perl executables.",
+    "line": 2975
+   },
+   "temporary_files_dir": {
+    "label": "Path to Temporary Files",
+    "type": "text",
+    "options": null,
+    "default": {
+     "expr": "$temporary_files_dir"
+    },
+    "description": "Full path to directory used for temporary files.",
+    "line": 2982
+   },
+   "backup_log_dir": {
+    "label": "Path for Event Log Backup",
+    "type": "text",
+    "options": null,
+    "default": {
+     "expr": "$backup_log_dir"
+    },
+    "description": "Full path to directory for event log backup.",
+    "line": 2989
+   },
+   "state_data_type": {
+    "label": "State Data Type",
+    "type": "select",
+    "options": {
+     "2": "Text field",
+     "1": "Single-selection list",
+     "26": "Single-selection list with ability to add to the list"
+    },
+    "default": "26",
+    "description": "Field type to use for employer or subscriber state in demographics.",
+    "line": 2996
+   },
+   "state_list": {
+    "label": "State list",
+    "type": "text",
+    "options": null,
+    "default": "state",
+    "description": "List used by above State Data Type option.",
+    "line": 3007
+   },
+   "state_custom_addlist_widget": {
+    "label": "State List Widget Custom Fields",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Show the custom state form for the add list widget (will ask for title and abbreviation).",
+    "line": 3014
+   },
+   "country_data_type": {
+    "label": "Country Data Type",
+    "type": "select",
+    "options": {
+     "2": "Text field",
+     "1": "Single-selection list",
+     "26": "Single-selection list with ability to add to the list"
+    },
+    "default": "26",
+    "description": "Field type to use for employer or subscriber country in demographics.",
+    "line": 3021
+   },
+   "country_list": {
+    "label": "Country list",
+    "type": "text",
+    "options": null,
+    "default": "country",
+    "description": "List used by above Country Data Type option.",
+    "line": 3032
+   },
+   "post_to_date_benchmark": {
+    "label": "Financial Close Date (yyyy-mm-dd)",
+    "type": "text",
+    "options": null,
+    "default": {
+     "expr": "date('Y-m-d', time() - 10 * 24 * 60 * 60)"
+    },
+    "description": "The payments posted cannot go below this date.This ensures that after taking the final report nobody post for previous dates.",
+    "line": 3039
+   },
+   "enable_hylafax": {
+    "label": "Enable Hylafax Support",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Hylafax Support",
+    "line": 3046
+   },
+   "hylafax_server": {
+    "label": "Hylafax Server",
+    "type": "text",
+    "options": null,
+    "default": "localhost",
+    "description": "Hylafax server hostname.",
+    "line": 3053
+   },
+   "hylafax_basedir": {
+    "label": "Hylafax Directory",
+    "type": "text",
+    "options": null,
+    "default": "/var/spool/hylafax",
+    "description": "Location where Hylafax stores faxes.",
+    "line": 3060
+   },
+   "enable_scanner": {
+    "label": "Enable Scanner Support",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Scanner Support",
+    "line": 3067
+   },
+   "scanner_output_directory": {
+    "label": "Scanner Directory",
+    "type": "text",
+    "options": null,
+    "default": "/mnt/scan_docs",
+    "description": "Location where scans are stored.",
+    "line": 3074
+   },
+   "unique_installation_id": {
+    "label": "Unique Installation ID",
+    "type": "if_empty_create_random_uuid",
+    "options": null,
+    "default": "",
+    "description": "Unique installation ID. Creates a random UUID if empty.",
+    "line": 3081
+   }
+  },
+  "Portal": {
+   "portal_onsite_two_enable": {
+    "label": "Enable Patient Portal",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Patient Portal",
+    "line": 3093
+   },
+   "portal_onsite_two_address": {
+    "label": "Patient Portal Site Address",
+    "type": "text",
+    "options": null,
+    "default": "https://your_web_site.com/openemr/portal",
+    "description": "Website link for the Patient Portal.",
+    "line": 3100
+   },
+   "portal_css_header": {
+    "label": "Portal Default Theme",
+    "type": "select",
+    "options": {
+     "style_light.css": "Light",
+     "style_dark.css": "Dark"
+    },
+    "default": "style_light.css",
+    "description": "Pick a default portal theme.",
+    "line": 3107
+   },
+   "portal_force_credential_reset": {
+    "label": "Portal Login Forced Credential Reset",
+    "type": "select",
+    "options": [
+     "Allow (Recommended)",
+     "Disable",
+     "User optional from credential dialog."
+    ],
+    "default": "0",
+    "description": "Select the credentials create or reset behavior for forcing patient to change password on portal login.User optional persists the options checkbox state in the credential dialog to allow deciding on a patient by patient basis.",
+    "line": 3117
+   },
+   "portal_onsite_two_basepath": {
+    "label": "Portal Uses Server Base Path (internal)",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Use servers protocol and host in urls (portal internal only).",
+    "line": 3129
+   },
+   "use_email_for_portal_username": {
+    "label": "Use Patients on-record E-Mail for new Portal Login Username",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Use contact email when creating portal credentials.",
+    "line": 3136
+   },
+   "enforce_signin_email": {
+    "label": "Require Patients to enter their on-record email for Portal Login",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Patient is required to enter their contact e-mail if present in Demographics Contact.",
+    "line": 3143
+   },
+   "google_recaptcha_site_key": {
+    "label": "Google reCAPTCHA V2 site key",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Google reCAPTCHA V2 site key",
+    "line": 3150
+   },
+   "google_recaptcha_secret_key": {
+    "label": "Google reCAPTCHA V2 secret key",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Google reCAPTCHA V2 secret key",
+    "line": 3157
+   },
+   "portal_primary_menu_logo_height": {
+    "label": "Primary Menu Logo Height",
+    "type": "text",
+    "options": null,
+    "default": "30",
+    "description": "The height of the portal logo located on the primary navbar in pixels without a suffix",
+    "line": 3164
+   },
+   "portal_onsite_two_register": {
+    "label": "Allow New Patient Registration Widget This requires reCAPTCHA to be setup",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Patient Portal new patient to self register.",
+    "line": 3171
+   },
+   "portal_two_pass_reset": {
+    "label": "Allow Patients to Reset Credentials This requires reCAPTCHA to be setup",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Patient may change their logon from portal login dialog.",
+    "line": 3178
+   },
+   "allow_portal_appointments": {
+    "label": "Allow Online Appointments",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Allow Patient to make and view appointments online.",
+    "line": 3185
+   },
+   "allow_custom_report": {
+    "label": "Allow Online Custom Content Report",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Allow Patient to use Custom Content Report.",
+    "line": 3192
+   },
+   "portal_two_ledger": {
+    "label": "Allow Patient Billing Summary Report Online",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Allow Patient to view their accounting ledger online.",
+    "line": 3199
+   },
+   "portal_two_payments": {
+    "label": "Allow Online Payments",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow Patient to make payments online.",
+    "line": 3206
+   },
+   "portal_onsite_document_download": {
+    "label": "Enable Patient Portal Document Download",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enables the ability to download documents in the Patient Portal by the user.",
+    "line": 3213
+   },
+   "allow_portal_uploads": {
+    "label": "Allow Patient Uploads from Portal Documents",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enables the ability for patient to upload documents to Documents Onsite Patient category.",
+    "line": 3220
+   },
+   "show_insurance_in_profile": {
+    "label": "Allow Insurances in Patient Profile",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "UnCheck to not show insurances in Profile.",
+    "line": 3227
+   },
+   "show_portal_primary_logo": {
+    "label": "Show Primary Logo on portal login page",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Show primary logo on login",
+    "line": 3234
+   },
+   "extra_portal_logo_login": {
+    "label": "Show Secondary Logo on portal Login page",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Show Secondary Logo on Login",
+    "line": 3241
+   },
+   "secondary_portal_logo_position": {
+    "label": "Order of the Secondary logo",
+    "type": "select",
+    "options": {
+     "first": "First Position",
+     "second": "Second Position"
+    },
+    "default": "second",
+    "description": "Place the secondary logo first, or second",
+    "line": 3248
+   }
+  },
+  "Connectors": {
+   "site_addr_oath": {
+    "label": "Site Address Override (if needed for OAuth2, FHIR, CCDA, or Payment Processing)",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "The hostname for OAuth2, FHIR, CCDA, and Payment Processing, pointing back back to this OpenEMR instance. e.g. https://localhost:9300.",
+    "line": 3263
+   },
+   "rest_fhir_api": {
+    "label": "Enable OpenEMR Standard FHIR REST API",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable OpenEMR Standard FHIR RESTful API.",
+    "line": 3270
+   },
+   "rest_system_scopes_api": {
+    "label": "Enable OpenEMR FHIR System Scopes (Turn on only if you know what you are doing)",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable OpenEMR FHIR System Scopes.",
+    "line": 3277
+   },
+   "rest_api": {
+    "label": "Enable OpenEMR Standard REST API",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable OpenEMR Standard RESTful API.",
+    "line": 3284
+   },
+   "rest_portal_api": {
+    "label": "Enable OpenEMR Patient Portal REST API (EXPERIMENTAL)",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable OpenEMR Patient Portal RESTful API.",
+    "line": 3291
+   },
+   "oauth_password_grant": {
+    "label": "Enable OAuth2 Password Grant (Not considered secure)",
+    "type": "select",
+    "options": [
+     "Off (Recommended setting)",
+     "On for Users Role",
+     "On for Patient Role",
+     "On for Both Roles"
+    ],
+    "default": "0",
+    "description": "Enable OAuth2 Password Grant. Recommend turning this setting off for production server. Recommend only using for testing.",
+    "line": 3298
+   },
+   "oauth_app_manual_approval": {
+    "label": "OAuth2 App Manual Approval Settings",
+    "type": "select",
+    "options": [
+     "Patient standalone apps Auto Approved, EHR-Launch,Provider&System Apps require manual approval",
+     "Manually Approve All Apps (USA jurisdictions must approve all patient standalone apps within 48 hours)"
+    ],
+    "default": "0",
+    "description": "Approval settings for 3rd party app/api access",
+    "line": 3309
+   },
+   "oauth_ehr_launch_authorization_flow_skip": {
+    "label": "OAuth2 EHR-Launch Authorization Flow Skip Enable App Setting",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable an OAuth2 Client application to be configured to skip the login screen and the scope authorization screen if the user is already logged into the EHR.",
+    "line": 3319
+   },
+   "fhir_us_core_profile_version": {
+    "label": "Maximum supported version for US Core FHIR Implementation Guide -- note if a resource/profile is forwards compatible it will still be supported",
+    "type": "select",
+    "options": {
+     "3.1.1": "US Core 3.1.1",
+     "7.0.0": "US Core 7.0.0",
+     "8.0.0": "US Core 8.0.0"
+    },
+    "default": "8.0.0",
+    "description": "Set the maximum compatibility version of US Core IG to support.  If a resource profile has breaking changes it will not exceed the given profile. If a profile has backwards breaking changes it will skip that profile version if a later version is supported.",
+    "line": 3325
+   },
+   "cc_front_payments": {
+    "label": "Accept Credit Card transactions from Front Payments",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow manual entry and authorise credit card payments. Ensure a gateway is enabled.",
+    "line": 3335
+   },
+   "cc_stripe_terminal": {
+    "label": "In person payments with Stripe Verifone P400",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Allow in person credit card payments using Stripe Verifone P400. Ensure Stripe gateway is enabled.",
+    "line": 3341
+   },
+   "payment_gateway": {
+    "label": "Select Credit Card Payment Gateway",
+    "type": "select",
+    "options": {
+     "InHouse": "In House Authorize Payments",
+     "AuthorizeNet": "Gateway for AuthorizeNet Manual Payments",
+     "Sphere": "Gateway for Sphere Payments",
+     "Stripe": "Gateway for Stripe Manual Payments",
+     "Rainforest": "Gateway for Rainforest payments"
+    },
+    "default": "InHouse",
+    "description": "Enable a Payment Gateway Service for processing credit card transactions",
+    "line": 3347
+   },
+   "gateway_mode_production": {
+    "label": "Set Gateway to Production Mode",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Check this to go live. Not checked is testing mode.",
+    "line": 3360
+   },
+   "gateway_public_key": {
+    "label": "Gateway Publishable Key",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "The public access key for secure tokenize of credit or debit card authorization. PCI compliance",
+    "line": 3367
+   },
+   "gateway_api_key": {
+    "label": "Gateway API Login Auth Name or Secret",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "The Auth Name or API key for selected account. API Login ID for Authorize.Net and API Secret for Stripe.",
+    "line": 3377
+   },
+   "gateway_transaction_key": {
+    "label": "Gateway Transaction Key",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Mainly Authorize.Net uses two keys",
+    "line": 3384
+   },
+   "rainforest_api_key": {
+    "label": "Rainforest API Key",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Used when payment_gateway is Rainforest. Stored encrypted",
+    "line": 3391
+   },
+   "rainforest_merchant_id": {
+    "label": "Rainforest Merchant ID",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Used when payment_gateway is Rainforest.",
+    "line": 3397
+   },
+   "rainforest_platform_id": {
+    "label": "Rainforest Platform ID",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Used when payment_gateway is Rainforest.",
+    "line": 3403
+   },
+   "rainforest_webhook_secret": {
+    "label": "Rainforest Webhook Secret",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Used when payment_gateway is Rainforest. Stored encrypted",
+    "line": 3409
+   },
+   "sphere_clinicfront_trxcustid": {
+    "label": "Sphere Clinicfront over phone (MOTO) Transaction CustID",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere Clinicfront over phone (MOTO) Transaction CustID",
+    "line": 3416
+   },
+   "sphere_clinicfront_trxcustid_licensekey": {
+    "label": "Sphere Clinicfront over phone (MOTO) Transaction CustID License Key",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere Clinicfront over phone (MOTO) Transaction CustID License Key",
+    "line": 3423
+   },
+   "sphere_moto_tc_link_pass": {
+    "label": "Sphere MOTO TC Link Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere MOTO TC Link Password",
+    "line": 3430
+   },
+   "sphere_clinicfront_retail_trxcustid": {
+    "label": "Sphere Clinicfront in person (RETAIL) Transaction CustID",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere Clinicfront in person (RETAIL) Transaction CustID",
+    "line": 3437
+   },
+   "sphere_clinicfront_retail_trxcustid_licensekey": {
+    "label": "Sphere Clinicfront in person (RETAIL) Transaction CustID License Key",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere Clinicfront in person (RETAIL) Transaction CustID License Key",
+    "line": 3444
+   },
+   "sphere_retail_tc_link_pass": {
+    "label": "Sphere RETAIL TC Link Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere RETAIL TC Link Password",
+    "line": 3451
+   },
+   "sphere_patientfront_trxcustid": {
+    "label": "Sphere Patientfront (Ecomm) Transaction CustID",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere Patientfront (Ecomm) Transaction CustID",
+    "line": 3458
+   },
+   "sphere_patientfront_trxcustid_licensekey": {
+    "label": "Sphere Patientfront (Ecomm) Transaction CustID License Key",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere Patientfront (Ecomm) Transaction CustID License Key",
+    "line": 3465
+   },
+   "sphere_ecomm_tc_link_pass": {
+    "label": "Sphere Ecomm TC Link Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Sphere Ecomm TC Link Password",
+    "line": 3472
+   },
+   "sphere_credit_void_confirm_pin": {
+    "label": "Sphere Void/Credit Confirmation PIN",
+    "type": "encrypted_hash",
+    "options": null,
+    "default": "",
+    "description": "Sphere Void/Credit Confirmation Password. OpenEMR confirms pin/password before proceeding with void/credit.",
+    "line": 3479
+   },
+   "medex_enable": {
+    "label": "Enable MedEx Communication Service",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable MedEx Communication Service",
+    "line": 3486
+   },
+   "erx_enable": {
+    "label": "Enable Ensora eRx Service",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Ensora eRx Service.",
+    "line": 3493
+   },
+   "erx_newcrop_path": {
+    "label": "Ensora eRx Site Address",
+    "type": "text",
+    "options": null,
+    "default": "https://secure.newcropaccounts.com/ux2/InterfaceV7/RxEntry.aspx",
+    "description": "URL for Ensora eRx Site Address.",
+    "line": 3500
+   },
+   "erx_newcrop_path_soap": {
+    "label": "Ensora eRx Web Service Address",
+    "type": "text",
+    "options": null,
+    "default": "https://secure.newcropaccounts.com/v7/WebServices/Update1.asmx?WSDL;https://secure.newcropaccounts.com/v7/WebServices/Patient.asmx?WSDL",
+    "description": "URLs for Ensora eRx Service Address, separated by a semi-colon.",
+    "line": 3507
+   },
+   "erx_soap_ttl_allergies": {
+    "label": "Ensora eRx SOAP Request Time-To-Live for Allergies",
+    "type": "num",
+    "options": null,
+    "default": "21600",
+    "description": "Time-To-Live for Ensora eRx Allergies SOAP Request in seconds.",
+    "line": 3514
+   },
+   "erx_soap_ttl_medications": {
+    "label": "Ensora eRx SOAP Request Time-To-Live for Medications",
+    "type": "num",
+    "options": null,
+    "default": "21600",
+    "description": "Time-To-Live for Ensora eRx Medications SOAP Request in seconds.",
+    "line": 3521
+   },
+   "erx_account_partner_name": {
+    "label": "Ensora eRx Partner Name",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Partner Name issued for Ensora eRx service.",
+    "line": 3528
+   },
+   "erx_account_name": {
+    "label": "Ensora eRx Name",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Account Name issued for Ensora eRx service.",
+    "line": 3535
+   },
+   "erx_account_password": {
+    "label": "Ensora eRx Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Account Password issued for Ensora eRx service.",
+    "line": 3542
+   },
+   "erx_account_id": {
+    "label": "Ensora eRx Account Id",
+    "type": "text",
+    "options": null,
+    "default": "1",
+    "description": "Account Id issued for Ensora eRx service, used to separate multi-facility accounts.",
+    "line": 3549
+   },
+   "erx_upload_active": {
+    "label": "Only upload active prescriptions",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Only upload active prescriptions to Ensora eRx.",
+    "line": 3556
+   },
+   "erx_import_status_message": {
+    "label": "Enable Ensora eRx import status message",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable import status message after visiting Ensora eRx.",
+    "line": 3563
+   },
+   "erx_medication_display": {
+    "label": "Do not display Ensora eRx Medications uploaded",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Do not display Medications uploaded after visiting Ensora eRx.",
+    "line": 3570
+   },
+   "erx_allergy_display": {
+    "label": "Do not display Ensora eRx Allergy uploaded",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Do not display Allergies uploaded after visiting Ensora eRx.",
+    "line": 3577
+   },
+   "erx_default_patient_country": {
+    "label": "Ensora eRx Default Patient Country",
+    "type": "select",
+    "options": {
+     "": "",
+     "US": "USA",
+     "CA": "Canada",
+     "MX": "Mexico"
+    },
+    "default": "",
+    "description": "Default Patient Country sent to Ensora eRx, only if patient country is not set.",
+    "line": 3584
+   },
+   "erx_debug_setting": {
+    "label": "Ensora eRx Debug Setting",
+    "type": "select",
+    "options": [
+     "None",
+     "Request Only",
+     "Response Only",
+     "Request & Response"
+    ],
+    "default": "0",
+    "description": "Log all Ensora eRx Requests and / or Responses.",
+    "line": 3596
+   },
+   "ccda_alt_service_enable": {
+    "label": "Enable C-CDA Service",
+    "type": "select",
+    "options": [
+     "Off",
+     "Care Coordination Only",
+     "Portal Only",
+     "Both"
+    ],
+    "default": "0",
+    "description": "Enable C-CDA Service",
+    "line": 3608
+   },
+   "phimail_enable": {
+    "label": "Enable phiMail Direct Messaging Service",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable phiMail Direct Messaging Service",
+    "line": 3620
+   },
+   "phimail_testmode_disabled": {
+    "label": "Disable phiMail Test Mode",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "When you are ready to run phiMail in production mode. Turn on this flag.",
+    "line": 3626
+   },
+   "phimail_verifyrecipientreceived_enable": {
+    "label": "phiMail default force message receipt confirmation to on",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Marks a message as successful only if recipient confirms they received the message.  This can fail messages that otherwise would have been received if the recipient's system does not support confirmation receipt",
+    "line": 3632
+   },
+   "phimail_server_address": {
+    "label": "phiMail Server Address",
+    "type": "text",
+    "options": null,
+    "default": "https://phimail.example.com:32541",
+    "description": "Contact EMR Direct to subscribe to the phiMail Direct messaging service",
+    "line": 3639
+   },
+   "phimail_username": {
+    "label": "phiMail Username",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Contact EMR Direct to subscribe to the phiMail Direct messaging service",
+    "line": 3646
+   },
+   "phimail_password": {
+    "label": "phiMail Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Contact EMR Direct to subscribe to the phiMail Direct messaging service",
+    "line": 3653
+   },
+   "phimail_notify": {
+    "label": "phiMail notification user",
+    "type": "text",
+    "options": null,
+    "default": "admin",
+    "description": "This user will receive notification of new incoming Direct messages",
+    "line": 3660
+   },
+   "phimail_interval": {
+    "label": "phiMail Message Check Interval (minutes)",
+    "type": "num",
+    "options": null,
+    "default": "5",
+    "description": "Interval between message checks (set to zero for manual checks only)",
+    "line": 3667
+   },
+   "phimail_ccd_enable": {
+    "label": "phiMail Allow CCD Send",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "phiMail Allow CCD Send",
+    "line": 3674
+   },
+   "phimail_ccr_enable": {
+    "label": "phiMail Allow CCR Send",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "phiMail Allow CCR Send",
+    "line": 3681
+   },
+   "easipro_enable": {
+    "label": "Enable Easipro",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable Easipro. For licensing options for this feature, please contact api@assessmentcenter.net",
+    "line": 3688
+   },
+   "easipro_server": {
+    "label": "Easipro Server",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Easipro Server",
+    "line": 3695
+   },
+   "easipro_name": {
+    "label": "Easipro Server Username",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "Easipro Server Username",
+    "line": 3702
+   },
+   "easipro_pass": {
+    "label": "Easipro Server Password",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Easipro Server Password",
+    "line": 3709
+   },
+   "usps_apiv3_client_id": {
+    "label": "USPS API Client ID",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Client ID for USPS API v3",
+    "line": 3716
+   },
+   "usps_apiv3_client_secret": {
+    "label": "USPS API Client Secret",
+    "type": "encrypted",
+    "options": null,
+    "default": "",
+    "description": "Client Secret for USPS API v3",
+    "line": 3723
+   },
+   "ccda_validation_disable": {
+    "label": "Disable All import CDA Validation Reporting",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Disable All CDA conformance and validation services to improve import performance",
+    "line": 3730
+   },
+   "mdht_conformance_server_enable": {
+    "label": "Use MDHT External Validation Service",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable CCDA conformance and validation API service",
+    "line": 3737
+   },
+   "mdht_conformance_server": {
+    "label": "CCDA MDHT Validation API Server Address",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "CCDA conformance and validation API service URL. For testing (using ONLY test data) you can default to http://ccda.healthit.gov which should not be used to transmit PHI. Production sites can deploy their own by following instructions here https://github.com/onc-healthit/reference-ccda-validator.",
+    "line": 3744
+   }
+  },
+  "Rx": {
+   "rx_enable_DEA": {
+    "label": "Rx Enable DEA #",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Rx Enable DEA #",
+    "line": 3753
+   },
+   "rx_show_DEA": {
+    "label": "Rx Show DEA #",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Rx Show DEA #",
+    "line": 3759
+   },
+   "rx_enable_NPI": {
+    "label": "Rx Enable NPI",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Rx Enable NPI",
+    "line": 3765
+   },
+   "rx_show_NPI": {
+    "label": "Rx Show NPI",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Rx Show NPI",
+    "line": 3771
+   },
+   "rx_enable_SLN": {
+    "label": "Rx Enable State Lic. #",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Rx Enable State Lic. #",
+    "line": 3777
+   },
+   "rx_show_SLN": {
+    "label": "Rx Show State Lic. #",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Rx Show State Lic. #",
+    "line": 3783
+   },
+   "rx_show_drug_drug": {
+    "label": "Rx NLM Drug-Drug",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Rx NLM Drug-Drug",
+    "line": 3789
+   },
+   "rx_paper_size": {
+    "label": "Rx Paper Size",
+    "type": "select",
+    "options": {
+     "LETTER": "Letter Paper Size",
+     "LEGAL": "Legal Paper Size",
+     "FOLIO": "Folio Paper Size",
+     "EXECUTIVE": "Executive Paper Size",
+     "4A0": "4A0 Paper Size",
+     "2A0": "2A0 Paper Size",
+     "A0": "A0 Paper Size",
+     "A1": "A1 Paper Size",
+     "A2": "A2 Paper Size",
+     "A3": "A3 Paper Size",
+     "A4": "A4 Paper Size",
+     "A5": "A5 Paper Size",
+     "A6": "A6 Paper Size",
+     "A7": "A7 Paper Size",
+     "A8": "A8 Paper Size",
+     "A9": "A9 Paper Size",
+     "A10": "A10 Paper Size",
+     "B0": "B0 Paper Size",
+     "B1": "B1 Paper Size",
+     "B2": "B2 Paper Size",
+     "B3": "B3 Paper Size",
+     "B4": "B4 Paper Size",
+     "B5": "B5 Paper Size",
+     "B6": "B6 Paper Size",
+     "B7": "B7 Paper Size",
+     "B8": "B8 Paper Size",
+     "B9": "B9 Paper Size",
+     "B10": "B10 Paper Size",
+     "C0": "C0 Paper Size",
+     "C1": "C1 Paper Size",
+     "C2": "C2 Paper Size",
+     "C3": "C3 Paper Size",
+     "C4": "C4 Paper Size",
+     "C5": "C5 Paper Size",
+     "C6": "C6 Paper Size",
+     "C7": "C7 Paper Size",
+     "C8": "C8 Paper Size",
+     "C9": "C9 Paper Size",
+     "C10": "C10 Paper Size",
+     "RA0": "RA0 Paper Size",
+     "RA1": "RA1 Paper Size",
+     "RA2": "RA2 Paper Size",
+     "RA3": "RA3 Paper Size",
+     "RA4": "RA4 Paper Size",
+     "SRA0": "SRA0 Paper Size",
+     "SRA1": "SRA1 Paper Size",
+     "SRA2": "SRA2 Paper Size",
+     "SRA3": "SRA3 Paper Size",
+     "SRA4": "SRA4 Paper Size"
+    },
+    "default": "LETTER",
+    "description": "Rx Paper Size",
+    "line": 3795
+   },
+   "rx_left_margin": {
+    "label": "Rx Left Margin (px)",
+    "type": "num",
+    "options": null,
+    "default": "30",
+    "description": "Rx Left Margin (px)",
+    "line": 3851
+   },
+   "rx_right_margin": {
+    "label": "Rx Right Margin (px)",
+    "type": "num",
+    "options": null,
+    "default": "30",
+    "description": "Rx Right Margin (px)",
+    "line": 3857
+   },
+   "rx_top_margin": {
+    "label": "Rx Top Margin (px)",
+    "type": "num",
+    "options": null,
+    "default": "72",
+    "description": "Rx Top Margin (px)",
+    "line": 3863
+   },
+   "rx_bottom_margin": {
+    "label": "Rx Bottom Margin (px)",
+    "type": "num",
+    "options": null,
+    "default": "30",
+    "description": "Rx Bottom Margin (px)",
+    "line": 3869
+   },
+   "rx_use_fax_template": {
+    "label": "Show button for download fax template",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Show button in the prescription list for download fax template",
+    "line": 3875
+   },
+   "rx_zend_html_template": {
+    "label": "Rx html print - zend module",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Use an html template from zend module",
+    "line": 3881
+   },
+   "rx_zend_html_action": {
+    "label": "Name of zend template for html print",
+    "type": "text",
+    "options": null,
+    "default": "default",
+    "description": "Name of zend template for html print, possible to add custom template in the PrescriptionTemplate module",
+    "line": 3887
+   },
+   "rx_zend_pdf_template": {
+    "label": "Rx pdf - zend template",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Use a pdf template from zend module",
+    "line": 3893
+   },
+   "rx_zend_pdf_action": {
+    "label": "Name of zend template for pdf export",
+    "type": "text",
+    "options": null,
+    "default": "default",
+    "description": "Name of zend template for pdf export, possible to add custom template in the PrescriptionTemplate module",
+    "line": 3899
+   },
+   "rx_send_email": {
+    "label": "Allow email sending of prescriptions",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Enable email option (available on prescriptions list screen) for emailing prescriptions",
+    "line": 3905
+   }
+  },
+  "PDF": {
+   "pdf_layout": {
+    "label": "Layout",
+    "type": "select",
+    "options": {
+     "P": "Portrait",
+     "L": "Landscape"
+    },
+    "default": "P",
+    "description": "Choose Layout Direction",
+    "line": 3913
+   },
+   "pdf_language": {
+    "label": "PDF Language",
+    "type": "select",
+    "options": {
+     "aa": "Afar",
+     "af": "Afrikaans",
+     "ak": "Akan",
+     "sq": "Albanian",
+     "am": "Amharic",
+     "ar": "Arabic",
+     "an": "Aragonese",
+     "hy": "Armenian",
+     "as": "Assamese",
+     "av": "Avaric",
+     "ae": "Avestan",
+     "ay": "Aymara",
+     "az": "Azerbaijani",
+     "bm": "Bambara",
+     "ba": "Bashkir",
+     "eu": "Basque",
+     "be": "Belarusian",
+     "bn": "Bengali- Bangla",
+     "bh": "Bihari",
+     "bi": "Bislama",
+     "bs": "Bosnian",
+     "br": "Breton",
+     "bg": "Bulgarian",
+     "my": "Burmese",
+     "ca": "Catalan- Valencian",
+     "ch": "Chamorro",
+     "ce": "Chechen",
+     "ny": "Chichewa- Chewa- Nyanja",
+     "zh": "Chinese",
+     "cv": "Chuvash",
+     "kw": "Cornish",
+     "co": "Corsican",
+     "cr": "Cree",
+     "hr": "Croatian",
+     "cs": "Czech",
+     "da": "Danish",
+     "dv": "Divehi- Dhivehi- Maldivian-",
+     "nl": "Dutch",
+     "dz": "Dzongkha",
+     "en": "English",
+     "eo": "Esperanto",
+     "et": "Estonian",
+     "ee": "Ewe",
+     "fo": "Faroese",
+     "fj": "Fijian",
+     "fi": "Finnish",
+     "fr": "French",
+     "ff": "Fula- Fulah- Pulaar- Pular",
+     "gl": "Galician",
+     "ka": "Georgian",
+     "de": "German",
+     "el": "Greek, Modern",
+     "gn": "Guarani",
+     "gu": "Gujarati",
+     "ht": "Haitian- Haitian Creole",
+     "ha": "Hausa",
+     "he": "Hebrew (modern)",
+     "hz": "Herero",
+     "hi": "Hindi",
+     "ho": "Hiri Motu",
+     "hu": "Hungarian",
+     "ia": "Interlingua",
+     "id": "Indonesian",
+     "ie": "Interlingue",
+     "ga": "Irish",
+     "ig": "Igbo",
+     "ik": "Inupiaq",
+     "io": "Ido",
+     "is": "Icelandic",
+     "it": "Italian",
+     "iu": "Inuktitut",
+     "ja": "Japanese",
+     "jv": "Javanese",
+     "kl": "Kalaallisut, Greenlandic",
+     "kn": "Kannada",
+     "kr": "Kanuri",
+     "ks": "Kashmiri",
+     "kk": "Kazakh",
+     "km": "Khmer",
+     "ki": "Kikuyu, Gikuyu",
+     "rw": "Kinyarwanda",
+     "ky": "Kyrgyz",
+     "kv": "Komi",
+     "kg": "Kongo",
+     "ko": "Korean",
+     "ku": "Kurdish",
+     "kj": "Kwanyama, Kuanyama",
+     "la": "Latin",
+     "lb": "Luxembourgish, Letzeburgesch",
+     "lg": "Ganda",
+     "li": "Limburgish, Limburgan, Limburger",
+     "ln": "Lingala",
+     "lo": "Lao",
+     "lt": "Lithuanian",
+     "lu": "Luba-Katanga",
+     "lv": "Latvian",
+     "gv": "Manx",
+     "mk": "Macedonian",
+     "mg": "Malagasy",
+     "ms": "Malay",
+     "ml": "Malayalam",
+     "mt": "Maltese",
+     "mi": "Maori",
+     "mr": "Marathi (Marathi)",
+     "mh": "Marshallese",
+     "mn": "Mongolian",
+     "na": "Nauru",
+     "nv": "Navajo, Navaho",
+     "nb": "Norwegian Bokmal",
+     "nd": "North Ndebele",
+     "ne": "Nepali",
+     "ng": "Ndonga",
+     "nn": "Norwegian Nynorsk",
+     "no": "Norwegian",
+     "ii": "Nuosu",
+     "nr": "South Ndebele",
+     "oc": "Occitan",
+     "oj": "Ojibwe, Ojibwa",
+     "cu": "Old Church Slavonic, Church Slavonic, Old Bulgarian",
+     "om": "Oromo",
+     "or": "Oriya",
+     "os": "Ossetian, Ossetic",
+     "pa": "Panjabi, Punjabi",
+     "pi": "Pali",
+     "fa": "Persian (Farsi)",
+     "pl": "Polish",
+     "ps": "Pashto, Pushto",
+     "pt": "Portuguese",
+     "qu": "Quechua",
+     "rm": "Romansh",
+     "rn": "Kirundi",
+     "ro": "Romanian",
+     "ru": "Russian",
+     "sa": "Sanskrit (Samskrta)",
+     "sc": "Sardinian",
+     "sd": "Sindhi",
+     "se": "Northern Sami",
+     "sm": "Samoan",
+     "sg": "Sango",
+     "sr": "Serbian",
+     "gd": "Scottish Gaelic- Gaelic",
+     "sn": "Shona",
+     "si": "Sinhala, Sinhalese",
+     "sk": "Slovak",
+     "sl": "Slovene",
+     "so": "Somali",
+     "st": "Southern Sotho",
+     "es": "Spanish- Castilian",
+     "su": "Sundanese",
+     "sw": "Swahili",
+     "ss": "Swati",
+     "sv": "Swedish",
+     "ta": "Tamil",
+     "te": "Telugu",
+     "tg": "Tajik",
+     "th": "Thai",
+     "ti": "Tigrinya",
+     "bo": "Tibetan Standard, Tibetan, Central",
+     "tk": "Turkmen",
+     "tl": "Tagalog",
+     "tn": "Tswana",
+     "to": "Tonga (Tonga Islands)",
+     "tr": "Turkish",
+     "ts": "Tsonga",
+     "tt": "Tatar",
+     "tw": "Twi",
+     "ty": "Tahitian",
+     "ug": "Uyghur, Uighur",
+     "uk": "Ukrainian",
+     "ur": "Urdu",
+     "uz": "Uzbek",
+     "ve": "Venda",
+     "vi": "Vietnamese",
+     "vo": "Volapuk",
+     "wa": "Walloon",
+     "cy": "Welsh",
+     "wo": "Wolof",
+     "fy": "Western Frisian",
+     "xh": "Xhosa",
+     "yi": "Yiddish",
+     "yo": "Yoruba",
+     "za": "Zhuang, Chuang",
+     "zu": "Zulu"
+    },
+    "default": "en",
+    "description": "Choose PDF language Preference",
+    "line": 3922
+   },
+   "pdf_size": {
+    "label": "Paper Size",
+    "type": "select",
+    "options": {
+     "LETTER": "Letter Paper Size",
+     "LEGAL": "Legal Paper Size",
+     "FOLIO": "Folio Paper Size",
+     "EXECUTIVE": "Executive Paper Size",
+     "4A0": "4A0 Paper Size",
+     "2A0": "2A0 Paper Size",
+     "A0": "A0 Paper Size",
+     "A1": "A1 Paper Size",
+     "A2": "A2 Paper Size",
+     "A3": "A3 Paper Size",
+     "A4": "A4 Paper Size",
+     "A5": "A5 Paper Size",
+     "A6": "A6 Paper Size",
+     "A7": "A7 Paper Size",
+     "A8": "A8 Paper Size",
+     "A9": "A9 Paper Size",
+     "A10": "A10 Paper Size",
+     "B0": "B0 Paper Size",
+     "B1": "B1 Paper Size",
+     "B2": "B2 Paper Size",
+     "B3": "B3 Paper Size",
+     "B4": "B4 Paper Size",
+     "B5": "B5 Paper Size",
+     "B6": "B6 Paper Size",
+     "B7": "B7 Paper Size",
+     "B8": "B8 Paper Size",
+     "B9": "B9 Paper Size",
+     "B10": "B10 Paper Size",
+     "C0": "C0 Paper Size",
+     "C1": "C1 Paper Size",
+     "C2": "C2 Paper Size",
+     "C3": "C3 Paper Size",
+     "C4": "C4 Paper Size",
+     "C5": "C5 Paper Size",
+     "C6": "C6 Paper Size",
+     "C7": "C7 Paper Size",
+     "C8": "C8 Paper Size",
+     "C9": "C9 Paper Size",
+     "C10": "C10 Paper Size",
+     "RA0": "RA0 Paper Size",
+     "RA1": "RA1 Paper Size",
+     "RA2": "RA2 Paper Size",
+     "RA3": "RA3 Paper Size",
+     "RA4": "RA4 Paper Size",
+     "SRA0": "SRA0 Paper Size",
+     "SRA1": "SRA1 Paper Size",
+     "SRA2": "SRA2 Paper Size",
+     "SRA3": "SRA3 Paper Size",
+     "SRA4": "SRA4 Paper Size"
+    },
+    "default": "LETTER",
+    "description": "Choose Paper Size",
+    "line": 4112
+   },
+   "pdf_font_size": {
+    "label": "PDF Font Size in Pt",
+    "type": "num",
+    "options": null,
+    "default": "10",
+    "description": "Sets the font size for most PDF text in pt",
+    "line": 4169
+   },
+   "pdf_left_margin": {
+    "label": "Left Margin (mm)",
+    "type": "num",
+    "options": null,
+    "default": "5",
+    "description": "Left Margin (mm)",
+    "line": 4176
+   },
+   "pdf_right_margin": {
+    "label": "Right Margin (mm)",
+    "type": "num",
+    "options": null,
+    "default": "5",
+    "description": "Right Margin (mm)",
+    "line": 4182
+   },
+   "pdf_top_margin": {
+    "label": "Top Margin (mm)",
+    "type": "num",
+    "options": null,
+    "default": "5",
+    "description": "Top Margin (mm)",
+    "line": 4188
+   },
+   "pdf_bottom_margin": {
+    "label": "Bottom Margin (px)",
+    "type": "num",
+    "options": null,
+    "default": "8",
+    "description": "Bottom Margin (px)",
+    "line": 4194
+   },
+   "pdf_output": {
+    "label": "Output Type",
+    "type": "select",
+    "options": {
+     "D": "Download",
+     "I": "Inline"
+    },
+    "default": "D",
+    "description": "Choose Download or Display Inline",
+    "line": 4200
+   },
+   "chart_label_type": {
+    "label": "Patient Label Type",
+    "type": "select",
+    "options": [
+     "None",
+     "5160",
+     "5161",
+     "5162"
+    ],
+    "default": "1",
+    "description": "Avery Label type for printing patient labels from popups in left nav screen",
+    "line": 4210
+   },
+   "barcode_label_type": {
+    "label": "Barcode Label Type",
+    "type": "select",
+    "options": [
+     "None",
+     "std25",
+     "int25",
+     "ean8",
+     "ean13",
+     "upc",
+     "code11",
+     "code39",
+     "code93",
+     "code128",
+     "codabar",
+     "msi",
+     "datamatrix"
+    ],
+    "default": "9",
+    "description": "Barcode type for printing barcode labels from popups in left nav screen.",
+    "line": 4222
+   },
+   "addr_label_type": {
+    "label": "Print Patient Address Label",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "Select to print patient address labels from popups in left nav screen.",
+    "line": 4243
+   },
+   "env_x_width": {
+    "label": "Envelope Width in mm",
+    "type": "num",
+    "options": null,
+    "default": "104.775",
+    "description": "In Portrait mode, determines the width of the envelope along the x-axis in mm",
+    "line": 4250
+   },
+   "env_y_height": {
+    "label": "Envelope Height in mm",
+    "type": "num",
+    "options": null,
+    "default": "241.3",
+    "description": "In Portrait mode, determines the height of the envelope along the y-axis in mm",
+    "line": 4257
+   },
+   "env_font_size": {
+    "label": "Envelope Font Size in Pt",
+    "type": "num",
+    "options": null,
+    "default": "14",
+    "description": "Sets the font of the address text on the envelope in mm",
+    "line": 4264
+   },
+   "env_x_dist": {
+    "label": "Envelope x-axis starting pt",
+    "type": "num",
+    "options": null,
+    "default": "65",
+    "description": "Distance from the 'top' of the envelope in mm",
+    "line": 4271
+   },
+   "env_y_dist": {
+    "label": "Envelope y-axis starting pt",
+    "type": "num",
+    "options": null,
+    "default": "220",
+    "description": "Distance from the right most edge of the envelope in portrait position in mm",
+    "line": 4278
+   }
+  },
+  "Patient Banner Bar": {
+   "patient_name_display": {
+    "label": "Patient Name Display",
+    "type": "select",
+    "options": {
+     "btn": "As Button",
+     "text": "As Text Link",
+     "text-large": "As Large Text Link"
+    },
+    "default": "text-large",
+    "description": "How to display the patient name",
+    "line": 4288
+   }
+  },
+  "Encounter Form": {
+   "default_chief_complaint": {
+    "label": "Default Reason for Visit",
+    "type": "text",
+    "options": null,
+    "default": "",
+    "description": "You may put text here as the default complaint in the New Patient Encounter form.",
+    "line": 4301
+   },
+   "default_visit_category": {
+    "label": "Default Visit Category",
+    "type": "default_visit_category",
+    "options": null,
+    "default": "_blank",
+    "description": "Define a default visit category",
+    "line": 4308
+   },
+   "enable_follow_up_encounters": {
+    "label": "Enable follow-up encounters",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Enable follow-up encounters feature",
+    "line": 4315
+   },
+   "gbl_visit_referral_source": {
+    "label": "Referral Source for Encounters",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "A referral source may be specified for each visit.",
+    "line": 4322
+   },
+   "gbl_visit_onset_date": {
+    "label": "Onset/Hosp Date for Encounters",
+    "type": "bool",
+    "options": null,
+    "default": "1",
+    "description": "An onset/hospitalization date may be specified for each visit.",
+    "line": 4329
+   },
+   "set_pos_code_encounter": {
+    "label": "Set POS code in Encounter",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This feature will allow the default POS facility code to be overridden from the encounter.",
+    "line": 4336
+   },
+   "set_service_facility_encounter": {
+    "label": "Set Service Facility in Encounter To First Care Team Facility",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "This feature will allow the default service facility to be selected by the care team facility in Choices.",
+    "line": 4343
+   },
+   "enc_service_date": {
+    "label": "Show Date of Service on Encounter Form",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "How to display the Date of Service on the Encounter form. Defaults to the current time on a new form",
+    "line": 4350
+   },
+   "enc_sensitivity_visibility": {
+    "label": "Show Sensitivity on Encounter Form",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "How to display the sensitivity option",
+    "line": 4357
+   },
+   "enc_in_collection": {
+    "label": "Show In Collection on Encounter Form",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "How to display the 'In Collection' option. May be overridden by Hide Billing Widget setting",
+    "line": 4364
+   },
+   "enc_enable_issues": {
+    "label": "Allow Linking/Adding Issues on Encounter",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "Allow issues to be linked or added to an encounter",
+    "line": 4371
+   },
+   "enc_enable_referring_provider": {
+    "label": "Show Referring Provider option on Encounters",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "Display the Referring Provider option on Encounters",
+    "line": 4378
+   },
+   "enc_enable_facility": {
+    "label": "Show Facility option on Encounters",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "Display the Referring Provider option on Encounters",
+    "line": 4385
+   },
+   "enc_enable_discharge_disposition": {
+    "label": "Show Discharge Disposition option on Encounters",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "Display the Discharge Disposition option on the Encounter form",
+    "line": 4392
+   },
+   "enc_enable_visit_category": {
+    "label": "Show Visit Category option on Encounters",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "Show Visit Category option on Encounters",
+    "line": 4399
+   },
+   "enc_enable_class": {
+    "label": "Show Encounter Class option on Encounters",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "Show Encounter Class option on Encounters",
+    "line": 4406
+   },
+   "enc_enable_type": {
+    "label": "Show Encounter Type option on Encounters",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::SHOW_ALL"
+    },
+    "description": "Show Encounter Type option on Encounters",
+    "line": 4413
+   },
+   "enc_enable_ordering_provider": {
+    "label": "Show Ordering Provider option on Encounters",
+    "type": {
+     "expr": "getDefaultRenderListOptions()"
+    },
+    "options": null,
+    "default": {
+     "expr": "RenderFormFieldHelper::HIDE_ALL"
+    },
+    "description": "Display the Ordering Provider option on Encounters",
+    "line": 4420
+   }
+  },
+  "Questionnaires": {
+   "questionnaire_display_LOINCnote": {
+    "label": "Display LOINC note on questionnaires",
+    "type": "select",
+    "options": [
+     "At the top of the page only",
+     "At the foot of the page only",
+     "At the top of the page and at the foot of the page",
+     "Do not display the note"
+    ],
+    "default": "0",
+    "description": "Configure where LOINC statement should be displayed",
+    "line": 4429
+   },
+   "questionnaire_display_style": {
+    "label": "Questionnaire Form Display Style",
+    "type": "select",
+    "options": {
+     "0": "OpenEMR Auto Select Dark/Light Themed Version",
+     "1": "LForms Project Maintained Light Version(Original)",
+     "3": "OpenEMR Light Theme Version Always",
+     "4": "OpenEMR Dark Theme Version Always"
+    },
+    "default": "0",
+    "description": "Choose OpenEMR auto select based on core theme styles(OpenEMR dark theme turns on Questionnaire dark, LForms project maintained light styles(Original) or default to always dark or light regardless of core themes.",
+    "line": 4441
+   },
+   "questionnaire_display_fullscreen": {
+    "label": "Turn off full screen display for Questionnaire Forms",
+    "type": "bool",
+    "options": null,
+    "default": "0",
+    "description": "Default form width of Questionnaire display.",
+    "line": 4453
+   }
+  }
+ },
+ "source": {
+  "tag": "v8_1_0",
+  "commit": "28dc4f9ba3",
+  "file": "library/globals.inc.php"
+ },
+ "enum_files": [
+  "src/Services/Globals/GlobalAppearanceEnum.php",
+  "src/Services/Globals/GlobalConnectorsEnum.php",
+  "src/Services/Globals/GlobalFeaturesEnum.php"
+ ]
+}

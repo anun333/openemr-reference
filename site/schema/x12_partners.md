@@ -1,0 +1,54 @@
+# `x12_partners`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no | `0` |  |  |
+| `name` | `varchar(255)` | yes | `NULL` |  |  |
+| `id_number` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_sender_id` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_receiver_id` | `varchar(255)` | yes | `NULL` |  |  |
+| `processing_format` | `enum('standard','medi-cal','cms','proxymed','oa_eligibility','availity_eligibility')` | yes | `NULL` |  |  |
+| `x12_isa01` | `varchar(2)` | no | `'00'` |  | User logon Required Indicator |
+| `x12_isa02` | `varchar(10)` | no | `'          '` |  | User Logon |
+| `x12_isa03` | `varchar(2)` | no | `'00'` |  | User password required Indicator |
+| `x12_isa04` | `varchar(10)` | no | `'          '` |  | User Password |
+| `x12_isa05` | `char(2)` | no | `'ZZ'` |  |  |
+| `x12_isa07` | `char(2)` | no | `'ZZ'` |  |  |
+| `x12_isa14` | `char(1)` | no | `'0'` |  |  |
+| `x12_isa15` | `char(1)` | no | `'P'` |  |  |
+| `x12_gs02` | `varchar(15)` | no | `''` |  |  |
+| `x12_per06` | `varchar(80)` | no | `''` |  |  |
+| `x12_dtp03` | `char(1)` | no | `'A'` |  |  |
+| `x12_gs03` | `varchar(15)` | yes | `NULL` |  |  |
+| `x12_submitter_id` | `smallint(6)` | yes | `NULL` |  |  |
+| `x12_submitter_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_sftp_login` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_sftp_pass` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_sftp_host` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_sftp_port` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_sftp_local_dir` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_sftp_remote_dir` | `varchar(255)` | yes | `NULL` |  |  |
+| `x12_token_endpoint` | `tinytext` | yes | `NULL` |  |  |
+| `x12_eligibility_endpoint` | `tinytext` | yes | `NULL` |  |  |
+| `x12_claim_status_endpoint` | `tinytext` | yes | `NULL` |  |  |
+| `x12_attachment_endpoint` | `tinytext` | yes | `NULL` |  |  |
+| `x12_client_id` | `tinytext` | yes | `NULL` |  |  |
+| `x12_client_secret` | `tinytext` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+
+## Changes since 7.0.0
+
+- **7.0.2:** added `x12_submitter_id` smallint(6); added `x12_token_endpoint` tinytext; added `x12_eligibility_endpoint` tinytext; added `x12_claim_status_endpoint` tinytext; added `x12_attachment_endpoint` tinytext; added `x12_client_id` tinytext; added `x12_client_secret` tinytext
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

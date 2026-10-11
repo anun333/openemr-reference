@@ -1,0 +1,33 @@
+# `audit_master`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `pid` | `bigint(20)` | no |  |  |  |
+| `user_id` | `bigint(20)` | no |  |  | The Id of the user who approves or denies |
+| `approval_status` | `tinyint(4)` | no |  |  | 1-Pending,2-Approved,3-Denied,4-Appointment directly updated to calendar table,5-Cancelled appointment |
+| `comments` | `text` | yes | `NULL` |  |  |
+| `created_time` | `timestamp` | no | `current_timestamp()` |  |  |
+| `modified_time` | `datetime` | no |  |  |  |
+| `ip_address` | `varchar(100)` | no |  |  |  |
+| `type` | `tinyint(4)` | no |  |  | 1-new patient,2-existing patient,3-change is only in the document,4-Patient upload,5-random key,10-Appointment |
+| `is_qrda_document` | `tinyint(1)` | yes | `0` |  |  |
+| `is_unstructured_document` | `tinyint(1)` | yes | `0` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** added `is_unstructured_document` tinyint(1)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

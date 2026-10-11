@@ -1,0 +1,35 @@
+# `email_queue`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `sender` | `varchar(255)` | yes | `''` |  |  |
+| `recipient` | `varchar(255)` | yes | `''` |  |  |
+| `subject` | `varchar(255)` | yes | `''` |  |  |
+| `body` | `text` | yes | `NULL` |  |  |
+| `datetime_queued` | `datetime` | yes | `NULL` |  |  |
+| `sent` | `tinyint(4)` | yes | `0` |  |  |
+| `datetime_sent` | `datetime` | yes | `NULL` |  |  |
+| `error` | `tinyint(4)` | yes | `0` |  |  |
+| `error_message` | `text` | yes | `NULL` |  |  |
+| `datetime_error` | `datetime` | yes | `NULL` |  |  |
+| `template_name` | `varchar(255)` | yes | `NULL` |  | The folder prefix and base filename (w/o extension) of the twig template file to use for this email |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `sent` |  | `sent` |
+
+## Changes since 7.0.0
+
+- **7.0.2:** table added
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

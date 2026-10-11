@@ -1,0 +1,33 @@
+# `form_soap`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | yes | `0` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(4)` | yes | `0` |  |  |
+| `activity` | `tinyint(4)` | yes | `0` |  |  |
+| `subjective` | `text` | yes | `NULL` |  |  |
+| `objective` | `text` | yes | `NULL` |  |  |
+| `assessment` | `text` | yes | `NULL` |  |  |
+| `plan` | `text` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

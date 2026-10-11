@@ -1,0 +1,38 @@
+# `document_templates`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(21) unsigned` | no |  | auto_increment |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `provider` | `int(11) unsigned` | yes | `NULL` |  |  |
+| `encounter` | `int(11) unsigned` | yes | `NULL` |  |  |
+| `modified_date` | `datetime` | no | `current_timestamp()` |  |  |
+| `profile` | `varchar(63)` | no |  |  |  |
+| `category` | `varchar(63)` | no |  |  |  |
+| `location` | `varchar(255)` | yes | `NULL` |  |  |
+| `template_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `status` | `varchar(31)` | yes | `NULL` |  |  |
+| `send_date` | `datetime` | no | `current_timestamp()` |  |  |
+| `end_date` | `datetime` | yes | `NULL` |  |  |
+| `size` | `int(11)` | no | `0` |  |  |
+| `template_content` | `mediumblob` | yes | `NULL` |  |  |
+| `mime` | `varchar(31)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `location` | yes | `pid`, `profile`, `category`, `template_name` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

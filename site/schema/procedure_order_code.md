@@ -1,0 +1,38 @@
+# `procedure_order_code`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `procedure_order_id` | `bigint(20)` | no |  |  | references procedure_order.procedure_order_id |
+| `procedure_order_seq` | `int(11)` | no |  |  | Supports multiple tests per order. Procedure_order_seq, incremented in code |
+| `procedure_code` | `varchar(64)` | no | `''` |  | like procedure_type.procedure_code |
+| `procedure_name` | `varchar(255)` | no | `''` |  | descriptive name of the procedure code |
+| `procedure_source` | `char(1)` | no | `'1'` |  | 1=original order, 2=added after order sent |
+| `diagnoses` | `text` | yes | `NULL` |  | diagnoses and maybe other coding (e.g. ICD9:111.11) |
+| `do_not_send` | `tinyint(1)` | no | `0` |  | 0 = normal, 1 = do not transmit to lab |
+| `procedure_order_title` | `varchar(255)` | yes | `NULL` |  |  |
+| `procedure_type` | `varchar(31)` | yes | `NULL` |  |  |
+| `transport` | `varchar(31)` | yes | `NULL` |  |  |
+| `date_end` | `datetime` | yes | `NULL` |  |  |
+| `reason_code` | `varchar(31)` | yes | `NULL` |  |  |
+| `reason_description` | `text` | yes | `NULL` |  |  |
+| `reason_date_low` | `datetime` | yes | `NULL` |  |  |
+| `reason_date_high` | `datetime` | yes | `NULL` |  |  |
+| `reason_status` | `varchar(31)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `procedure_order_id`, `procedure_order_seq` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

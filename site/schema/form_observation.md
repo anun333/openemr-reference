@@ -1,0 +1,59 @@
+# `form_observation`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  | UUID for the observation, used as unique logical identifier |
+| `form_id` | `bigint(20)` | no |  |  | FK to forms.form_id |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `encounter` | `varchar(255)` | yes | `NULL` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(4)` | yes | `NULL` |  |  |
+| `activity` | `tinyint(4)` | yes | `NULL` |  |  |
+| `code` | `varchar(255)` | yes | `NULL` |  |  |
+| `observation` | `varchar(255)` | yes | `NULL` |  |  |
+| `ob_value` | `varchar(255)` | yes | `NULL` |  |  |
+| `ob_unit` | `varchar(255)` | yes | `NULL` |  |  |
+| `description` | `varchar(255)` | yes | `NULL` |  |  |
+| `code_type` | `varchar(255)` | yes | `NULL` |  |  |
+| `table_code` | `varchar(255)` | yes | `NULL` |  |  |
+| `ob_code` | `varchar(64)` | yes | `NULL` |  |  |
+| `ob_type` | `varchar(64)` | yes | `NULL` |  |  |
+| `ob_status` | `varchar(32)` | yes | `NULL` |  |  |
+| `result_status` | `varchar(32)` | yes | `NULL` |  |  |
+| `ob_reason_status` | `varchar(32)` | yes | `NULL` |  |  |
+| `ob_reason_code` | `varchar(64)` | yes | `NULL` |  |  |
+| `ob_reason_text` | `text` | yes | `NULL` |  |  |
+| `ob_documentationof_table` | `varchar(255)` | yes | `NULL` |  |  |
+| `ob_documentationof_table_id` | `bigint(21)` | yes | `NULL` |  |  |
+| `date_end` | `datetime` | yes | `NULL` |  |  |
+| `parent_observation_id` | `bigint(20)` | yes | `NULL` |  | FK to parent observation for sub-observations |
+| `category` | `varchar(64)` | yes | `NULL` |  | FK to list_options.option_id for observation category (SDOH, Functional, Cognitive, Physical, etc) |
+| `questionnaire_response_id` | `bigint(21)` | yes | `NULL` |  | FK to questionnaire_response table |
+| `ob_value_code_description` | `varchar(255)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `idx_category` |  | `category` |
+| `idx_date` |  | `date` |
+| `idx_form_id` |  | `form_id` |
+| `idx_parent_observation` |  | `parent_observation_id` |
+| `idx_pid_encounter` |  | `pid`, `encounter` |
+| `idx_questionnaire_response` |  | `questionnaire_response_id` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** added `uuid` binary(16); added `form_id` bigint(20); added `parent_observation_id` bigint(20); added `category` varchar(64); added `questionnaire_response_id` bigint(21); added `ob_value_code_description` varchar(255); index `PRIMARY` added (id); index `idx_category` added (category); index `idx_date` added (date); index `idx_form_id` added (form_id); index `idx_parent_observation` added (parent_observation_id); index `idx_pid_encounter` added (pid, encounter); index `idx_questionnaire_response` added (questionnaire_response_id)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

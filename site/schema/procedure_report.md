@@ -1,0 +1,37 @@
+# `procedure_report`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `procedure_report_id` | `bigint(20)` | no |  | auto_increment |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  |  |
+| `procedure_order_id` | `bigint(20)` | yes | `NULL` |  | references procedure_order.procedure_order_id |
+| `procedure_order_seq` | `int(11)` | no | `1` |  | references procedure_order_code.procedure_order_seq |
+| `date_collected` | `datetime` | yes | `NULL` |  |  |
+| `date_collected_tz` | `varchar(5)` | yes | `''` |  | +-hhmm offset from UTC |
+| `date_report` | `datetime` | yes | `NULL` |  |  |
+| `date_report_tz` | `varchar(5)` | yes | `''` |  | +-hhmm offset from UTC |
+| `source` | `bigint(20)` | no | `0` |  | references users.id, who entered this data |
+| `specimen_num` | `varchar(63)` | no | `''` |  |  |
+| `report_status` | `varchar(31)` | no | `''` |  | received,complete,error |
+| `review_status` | `varchar(31)` | no | `'received'` |  | pending review status: received,reviewed |
+| `report_notes` | `text` | yes | `NULL` |  | notes from the lab |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `procedure_report_id` |
+| `procedure_order_id` |  | `procedure_order_id` |
+| `uuid` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

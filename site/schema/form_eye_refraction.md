@@ -1,0 +1,88 @@
+# `form_eye_refraction`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  |  | Links to forms.form_id |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `MRODSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODPRISM` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODBASE` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODADD` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSPRISM` | `varchar(50)` | yes | `NULL` |  |  |
+| `MROSBASE` | `varchar(50)` | yes | `NULL` |  |  |
+| `MROSADD` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODNEARSPHERE` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODNEARCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODNEARAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODPRISMNEAR` | `varchar(50)` | yes | `NULL` |  |  |
+| `MRODBASENEAR` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSNEARSHPERE` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSNEARCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSNEARAXIS` | `varchar(125)` | yes | `NULL` |  |  |
+| `MROSPRISMNEAR` | `varchar(50)` | yes | `NULL` |  |  |
+| `MROSBASENEAR` | `varchar(25)` | yes | `NULL` |  |  |
+| `CRODSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `CRODCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `CRODAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `CROSSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `CROSCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `CROSAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `CRCOMMENTS` | `varchar(255)` | yes | `NULL` |  |  |
+| `BALANCED` | `char(2)` | no |  |  |  |
+| `ARODSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `ARODCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `ARODAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `AROSSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `AROSCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `AROSAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `ARODADD` | `varchar(25)` | yes | `NULL` |  |  |
+| `AROSADD` | `varchar(25)` | yes | `NULL` |  |  |
+| `ARNEARODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `ARNEAROSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `ARODPRISM` | `varchar(50)` | yes | `NULL` |  |  |
+| `AROSPRISM` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLODSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLODCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLODAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLODBC` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLODDIAM` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSSPH` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSCYL` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSAXIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSBC` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSDIAM` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTL_COMMENTS` | `text` | yes | `NULL` |  |  |
+| `CTLMANUFACTUREROD` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLSUPPLIEROD` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLBRANDOD` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLMANUFACTUREROS` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLSUPPLIEROS` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLBRANDOS` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLODADD` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSADD` | `varchar(25)` | yes | `NULL` |  |  |
+| `NVOCHECKED` | `varchar(25)` | yes | `NULL` |  |  |
+| `ADDCHECKED` | `varchar(25)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `id_pid` | yes | `id`, `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

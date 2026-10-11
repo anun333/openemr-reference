@@ -1,0 +1,44 @@
+# `questionnaire_repository`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(21) unsigned` | no |  | auto_increment |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  |  |
+| `questionnaire_id` | `varchar(255)` | yes | `NULL` |  |  |
+| `provider` | `int(11) unsigned` | yes | `NULL` |  |  |
+| `version` | `int(11)` | no | `1` |  |  |
+| `created_date` | `datetime` | yes | `current_timestamp()` |  |  |
+| `modified_date` | `datetime` | yes | `current_timestamp()` |  |  |
+| `name` | `varchar(255)` | yes | `NULL` |  |  |
+| `type` | `varchar(63)` | no | `'Questionnaire'` |  |  |
+| `profile` | `varchar(255)` | yes | `NULL` |  |  |
+| `active` | `tinyint(1)` | no | `1` |  |  |
+| `status` | `varchar(31)` | yes | `NULL` |  |  |
+| `source_url` | `text` | yes | `NULL` |  |  |
+| `code` | `varchar(255)` | yes | `NULL` |  |  |
+| `code_display` | `text` | yes | `NULL` |  |  |
+| `questionnaire` | `longtext` | yes | `NULL` |  |  |
+| `lform` | `longtext` | yes | `NULL` |  |  |
+| `category` | `varchar(64)` | yes | `NULL` |  | Used for grouping and organizing  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `search` |  | `name`, `questionnaire_id` |
+| `uuid` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** table added
+- **7.0.4:** added `category` varchar(64)
+- **8.1.0:** `active` type tinyint(2) → tinyint(1)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,36 @@
+# `voids`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `void_id` | `bigint(20)` | no |  | auto_increment |  |
+| `patient_id` | `bigint(20)` | no |  |  | references patient_data.pid |
+| `encounter_id` | `bigint(20)` | no | `0` |  | references form_encounter.encounter |
+| `what_voided` | `varchar(31)` | no |  |  | checkout,receipt and maybe other options later |
+| `date_original` | `datetime` | yes | `NULL` |  | time of original action that is now voided |
+| `date_voided` | `datetime` | no |  |  | time of void action |
+| `user_id` | `bigint(20)` | no |  |  | references users.id |
+| `amount1` | `decimal(12,2)` | no | `0.00` |  | for checkout,receipt total voided adjustments |
+| `amount2` | `decimal(12,2)` | no | `0.00` |  | for checkout,receipt total voided payments |
+| `other_info` | `text` | yes | `NULL` |  | for checkout,receipt the old invoice refno |
+| `reason` | `varchar(31)` | yes | `''` |  |  |
+| `notes` | `varchar(255)` | yes | `''` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `void_id` |
+| `datevoided` |  | `date_voided` |
+| `pidenc` |  | `patient_id`, `encounter_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

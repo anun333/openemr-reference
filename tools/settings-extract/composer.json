@@ -1,0 +1,10 @@
+{
+    "name": "openemr-reference/settings-extract",
+    "description": "Reads OpenEMR's settings metadata (library/globals.inc.php) without running it",
+    "type": "project",
+    "license": "GPL-3.0-or-later",
+    "require": {
+        "php": ">=8.2",
+        "nikic/php-parser": "^5.4"
+    }
+}

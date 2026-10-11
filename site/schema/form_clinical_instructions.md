@@ -1,0 +1,29 @@
+# `form_clinical_instructions`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no |  | auto_increment |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `encounter` | `varchar(255)` | yes | `NULL` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `instruction` | `text` | yes | `NULL` |  |  |
+| `date` | `timestamp` | no | `current_timestamp()` | on update current_timestamp() |  |
+| `activity` | `tinyint(4)` | yes | `1` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

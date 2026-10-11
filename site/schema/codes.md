@@ -1,0 +1,40 @@
+# `codes`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no |  | auto_increment |  |
+| `code_text` | `text` | yes | `NULL` |  |  |
+| `code_text_short` | `text` | yes | `NULL` |  |  |
+| `code` | `varchar(25)` | no | `''` |  |  |
+| `code_type` | `smallint(6)` | yes | `NULL` |  |  |
+| `modifier` | `varchar(12)` | no | `''` |  |  |
+| `units` | `int(11)` | yes | `NULL` |  |  |
+| `fee` | `decimal(12,2)` | yes | `NULL` |  |  |
+| `superbill` | `varchar(31)` | no | `''` |  |  |
+| `related_code` | `varchar(255)` | no | `''` |  |  |
+| `taxrates` | `varchar(255)` | no | `''` |  |  |
+| `cyp_factor` | `float` | no | `0` |  | quantity representing a years supply |
+| `active` | `tinyint(1)` | yes | `1` |  | 0 = inactive, 1 = active |
+| `reportable` | `tinyint(1)` | yes | `0` |  | 0 = non-reportable, 1 = reportable |
+| `financial_reporting` | `tinyint(1)` | yes | `0` |  | 0 = negative, 1 = considered important code in financial reporting |
+| `revenue_code` | `varchar(6)` | no | `''` |  | Item revenue code |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `code` |  | `code` |
+| `code_type` |  | `code_type` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

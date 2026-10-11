@@ -1,0 +1,78 @@
+# `form_eye_mag_dispense`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `date` | `timestamp` | no | `current_timestamp()` |  |  |
+| `encounter` | `bigint(20)` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(4)` | yes | `NULL` |  |  |
+| `activity` | `tinyint(4)` | yes | `NULL` |  |  |
+| `REFDATE` | `datetime` | yes | `NULL` |  |  |
+| `REFTYPE` | `varchar(10)` | yes | `NULL` |  |  |
+| `RXTYPE` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODSPH` | `varchar(10)` | yes | `NULL` |  |  |
+| `ODCYL` | `varchar(10)` | yes | `NULL` |  |  |
+| `ODAXIS` | `varchar(10)` | yes | `NULL` |  |  |
+| `OSSPH` | `varchar(10)` | yes | `NULL` |  |  |
+| `OSCYL` | `varchar(10)` | yes | `NULL` |  |  |
+| `OSAXIS` | `varchar(10)` | yes | `NULL` |  |  |
+| `ODMIDADD` | `varchar(10)` | yes | `NULL` |  |  |
+| `OSMIDADD` | `varchar(10)` | yes | `NULL` |  |  |
+| `ODADD` | `varchar(10)` | yes | `NULL` |  |  |
+| `OSADD` | `varchar(10)` | yes | `NULL` |  |  |
+| `ODHPD` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODHBASE` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODVPD` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODVBASE` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODSLABOFF` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODVERTEXDIST` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSHPD` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSHBASE` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSVPD` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSVBASE` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSSLABOFF` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSVERTEXDIST` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODMPDD` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODMPDN` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSMPDD` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSMPDN` | `varchar(20)` | yes | `NULL` |  |  |
+| `BPDD` | `varchar(20)` | yes | `NULL` |  |  |
+| `BPDN` | `varchar(20)` | yes | `NULL` |  |  |
+| `LENS_MATERIAL` | `varchar(20)` | yes | `NULL` |  |  |
+| `LENS_TREATMENTS` | `varchar(100)` | yes | `NULL` |  |  |
+| `CTLMANUFACTUREROD` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLMANUFACTUREROS` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLSUPPLIEROD` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLSUPPLIEROS` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLBRANDOD` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLBRANDOS` | `varchar(50)` | yes | `NULL` |  |  |
+| `CTLODQUANTITY` | `varchar(255)` | yes | `NULL` |  |  |
+| `CTLOSQUANTITY` | `varchar(255)` | yes | `NULL` |  |  |
+| `ODDIAM` | `varchar(50)` | yes | `NULL` |  |  |
+| `ODBC` | `varchar(50)` | yes | `NULL` |  |  |
+| `OSDIAM` | `varchar(50)` | yes | `NULL` |  |  |
+| `OSBC` | `varchar(50)` | yes | `NULL` |  |  |
+| `RXCOMMENTS` | `text` | yes | `NULL` |  |  |
+| `COMMENTS` | `text` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `pid` | yes | `pid`, `encounter`, `id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

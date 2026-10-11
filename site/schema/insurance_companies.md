@@ -1,0 +1,38 @@
+# `insurance_companies`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no | `0` |  |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  |  |
+| `name` | `varchar(255)` | yes | `NULL` |  |  |
+| `attn` | `varchar(255)` | yes | `NULL` |  |  |
+| `cms_id` | `varchar(15)` | yes | `NULL` |  |  |
+| `ins_type_code` | `int(11)` | yes | `NULL` |  |  |
+| `x12_receiver_id` | `varchar(25)` | yes | `NULL` |  |  |
+| `x12_default_partner_id` | `int(11)` | yes | `NULL` |  |  |
+| `alt_cms_id` | `varchar(15)` | yes | `NULL` |  |  |
+| `inactive` | `tinyint(1)` | no | `0` |  |  |
+| `eligibility_id` | `varchar(32)` | yes | `NULL` |  |  |
+| `x12_default_eligibility_id` | `int(11)` | yes | `NULL` |  |  |
+| `cqm_sop` | `int(11)` | yes | `NULL` |  | HL7 Source of Payment for eCQMs |
+| `date_created` | `datetime` | no | `current_timestamp()` |  |  |
+| `last_updated` | `datetime` | no | `current_timestamp()` | on update current_timestamp() |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `uuid` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.3:** added `date_created` datetime; added `last_updated` datetime
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

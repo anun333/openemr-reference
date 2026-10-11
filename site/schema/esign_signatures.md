@@ -1,0 +1,33 @@
+# `esign_signatures`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no |  | auto_increment |  |
+| `tid` | `int(11)` | no |  |  | Table row ID for signature |
+| `table` | `varchar(255)` | no |  |  | table name for the signature |
+| `uid` | `int(11)` | no |  |  | user id for the signing user |
+| `datetime` | `datetime` | no |  |  | datetime of the signature action |
+| `is_lock` | `tinyint(1)` | no | `0` |  | sig, lock or amendment |
+| `amendment` | `text` | yes | `NULL` |  | amendment text, if any |
+| `hash` | `varchar(255)` | no |  |  | hash of signed data |
+| `signature_hash` | `varchar(255)` | no |  |  | hash of signature itself |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `table` |  | `table` |
+| `tid` |  | `tid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

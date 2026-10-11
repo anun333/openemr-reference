@@ -1,0 +1,33 @@
+# `amendments`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `amendment_id` | `int(11)` | no |  | auto_increment | Amendment ID |
+| `amendment_date` | `date` | no |  |  | Amendement request date |
+| `amendment_by` | `varchar(50)` | no |  |  | Amendment requested from |
+| `amendment_status` | `varchar(50)` | yes | `NULL` |  | Amendment status accepted/rejected/null |
+| `pid` | `bigint(20)` | no |  |  | Patient ID from patient_data |
+| `amendment_desc` | `text` | yes | `NULL` |  | Amendment Details |
+| `created_by` | `int(11)` | no |  |  | references users.id for session owner |
+| `modified_by` | `int(11)` | yes | `NULL` |  | references users.id for session owner |
+| `created_time` | `timestamp` | yes | `NULL` |  | created time |
+| `modified_time` | `timestamp` | yes | `NULL` |  | modified time |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `amendment_id` |
+| `amendment_pid` |  | `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

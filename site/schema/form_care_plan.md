@@ -1,0 +1,46 @@
+# `form_care_plan`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  |  |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `encounter` | `varchar(255)` | yes | `NULL` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(4)` | yes | `NULL` |  |  |
+| `activity` | `tinyint(4)` | yes | `NULL` |  |  |
+| `code` | `varchar(255)` | yes | `NULL` |  |  |
+| `codetext` | `text` | yes | `NULL` |  |  |
+| `description` | `text` | yes | `NULL` |  |  |
+| `external_id` | `varchar(30)` | yes | `NULL` |  |  |
+| `care_plan_type` | `varchar(30)` | yes | `NULL` |  |  |
+| `note_related_to` | `text` | yes | `NULL` |  |  |
+| `date_end` | `datetime` | yes | `NULL` |  |  |
+| `reason_code` | `varchar(31)` | yes | `NULL` |  |  |
+| `reason_description` | `text` | yes | `NULL` |  |  |
+| `reason_date_low` | `datetime` | yes | `NULL` |  | The date the reason was recorded |
+| `reason_date_high` | `datetime` | yes | `NULL` |  | The date the explanation reason for the care plan entry value ends |
+| `reason_status` | `varchar(31)` | yes | `NULL` |  |  |
+| `plan_status` | `varchar(32)` | yes | `NULL` |  | Care Plan status (e.g., draft, active, completed, etc) |
+| `proposed_date` | `datetime` | yes | `NULL` |  | Target or Achieve-by date for the goal |
+| `plan_engagement_category` | `varchar(100)` | yes | `''` |  | Expected engagement category with the patient based upon the care plan type |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `idx_status_date` |  | `plan_status`, `date`, `date_end` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** added `plan_status` varchar(32); added `proposed_date` datetime; index `idx_status_date` added (plan_status, date, date_end)
+- **8.4.0:** added `plan_engagement_category` varchar(100)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

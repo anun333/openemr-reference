@@ -1,0 +1,53 @@
+# `form_eye_acuity`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  |  | Links to forms.form_id |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `SCODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `SCOSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `PHODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `PHOSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `MROSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `SCNEARODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `SCNEAROSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRNEARODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `MRNEAROSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `GLAREODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `GLAREOSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `GLARECOMMENTS` | `varchar(255)` | yes | `NULL` |  |  |
+| `ARODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `AROSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `CRODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `CROSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLODVA1` | `varchar(25)` | yes | `NULL` |  |  |
+| `CTLOSVA1` | `varchar(25)` | yes | `NULL` |  |  |
+| `PAMODVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `PAMOSVA` | `varchar(25)` | yes | `NULL` |  |  |
+| `LIODVA` | `varchar(25)` | no |  |  |  |
+| `LIOSVA` | `varchar(25)` | no |  |  |  |
+| `WODVANEAR` | `varchar(25)` | yes | `NULL` |  |  |
+| `OSVANEARCC` | `varchar(25)` | yes | `NULL` |  |  |
+| `BINOCVA` | `varchar(25)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `id_pid` | yes | `id`, `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

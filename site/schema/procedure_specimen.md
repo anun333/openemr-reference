@@ -1,0 +1,51 @@
+# `procedure_specimen`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `procedure_specimen_id` | `bigint(20)` | no |  | auto_increment | record id |
+| `uuid` | `binary(16)` | yes | `NULL` |  | FHIR Specimen id |
+| `procedure_order_id` | `bigint(20)` | no |  |  | links to procedure_order.procedure_order_id |
+| `procedure_order_seq` | `int(11)` | no |  |  | links to procedure_order_code.procedure_order_seq (per test line) |
+| `specimen_identifier` | `varchar(128)` | yes | `NULL` |  | tube/barcode/internal id |
+| `accession_identifier` | `varchar(128)` | yes | `NULL` |  | lab accession number |
+| `specimen_type_code` | `varchar(64)` | yes | `NULL` |  | prefer SNOMED CT code |
+| `specimen_type` | `varchar(255)` | yes | `NULL` |  | display/text |
+| `collection_method_code` | `varchar(64)` | yes | `NULL` |  |  |
+| `collection_method` | `varchar(255)` | yes | `NULL` |  |  |
+| `specimen_location_code` | `varchar(64)` | yes | `NULL` |  |  |
+| `specimen_location` | `varchar(255)` | yes | `NULL` |  |  |
+| `collected_date` | `datetime` | yes | `NULL` |  | single instant |
+| `collection_date_low` | `datetime` | yes | `NULL` |  | period start |
+| `collection_date_high` | `datetime` | yes | `NULL` |  | period end |
+| `volume_value` | `decimal(10,3)` | yes | `NULL` |  |  |
+| `volume_unit` | `varchar(32)` | yes | `'mL'` |  |  |
+| `condition_code` | `varchar(32)` | yes | `NULL` |  | HL7 v2 0493 (e.g., ACT, HEM) |
+| `specimen_condition` | `varchar(64)` | yes | `NULL` |  |  |
+| `comments` | `text` | yes | `NULL` |  |  |
+| `created_at` | `datetime` | yes | `current_timestamp()` |  |  |
+| `updated_at` | `datetime` | yes | `current_timestamp()` | on update current_timestamp() |  |
+| `created_by` | `bigint(20)` | yes | `NULL` |  |  |
+| `updated_by` | `bigint(20)` | yes | `NULL` |  |  |
+| `deleted` | `tinyint(1)` | yes | `0` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `procedure_specimen_id` |
+| `idx_accession` |  | `accession_identifier` |
+| `idx_identifier` |  | `specimen_identifier` |
+| `idx_order_line` |  | `procedure_order_id`, `procedure_order_seq` |
+| `uuid_unique` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** table added
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,33 @@
+name: Update from OpenEMR releases
+
+# Checks OpenEMR for new release tags every day. When there is one, its facts are
+# extracted, checked and the site rebuilt, and the result is committed here.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch OpenEMR with its tags (no file contents until read)
+        run: git clone --filter=blob:none --no-checkout https://github.com/openemr/openemr.git "$RUNNER_TEMP/openemr"
+      - name: Install the settings parser
+        run: docker run --rm --user "$(id -u):$(id -g)" -e COMPOSER_HOME=/tmp/ch -v "$PWD/tools/settings-extract:/app" -w /app composer:2 install --no-interaction --no-progress
+      - name: Extract new releases, check, rebuild
+        env:
+          OPENEMR_REPO: ${{ runner.temp }}/openemr
+        run: python3 gen/run.py
+      - name: Commit if anything changed
+        run: |
+          git add data site
+          if git diff --cached --quiet; then echo "No new release."; exit 0; fi
+          git config user.name "openemr-reference bot"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Update from OpenEMR $(ls data | sort -V | tail -1)"
+          git push

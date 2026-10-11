@@ -1,0 +1,44 @@
+# `openemr_postcalendar_categories`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `pc_catid` | `int(11) unsigned` | no |  | auto_increment |  |
+| `pc_constant_id` | `varchar(255)` | yes | `NULL` |  |  |
+| `pc_catname` | `varchar(100)` | yes | `NULL` |  |  |
+| `pc_catcolor` | `varchar(50)` | yes | `NULL` |  |  |
+| `pc_catdesc` | `text` | yes | `NULL` |  |  |
+| `pc_recurrtype` | `int(1)` | no | `0` |  |  |
+| `pc_enddate` | `date` | yes | `NULL` |  |  |
+| `pc_recurrspec` | `text` | yes | `NULL` |  |  |
+| `pc_recurrfreq` | `int(3)` | no | `0` |  |  |
+| `pc_duration` | `bigint(20)` | no | `0` |  |  |
+| `pc_end_date_flag` | `tinyint(1)` | no | `0` |  |  |
+| `pc_end_date_type` | `int(2)` | yes | `NULL` |  |  |
+| `pc_end_date_freq` | `int(11)` | no | `0` |  |  |
+| `pc_end_all_day` | `tinyint(1)` | no | `0` |  |  |
+| `pc_dailylimit` | `int(2)` | no | `0` |  |  |
+| `pc_cattype` | `int(11)` | no |  |  | Used in grouping categories |
+| `pc_active` | `tinyint(1)` | no | `1` |  |  |
+| `pc_seq` | `int(11)` | no | `0` |  |  |
+| `aco_spec` | `varchar(63)` | no | `'encounters\|notes'` |  |  |
+| `pc_last_updated` | `datetime` | no | `current_timestamp()` | on update current_timestamp() |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `pc_catid` |
+| `basic_cat` |  | `pc_catname`, `pc_catcolor` |
+| `pc_constant_id` | yes | `pc_constant_id` |
+
+## Changes since 7.0.0
+
+- **7.0.3:** added `pc_last_updated` datetime
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

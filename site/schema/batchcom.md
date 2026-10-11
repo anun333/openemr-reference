@@ -1,0 +1,29 @@
+# `batchcom`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `patient_id` | `bigint(20)` | no | `0` |  |  |
+| `sent_by` | `bigint(20)` | no | `0` |  |  |
+| `msg_type` | `varchar(60)` | yes | `NULL` |  |  |
+| `msg_subject` | `varchar(255)` | yes | `NULL` |  |  |
+| `msg_text` | `mediumtext` | yes | `NULL` |  |  |
+| `msg_date_sent` | `datetime` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

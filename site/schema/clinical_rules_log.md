@@ -1,0 +1,33 @@
+# `clinical_rules_log`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | no | `0` |  |  |
+| `uid` | `bigint(20)` | no | `0` |  |  |
+| `category` | `varchar(255)` | no | `''` |  | An example category is clinical_reminder_widget |
+| `value` | `text` | yes | `NULL` |  |  |
+| `new_value` | `text` | yes | `NULL` |  |  |
+| `facility_id` | `int(11)` | yes | `0` |  | facility where the rule was executed, 0 if unknown |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `category` |  | `category` |
+| `pid` |  | `pid` |
+| `uid` |  | `uid` |
+
+## Changes since 7.0.0
+
+- **7.0.3:** added `facility_id` int(11)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,40 @@
+# `employer_data`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  | UUID for this employer record, for data exchange purposes |
+| `name` | `varchar(255)` | yes | `NULL` |  |  |
+| `street` | `varchar(255)` | yes | `NULL` |  |  |
+| `street_line_2` | `tinytext` | yes | `NULL` |  |  |
+| `postal_code` | `varchar(255)` | yes | `NULL` |  |  |
+| `city` | `varchar(255)` | yes | `NULL` |  |  |
+| `state` | `varchar(255)` | yes | `NULL` |  |  |
+| `country` | `varchar(255)` | yes | `NULL` |  |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | no | `0` |  |  |
+| `start_date` | `datetime` | yes | `NULL` |  | Employment start date for patient |
+| `end_date` | `datetime` | yes | `NULL` |  | Employment end date for patient |
+| `occupation` | `longtext` | yes | `NULL` |  | Employment Occupation fk to list_options.option_id where list_id=OccupationODH |
+| `industry` | `text` | yes | `NULL` |  | Employment Industry fk to list_options.option_id where list_id=IndustryODH |
+| `created_by` | `int(11)` | yes | `NULL` |  | fk to users.id for the user that entered in the employer data |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `pid` |  | `pid` |
+| `uuid_unique` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** added `uuid` binary(16); added `start_date` datetime; added `end_date` datetime; added `occupation` longtext; added `industry` text; added `created_by` int(11); index `uuid_unique` added (uuid)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,53 @@
+# `billing`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `code_type` | `varchar(15)` | yes | `NULL` |  |  |
+| `code` | `varchar(20)` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `provider_id` | `int(11)` | yes | `NULL` |  |  |
+| `user` | `int(11)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(1)` | yes | `NULL` |  |  |
+| `encounter` | `int(11)` | yes | `NULL` |  |  |
+| `code_text` | `longtext` | yes | `NULL` |  |  |
+| `billed` | `tinyint(1)` | yes | `NULL` |  |  |
+| `activity` | `tinyint(1)` | yes | `NULL` |  |  |
+| `payer_id` | `int(11)` | yes | `NULL` |  |  |
+| `bill_process` | `tinyint(2)` | no | `0` |  |  |
+| `bill_date` | `datetime` | yes | `NULL` |  |  |
+| `process_date` | `datetime` | yes | `NULL` |  |  |
+| `process_file` | `varchar(255)` | yes | `NULL` |  |  |
+| `modifier` | `varchar(12)` | yes | `NULL` |  |  |
+| `units` | `int(11)` | yes | `NULL` |  |  |
+| `fee` | `decimal(12,2)` | yes | `NULL` |  |  |
+| `justify` | `varchar(255)` | yes | `NULL` |  |  |
+| `target` | `varchar(30)` | yes | `NULL` |  |  |
+| `x12_partner_id` | `int(11)` | yes | `NULL` |  |  |
+| `ndc_info` | `varchar(255)` | yes | `NULL` |  |  |
+| `notecodes` | `varchar(25)` | no | `''` |  |  |
+| `external_id` | `varchar(20)` | yes | `NULL` |  |  |
+| `pricelevel` | `varchar(31)` | yes | `''` |  |  |
+| `revenue_code` | `varchar(6)` | no | `''` |  | Item revenue code |
+| `chargecat` | `varchar(31)` | yes | `''` |  | Charge category or customer |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `pid` |  | `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

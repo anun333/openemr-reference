@@ -1,0 +1,58 @@
+# `insurance_data`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  |  |
+| `type` | `enum('primary','secondary','tertiary')` | yes | `NULL` |  |  |
+| `provider` | `varchar(255)` | yes | `NULL` |  |  |
+| `plan_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `policy_number` | `varchar(255)` | yes | `NULL` |  |  |
+| `group_number` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_lname` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_mname` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_fname` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_relationship` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_ss` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_DOB` | `date` | yes | `NULL` |  |  |
+| `subscriber_street` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_postal_code` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_city` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_state` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_country` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_phone` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_employer` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_employer_street` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_employer_postal_code` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_employer_state` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_employer_country` | `varchar(255)` | yes | `NULL` |  |  |
+| `subscriber_employer_city` | `varchar(255)` | yes | `NULL` |  |  |
+| `copay` | `varchar(255)` | yes | `NULL` |  |  |
+| `date` | `date` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | no | `0` |  |  |
+| `subscriber_sex` | `varchar(25)` | yes | `NULL` |  |  |
+| `accept_assignment` | `varchar(5)` | no | `'TRUE'` |  |  |
+| `policy_type` | `varchar(25)` | no | `''` |  |  |
+| `subscriber_street_line_2` | `tinytext` | yes | `NULL` |  |  |
+| `subscriber_employer_street_line_2` | `tinytext` | yes | `NULL` |  |  |
+| `date_end` | `date` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `pid_type_date` | yes | `pid`, `type`, `date` |
+| `uuid` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** added `date_end` date
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

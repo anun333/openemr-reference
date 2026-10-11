@@ -1,0 +1,45 @@
+# `onsite_mail`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `owner` | `varchar(128)` | yes | `NULL` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `activity` | `tinyint(4)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(4)` | yes | `NULL` |  |  |
+| `header` | `varchar(255)` | yes | `NULL` |  |  |
+| `title` | `varchar(255)` | yes | `NULL` |  |  |
+| `body` | `longtext` | yes | `NULL` |  |  |
+| `recipient_id` | `varchar(128)` | yes | `NULL` |  |  |
+| `recipient_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `sender_id` | `varchar(128)` | yes | `NULL` |  |  |
+| `sender_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `assigned_to` | `varchar(255)` | yes | `NULL` |  |  |
+| `deleted` | `tinyint(4)` | yes | `0` |  | flag indicates note is deleted |
+| `delete_date` | `datetime` | yes | `NULL` |  |  |
+| `mtype` | `varchar(128)` | yes | `NULL` |  |  |
+| `message_status` | `varchar(20)` | no | `'New'` |  |  |
+| `mail_chain` | `int(11)` | yes | `NULL` |  |  |
+| `reply_mail_chain` | `int(11)` | yes | `NULL` |  |  |
+| `is_msg_encrypted` | `tinyint(2)` | yes | `0` |  | Whether messsage encrypted 0-Not encrypted, 1-Encrypted |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `pid` |  | `owner` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

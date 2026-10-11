@@ -1,0 +1,29 @@
+# `rule_target`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `varchar(31)` | no | `''` |  | Maps to the id column in the clinical_rules table |
+| `group_id` | `bigint(20)` | no | `1` |  | Contains group id to identify collection of targets in a rule |
+| `include_flag` | `tinyint(1)` | no | `0` |  | 0 is exclude and 1 is include |
+| `required_flag` | `tinyint(1)` | no | `0` |  | 0 is required and 1 is optional |
+| `method` | `varchar(31)` | no | `''` |  | Maps to list_options list rule_targets |
+| `value` | `varchar(255)` | no | `''` |  | Data is dependent on the method |
+| `interval` | `bigint(20)` | no | `0` |  | Only used in interval entries |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `id` |  | `id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

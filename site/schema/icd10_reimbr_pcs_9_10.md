@@ -1,0 +1,33 @@
+# `icd10_reimbr_pcs_9_10`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `map_id` | `bigint(20) unsigned` | no |  | auto_increment |  |
+| `code` | `varchar(8)` | yes | `NULL` |  |  |
+| `code_cnt` | `tinyint(4)` | yes | `NULL` |  |  |
+| `ICD9_01` | `varchar(5)` | yes | `NULL` |  |  |
+| `ICD9_02` | `varchar(5)` | yes | `NULL` |  |  |
+| `ICD9_03` | `varchar(5)` | yes | `NULL` |  |  |
+| `ICD9_04` | `varchar(5)` | yes | `NULL` |  |  |
+| `ICD9_05` | `varchar(5)` | yes | `NULL` |  |  |
+| `ICD9_06` | `varchar(5)` | yes | `NULL` |  |  |
+| `active` | `tinyint(4)` | yes | `0` |  |  |
+| `revision` | `int(11)` | yes | `0` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `map_id` | yes | `map_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

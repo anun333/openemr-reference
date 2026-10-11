@@ -1,0 +1,38 @@
+# `documents_legal_master`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB. List of Master Docs to be signed
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `dlm_category` | `int(10) unsigned` | yes | `NULL` |  |  |
+| `dlm_subcategory` | `int(10) unsigned` | yes | `NULL` |  |  |
+| `dlm_document_id` | `int(10) unsigned` | no |  | auto_increment |  |
+| `dlm_document_name` | `varchar(75)` | no |  |  |  |
+| `dlm_filepath` | `varchar(75)` | no |  |  |  |
+| `dlm_facility` | `int(10) unsigned` | yes | `NULL` |  |  |
+| `dlm_provider` | `int(10) unsigned` | yes | `NULL` |  |  |
+| `dlm_sign_height` | `double` | no |  |  |  |
+| `dlm_sign_width` | `double` | no |  |  |  |
+| `dlm_filename` | `varchar(45)` | no |  |  |  |
+| `dlm_effective_date` | `datetime` | no |  |  |  |
+| `dlm_version` | `int(10) unsigned` | no |  |  |  |
+| `content` | `varchar(255)` | no |  |  |  |
+| `dlm_savedsign` | `varchar(255)` | yes | `NULL` |  | 0-Yes 1-No |
+| `dlm_review` | `varchar(255)` | yes | `NULL` |  | 0-Yes 1-No |
+| `dlm_upload_type` | `tinyint(4)` | yes | `0` |  | 0-Provider Uploaded,1-Patient Uploaded |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `dlm_document_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

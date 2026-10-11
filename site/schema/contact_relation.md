@@ -1,0 +1,43 @@
+# `contact_relation`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `contact_id` | `bigint(20)` | no |  |  |  |
+| `target_table` | `varchar(255)` | no | `''` |  |  |
+| `target_id` | `bigint(20)` | no |  |  |  |
+| `active` | `tinyint(1)` | yes | `1` |  |  |
+| `role` | `varchar(63)` | yes | `NULL` |  |  |
+| `relationship` | `varchar(63)` | yes | `NULL` |  |  |
+| `contact_priority` | `int(11)` | yes | `1` |  | 1=highest priority |
+| `is_primary_contact` | `tinyint(1)` | yes | `0` |  |  |
+| `is_emergency_contact` | `tinyint(1)` | yes | `0` |  |  |
+| `can_make_medical_decisions` | `tinyint(1)` | yes | `0` |  |  |
+| `can_receive_medical_info` | `tinyint(1)` | yes | `0` |  |  |
+| `start_date` | `datetime` | yes | `NULL` |  |  |
+| `end_date` | `datetime` | yes | `NULL` |  |  |
+| `notes` | `text` | yes | `NULL` |  |  |
+| `created_date` | `datetime` | no | `current_timestamp()` |  |  |
+| `created_by` | `bigint(20)` | yes | `NULL` |  | users.id |
+| `updated_date` | `datetime` | yes | `current_timestamp()` | on update current_timestamp() |  |
+| `updated_by` | `bigint(20)` | yes | `NULL` |  | users.id |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `contact_id` |  | `contact_id` |
+| `idx_contact_target_table` |  | `target_table`, `target_id` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** table added
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,39 @@
+# `onetime_auth`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no |  | auto_increment |  |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `create_user_id` | `bigint(20)` | yes | `NULL` |  |  |
+| `context` | `varchar(64)` | yes | `NULL` |  |  |
+| `access_count` | `int(11)` | no | `0` |  |  |
+| `remote_ip` | `varchar(32)` | yes | `NULL` |  |  |
+| `onetime_pin` | `varchar(10)` | yes | `NULL` |  | Max 10 numeric. Default 6 |
+| `onetime_token` | `tinytext` | yes | `NULL` |  |  |
+| `redirect_url` | `tinytext` | yes | `NULL` |  |  |
+| `expires` | `int(11)` | yes | `NULL` |  |  |
+| `date_created` | `datetime` | yes | `current_timestamp()` |  |  |
+| `last_accessed` | `datetime` | yes | `NULL` |  |  |
+| `scope` | `tinytext` | yes | `NULL` |  | context scope for this token |
+| `profile` | `tinytext` | yes | `NULL` |  | profile of scope for this token |
+| `onetime_actions` | `text` | yes | `NULL` |  | JSON array of actions that can be performed with this token |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `pid` |  | `pid`, `onetime_token(32)` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** table added
+- **7.0.3:** added `scope` tinytext; added `profile` tinytext; added `onetime_actions` text
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

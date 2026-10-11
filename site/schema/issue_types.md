@@ -1,0 +1,32 @@
+# `issue_types`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `active` | `tinyint(1)` | no | `1` |  |  |
+| `category` | `varchar(75)` | no | `''` |  |  |
+| `type` | `varchar(75)` | no | `''` |  |  |
+| `plural` | `varchar(75)` | no | `''` |  |  |
+| `singular` | `varchar(75)` | no | `''` |  |  |
+| `abbreviation` | `varchar(75)` | no | `''` |  |  |
+| `style` | `smallint(6)` | no | `0` |  |  |
+| `force_show` | `smallint(6)` | no | `0` |  |  |
+| `ordering` | `int(11)` | no | `0` |  |  |
+| `aco_spec` | `varchar(63)` | no | `'patients\|med'` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `category`, `type` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

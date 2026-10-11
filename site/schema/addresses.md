@@ -1,0 +1,33 @@
+# `addresses`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no | `0` |  |  |
+| `line1` | `varchar(255)` | yes | `NULL` |  |  |
+| `line2` | `varchar(255)` | yes | `NULL` |  |  |
+| `city` | `varchar(255)` | yes | `NULL` |  |  |
+| `state` | `varchar(35)` | yes | `NULL` |  |  |
+| `zip` | `varchar(10)` | yes | `NULL` |  |  |
+| `plus_four` | `varchar(4)` | yes | `NULL` |  |  |
+| `country` | `varchar(255)` | yes | `NULL` |  |  |
+| `foreign_id` | `int(11)` | yes | `NULL` |  |  |
+| `district` | `varchar(255)` | yes | `NULL` |  | The county or district of the address |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `foreign_id` |  | `foreign_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

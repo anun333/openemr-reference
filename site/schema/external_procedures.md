@@ -1,0 +1,32 @@
+# `external_procedures`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `ep_id` | `int(11)` | no |  | auto_increment |  |
+| `ep_date` | `date` | yes | `NULL` |  |  |
+| `ep_code_type` | `varchar(20)` | yes | `NULL` |  |  |
+| `ep_code` | `varchar(9)` | yes | `NULL` |  |  |
+| `ep_pid` | `int(11)` | yes | `NULL` |  |  |
+| `ep_encounter` | `int(11)` | yes | `NULL` |  |  |
+| `ep_code_text` | `longtext` | yes | `NULL` |  |  |
+| `ep_facility_id` | `varchar(255)` | yes | `NULL` |  |  |
+| `ep_external_id` | `varchar(255)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `ep_id` |
+| `ep_pid` |  | `ep_pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

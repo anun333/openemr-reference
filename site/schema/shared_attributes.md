@@ -1,0 +1,28 @@
+# `shared_attributes`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `pid` | `bigint(20)` | no |  |  |  |
+| `encounter` | `bigint(20)` | no |  |  | 0 if patient attribute, else encounter attribute |
+| `field_id` | `varchar(31)` | no |  |  | references layout_options.field_id |
+| `last_update` | `datetime` | no |  |  | time of last update |
+| `user_id` | `bigint(20)` | no |  |  | user who last updated |
+| `field_value` | `text` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `pid`, `encounter`, `field_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

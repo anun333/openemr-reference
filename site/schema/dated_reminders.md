@@ -1,0 +1,33 @@
+# `dated_reminders`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `dr_id` | `int(11)` | no |  | auto_increment |  |
+| `dr_from_ID` | `int(11)` | no |  |  |  |
+| `dr_message_text` | `varchar(160)` | no |  |  |  |
+| `dr_message_sent_date` | `datetime` | no |  |  |  |
+| `dr_message_due_date` | `date` | no |  |  |  |
+| `pid` | `bigint(20)` | no |  |  |  |
+| `message_priority` | `tinyint(1)` | no |  |  |  |
+| `message_processed` | `tinyint(1)` | no | `0` |  |  |
+| `processed_date` | `timestamp` | yes | `NULL` |  |  |
+| `dr_processed_by` | `int(11)` | no |  |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `dr_id` |
+| `dr_from_ID` |  | `dr_from_ID`, `dr_message_due_date` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

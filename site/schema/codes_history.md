@@ -1,0 +1,36 @@
+# `codes_history`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `log_id` | `bigint(20)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `code` | `varchar(25)` | yes | `NULL` |  |  |
+| `modifier` | `varchar(12)` | yes | `NULL` |  |  |
+| `active` | `tinyint(1)` | yes | `NULL` |  |  |
+| `diagnosis_reporting` | `tinyint(1)` | yes | `NULL` |  |  |
+| `financial_reporting` | `tinyint(1)` | yes | `NULL` |  |  |
+| `category` | `varchar(255)` | yes | `NULL` |  |  |
+| `code_type_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `code_text` | `text` | yes | `NULL` |  |  |
+| `code_text_short` | `text` | yes | `NULL` |  |  |
+| `prices` | `text` | yes | `NULL` |  |  |
+| `action_type` | `varchar(25)` | yes | `NULL` |  |  |
+| `update_by` | `varchar(255)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `log_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,53 @@
+# `form_eye_external`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  |  | Links to forms.form_id |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `RUL` | `text` | yes | `NULL` |  |  |
+| `LUL` | `text` | yes | `NULL` |  |  |
+| `RLL` | `text` | yes | `NULL` |  |  |
+| `LLL` | `text` | yes | `NULL` |  |  |
+| `RBROW` | `text` | yes | `NULL` |  |  |
+| `LBROW` | `text` | yes | `NULL` |  |  |
+| `RMCT` | `text` | yes | `NULL` |  |  |
+| `LMCT` | `text` | yes | `NULL` |  |  |
+| `RADNEXA` | `text` | yes | `NULL` |  |  |
+| `LADNEXA` | `text` | yes | `NULL` |  |  |
+| `RMRD` | `varchar(25)` | yes | `NULL` |  |  |
+| `LMRD` | `varchar(25)` | yes | `NULL` |  |  |
+| `RLF` | `varchar(25)` | yes | `NULL` |  |  |
+| `LLF` | `varchar(25)` | yes | `NULL` |  |  |
+| `RVFISSURE` | `varchar(25)` | yes | `NULL` |  |  |
+| `LVFISSURE` | `varchar(25)` | yes | `NULL` |  |  |
+| `ODHERTEL` | `varchar(25)` | yes | `NULL` |  |  |
+| `OSHERTEL` | `varchar(25)` | yes | `NULL` |  |  |
+| `HERTELBASE` | `varchar(25)` | yes | `NULL` |  |  |
+| `RCAROTID` | `text` | yes | `NULL` |  |  |
+| `LCAROTID` | `text` | yes | `NULL` |  |  |
+| `RTEMPART` | `text` | yes | `NULL` |  |  |
+| `LTEMPART` | `text` | yes | `NULL` |  |  |
+| `RCNV` | `text` | yes | `NULL` |  |  |
+| `LCNV` | `text` | yes | `NULL` |  |  |
+| `RCNVII` | `text` | yes | `NULL` |  |  |
+| `LCNVII` | `text` | yes | `NULL` |  |  |
+| `EXT_COMMENTS` | `text` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `id_pid` | yes | `id`, `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

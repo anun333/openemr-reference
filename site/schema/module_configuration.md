@@ -1,0 +1,31 @@
+# `module_configuration`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `module_config_id` | `int(10) unsigned` | no |  | auto_increment |  |
+| `module_id` | `int(10) unsigned` | no |  |  |  |
+| `field_name` | `varchar(45)` | no |  |  |  |
+| `field_value` | `varchar(255)` | no |  |  |  |
+| `created_by` | `bigint(20)` | yes | `NULL` |  | users.id the user that first created this record |
+| `date_added` | `datetime` | yes | `NULL` |  | Datetime the record was initially created |
+| `updated_by` | `bigint(20)` | yes | `NULL` |  | users.id the user that last modified this record |
+| `date_modified` | `datetime` | yes | `current_timestamp()` |  | Datetime the record was last modified |
+| `date_created` | `datetime` | yes | `NULL` |  | Datetime the record was created |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `module_config_id` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** added `date_created` datetime
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

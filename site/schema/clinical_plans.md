@@ -1,0 +1,29 @@
+# `clinical_plans`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `varchar(31)` | no | `''` |  | Unique and maps to list_options list clinical_plans |
+| `pid` | `bigint(20)` | no | `0` |  | 0 is default for all patients, while > 0 is id from patient_data table |
+| `normal_flag` | `tinyint(1)` | yes | `NULL` |  | Normal Activation Flag |
+| `cqm_flag` | `tinyint(1)` | yes | `NULL` |  | Clinical Quality Measure flag (unable to customize per patient) |
+| `cqm_2011_flag` | `tinyint(1)` | yes | `NULL` |  | 2011 Clinical Quality Measure flag (unable to customize per patient) |
+| `cqm_2014_flag` | `tinyint(1)` | yes | `NULL` |  | 2014 Clinical Quality Measure flag (unable to customize per patient) |
+| `cqm_measure_group` | `varchar(10)` | no | `''` |  | Clinical Quality Measure Group Identifier |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id`, `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,27 @@
+# `onsite_online`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `hash` | `varchar(32)` | no |  |  |  |
+| `ip` | `varchar(15)` | no |  |  |  |
+| `last_update` | `datetime` | no |  |  |  |
+| `username` | `varchar(64)` | no |  |  |  |
+| `userid` | `int(11) unsigned` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `hash` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

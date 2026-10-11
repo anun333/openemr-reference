@@ -1,0 +1,35 @@
+# `form_taskman`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `ID` | `bigint(20)` | no |  | auto_increment |  |
+| `REQ_DATE` | `datetime` | no |  |  |  |
+| `FROM_ID` | `bigint(20)` | no |  |  |  |
+| `TO_ID` | `bigint(20)` | no |  |  |  |
+| `PATIENT_ID` | `bigint(20)` | no |  |  |  |
+| `DOC_TYPE` | `varchar(20)` | yes | `NULL` |  |  |
+| `DOC_ID` | `bigint(20)` | yes | `NULL` |  |  |
+| `ENC_ID` | `bigint(20)` | yes | `NULL` |  |  |
+| `METHOD` | `varchar(20)` | no |  |  |  |
+| `COMPLETED` | `varchar(1)` | yes | `NULL` |  | 1 = completed |
+| `COMPLETED_DATE` | `datetime` | yes | `NULL` |  |  |
+| `COMMENT` | `varchar(50)` | yes | `NULL` |  |  |
+| `USERFIELD_1` | `varchar(50)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `ID` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

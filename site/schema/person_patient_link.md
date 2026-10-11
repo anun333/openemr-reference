@@ -1,0 +1,36 @@
+# `person_patient_link`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB. Links person records to patient_data records when person becomes patient
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `person_id` | `bigint(20)` | no |  |  | FK to person.id |
+| `patient_id` | `bigint(20)` | no |  |  | FK to patient_data.id |
+| `linked_date` | `datetime` | no | `current_timestamp()` |  | When the link was created |
+| `linked_by` | `bigint(20)` | yes | `NULL` |  | FK to users.id - who created the link |
+| `link_method` | `varchar(50)` | yes | `'manual'` |  | How link was created: manual, auto_detected, migrated, import |
+| `notes` | `text` | yes | `NULL` |  | Optional notes about why/how they were linked |
+| `active` | `tinyint(1)` | no | `1` |  | Whether link is active (allows soft delete) |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `idx_ppl_active` |  | `active` |
+| `idx_ppl_linked_date` |  | `linked_date` |
+| `idx_ppl_method` |  | `link_method` |
+| `idx_ppl_patient` |  | `patient_id` |
+| `idx_ppl_person` |  | `person_id` |
+| `unique_active_link` | yes | `person_id`, `patient_id`, `active` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** table added
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

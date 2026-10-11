@@ -1,0 +1,44 @@
+# `questionnaire_response`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(21)` | no |  | auto_increment |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  |  |
+| `response_id` | `varchar(255)` | yes | `NULL` |  | A globally unique id for answer set. String version of UUID |
+| `questionnaire_foreign_id` | `bigint(21)` | yes | `NULL` |  | questionnaire_repository id for subject questionnaire |
+| `questionnaire_id` | `varchar(255)` | yes | `NULL` |  | Id for questionnaire content. String version of UUID |
+| `questionnaire_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `patient_id` | `int(11)` | yes | `NULL` |  |  |
+| `encounter` | `int(11)` | yes | `NULL` |  | May or may not be associated with an encounter |
+| `audit_user_id` | `int(11)` | yes | `NULL` |  |  |
+| `creator_user_id` | `int(11)` | yes | `NULL` |  | user id if answers are provider |
+| `create_time` | `datetime` | yes | `current_timestamp()` |  |  |
+| `last_updated` | `datetime` | yes | `NULL` |  |  |
+| `version` | `int(11)` | no | `1` |  |  |
+| `status` | `varchar(63)` | yes | `NULL` |  | form current status. completed,active,incomplete |
+| `questionnaire` | `longtext` | yes | `NULL` |  | the subject questionnaire json |
+| `questionnaire_response` | `longtext` | yes | `NULL` |  | questionnaire response json |
+| `form_response` | `longtext` | yes | `NULL` |  | lform answers array json |
+| `form_score` | `int(11)` | yes | `NULL` |  | Arithmetic scoring of questionnaires |
+| `tscore` | `double` | yes | `NULL` |  | T-Score |
+| `error` | `double` | yes | `NULL` |  | Standard error for the T-Score |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `response_index` |  | `response_id`, `patient_id`, `questionnaire_id`, `questionnaire_name` |
+| `uuid` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** table added
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

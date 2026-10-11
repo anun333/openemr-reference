@@ -1,0 +1,27 @@
+# `rule_action_item`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `category` | `varchar(31)` | no | `''` |  | Maps to list_options list rule_action_category |
+| `item` | `varchar(31)` | no | `''` |  | Maps to list_options list rule_action |
+| `clin_rem_link` | `varchar(255)` | no | `''` |  | Custom html link in clinical reminder widget |
+| `reminder_message` | `text` | yes | `NULL` |  | Custom message in patient reminder |
+| `custom_flag` | `tinyint(1)` | no | `0` |  | 1 indexed to rule_patient_data, 0 indexed within main schema |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `category`, `item` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

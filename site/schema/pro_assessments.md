@@ -1,0 +1,34 @@
+# `pro_assessments`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no |  | auto_increment |  |
+| `form_oid` | `varchar(255)` | no |  |  | unique id for specific instrument, pulled from assessment center API |
+| `form_name` | `varchar(255)` | no |  |  | pulled from assessment center API |
+| `user_id` | `int(11)` | no |  |  | ID for user that orders the form |
+| `deadline` | `datetime` | no |  |  | deadline to complete the form, will be used when sending notification and reminders |
+| `patient_id` | `int(11)` | no |  |  | ID for patient to order the form for |
+| `assessment_oid` | `varchar(255)` | no |  |  | unique id for this specific assessment, pulled from assessment center API |
+| `status` | `varchar(255)` | no |  |  | ordered or completed |
+| `score` | `double` | no |  |  | T-Score for the assessment |
+| `error` | `double` | no |  |  | Standard error for the score |
+| `created_at` | `datetime` | no |  |  | timestamp recording the creation time of this assessment |
+| `updated_at` | `datetime` | no |  |  | this field indicates the completion time when the status is completed |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

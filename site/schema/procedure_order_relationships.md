@@ -1,0 +1,32 @@
+# `procedure_order_relationships`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB. Links ServiceRequests to supporting clinical information
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no |  | auto_increment |  |
+| `procedure_order_id` | `bigint(20)` | no |  |  | Links to procedure_order.procedure_order_id |
+| `resource_type` | `varchar(50)` | no |  |  | FHIR resource type (Observation, Condition, etc.) |
+| `resource_uuid` | `binary(16)` | no |  |  | UUID of the related resource |
+| `relationship` | `varchar(50)` | yes | `NULL` |  | Type of relationship |
+| `created_at` | `timestamp` | yes | `current_timestamp()` |  |  |
+| `created_by` | `bigint(20)` | yes | `NULL` |  | User who created this link |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `idx_created_at` |  | `created_at` |
+| `idx_order_id` |  | `procedure_order_id` |
+| `idx_resource` |  | `resource_type`, `resource_uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** table added
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

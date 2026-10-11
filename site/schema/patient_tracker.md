@@ -1,0 +1,35 @@
+# `patient_tracker`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `apptdate` | `date` | yes | `NULL` |  |  |
+| `appttime` | `time` | yes | `NULL` |  |  |
+| `eid` | `bigint(20)` | no | `0` |  |  |
+| `pid` | `bigint(20)` | no | `0` |  |  |
+| `original_user` | `varchar(255)` | no | `''` |  | This is the user that created the original record |
+| `encounter` | `bigint(20)` | no | `0` |  |  |
+| `lastseq` | `varchar(4)` | no | `''` |  | The element file should contain this number of elements |
+| `random_drug_test` | `tinyint(1)` | yes | `NULL` |  | NULL if not randomized. If randomized, 0 is no, 1 is yes |
+| `drug_screen_completed` | `tinyint(1)` | no | `0` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `eid` |  | `eid` |
+| `pid` |  | `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

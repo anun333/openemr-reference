@@ -1,0 +1,43 @@
+# `layout_options`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `form_id` | `varchar(31)` | no | `''` |  |  |
+| `field_id` | `varchar(31)` | no | `''` |  |  |
+| `group_id` | `varchar(31)` | no | `''` |  |  |
+| `title` | `text` | yes | `NULL` |  |  |
+| `seq` | `int(11)` | no | `0` |  |  |
+| `data_type` | `tinyint(3)` | no | `0` |  |  |
+| `uor` | `tinyint(1)` | no | `1` |  |  |
+| `fld_length` | `int(11)` | no | `15` |  |  |
+| `max_length` | `int(11)` | no | `0` |  |  |
+| `list_id` | `varchar(100)` | no | `''` |  |  |
+| `titlecols` | `tinyint(3)` | no | `1` |  |  |
+| `datacols` | `tinyint(3)` | no | `1` |  |  |
+| `default_value` | `varchar(255)` | no | `''` |  |  |
+| `edit_options` | `varchar(36)` | no | `''` |  |  |
+| `description` | `text` | yes | `NULL` |  |  |
+| `fld_rows` | `int(11)` | no | `0` |  |  |
+| `list_backup_id` | `varchar(100)` | no | `''` |  |  |
+| `source` | `char(1)` | no | `'F'` |  | F=Form, D=Demographics, H=History, E=Encounter |
+| `conditions` | `text` | yes | `NULL` |  | serialized array of skip conditions |
+| `validation` | `varchar(100)` | yes | `NULL` |  |  |
+| `codes` | `varchar(255)` | no | `''` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `form_id`, `field_id`, `seq` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

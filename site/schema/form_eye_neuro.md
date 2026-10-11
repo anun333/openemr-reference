@@ -1,0 +1,104 @@
+# `form_eye_neuro`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  |  | Links to forms.form_id |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `ACT` | `char(3)` | no | `'on'` |  |  |
+| `ACT5CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT1CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT2CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT3CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT4CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT6CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT7CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT8CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT9CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT10CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT11CCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT1SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT2SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT3SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT4SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT5SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT6SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT7SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT8SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT9SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT10SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT11SCDIST` | `text` | yes | `NULL` |  |  |
+| `ACT1SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT2SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT3SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT4SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT5CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT6CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT7CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT8CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT9CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT10CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT11CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT5SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT6SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT7SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT8SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT9SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT10SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT11SCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT1CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT2CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT3CCNEAR` | `text` | yes | `NULL` |  |  |
+| `ACT4CCNEAR` | `text` | yes | `NULL` |  |  |
+| `MOTILITYNORMAL` | `char(3)` | no | `'on'` |  |  |
+| `MOTILITY_RS` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_RI` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_RR` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_RL` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_LS` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_LI` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_LR` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_LL` | `char(1)` | yes | `'0'` |  |  |
+| `MOTILITY_RRSO` | `int(1)` | yes | `NULL` |  |  |
+| `MOTILITY_RLSO` | `int(1)` | yes | `NULL` |  |  |
+| `MOTILITY_RRIO` | `int(1)` | yes | `NULL` |  |  |
+| `MOTILITY_RLIO` | `int(1)` | yes | `NULL` |  |  |
+| `MOTILITY_LRSO` | `int(1)` | yes | `NULL` |  |  |
+| `MOTILITY_LLSO` | `int(1)` | yes | `NULL` |  |  |
+| `MOTILITY_LRIO` | `int(1)` | yes | `NULL` |  |  |
+| `MOTILITY_LLIO` | `int(1)` | yes | `NULL` |  |  |
+| `NEURO_COMMENTS` | `text` | yes | `NULL` |  |  |
+| `STEREOPSIS` | `varchar(25)` | yes | `NULL` |  |  |
+| `ODNPA` | `text` | yes | `NULL` |  |  |
+| `OSNPA` | `text` | yes | `NULL` |  |  |
+| `VERTFUSAMPS` | `text` | yes | `NULL` |  |  |
+| `DIVERGENCEAMPS` | `text` | yes | `NULL` |  |  |
+| `NPC` | `varchar(10)` | yes | `NULL` |  |  |
+| `DACCDIST` | `varchar(20)` | yes | `NULL` |  |  |
+| `DACCNEAR` | `varchar(20)` | yes | `NULL` |  |  |
+| `CACCDIST` | `varchar(20)` | yes | `NULL` |  |  |
+| `CACCNEAR` | `varchar(20)` | yes | `NULL` |  |  |
+| `ODCOLOR` | `text` | yes | `NULL` |  |  |
+| `OSCOLOR` | `text` | yes | `NULL` |  |  |
+| `ODCOINS` | `text` | yes | `NULL` |  |  |
+| `OSCOINS` | `text` | yes | `NULL` |  |  |
+| `ODREDDESAT` | `varchar(20)` | yes | `NULL` |  |  |
+| `OSREDDESAT` | `varchar(20)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `id_pid` | yes | `id`, `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

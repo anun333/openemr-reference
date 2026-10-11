@@ -1,0 +1,35 @@
+# `claims`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `patient_id` | `bigint(20)` | no |  |  |  |
+| `encounter_id` | `int(11)` | no |  |  |  |
+| `version` | `int(10) unsigned` | no |  |  | Claim version, incremented in code |
+| `payer_id` | `int(11)` | no | `0` |  |  |
+| `status` | `tinyint(2)` | no | `0` |  |  |
+| `payer_type` | `tinyint(4)` | no | `0` |  |  |
+| `bill_process` | `tinyint(2)` | no | `0` |  |  |
+| `bill_time` | `datetime` | yes | `NULL` |  |  |
+| `process_time` | `datetime` | yes | `NULL` |  |  |
+| `process_file` | `varchar(255)` | yes | `NULL` |  |  |
+| `target` | `varchar(30)` | yes | `NULL` |  |  |
+| `x12_partner_id` | `int(11)` | no | `0` |  |  |
+| `submitted_claim` | `text` | yes | `NULL` |  | This claims form claim data |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `patient_id`, `encounter_id`, `version` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

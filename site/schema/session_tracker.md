@@ -1,0 +1,26 @@
+# `session_tracker`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `uuid` | `binary(16)` | no | `x'00000000000000000000000000000000'` |  |  |
+| `created` | `timestamp` | yes | `NULL` |  |  |
+| `last_updated` | `timestamp` | yes | `NULL` |  |  |
+| `number_scripts` | `bigint(20)` | yes | `1` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.3:** added `number_scripts` bigint(20)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

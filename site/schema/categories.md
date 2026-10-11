@@ -1,0 +1,32 @@
+# `categories`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `int(11)` | no | `0` |  |  |
+| `name` | `varchar(255)` | yes | `NULL` |  |  |
+| `value` | `varchar(255)` | yes | `NULL` |  |  |
+| `parent` | `int(11)` | no | `0` |  |  |
+| `lft` | `int(11)` | no | `0` |  |  |
+| `rght` | `int(11)` | no | `0` |  |  |
+| `aco_spec` | `varchar(63)` | no | `'patients\|docs'` |  |  |
+| `codes` | `varchar(255)` | no | `''` |  | Category codes for documents stored in this category |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `lft` |  | `lft`, `rght` |
+| `parent` |  | `parent` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

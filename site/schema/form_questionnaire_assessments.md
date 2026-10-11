@@ -1,0 +1,40 @@
+# `form_questionnaire_assessments`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(21)` | no |  | auto_increment |  |
+| `date` | `datetime` | yes | `current_timestamp()` |  |  |
+| `response_id` | `text` | yes | `NULL` |  | The foreign id to the questionnaire_response repository |
+| `pid` | `bigint(21)` | no | `0` |  |  |
+| `user` | `varchar(255)` | yes | `NULL` |  |  |
+| `groupname` | `varchar(255)` | yes | `NULL` |  |  |
+| `authorized` | `tinyint(4)` | no | `0` |  |  |
+| `activity` | `tinyint(4)` | no | `1` |  |  |
+| `copyright` | `text` | yes | `NULL` |  |  |
+| `form_name` | `varchar(255)` | yes | `NULL` |  |  |
+| `response_meta` | `text` | yes | `NULL` |  | json meta data for the response resource |
+| `questionnaire_id` | `text` | yes | `NULL` |  | The foreign id to the questionnaire_repository |
+| `questionnaire` | `longtext` | yes | `NULL` |  |  |
+| `questionnaire_response` | `longtext` | yes | `NULL` |  |  |
+| `lform` | `longtext` | yes | `NULL` |  |  |
+| `lform_response` | `longtext` | yes | `NULL` |  |  |
+| `category` | `varchar(64)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** table added
+- **7.0.4:** added `category` varchar(64)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,45 @@
+# `procedure_providers`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `ppid` | `bigint(20)` | no |  | auto_increment |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  |  |
+| `name` | `varchar(255)` | no | `''` |  |  |
+| `npi` | `varchar(15)` | no | `''` |  |  |
+| `send_app_id` | `varchar(255)` | no | `''` |  | Sending application ID (MSH-3.1) |
+| `send_fac_id` | `varchar(255)` | no | `''` |  | Sending facility ID (MSH-4.1) |
+| `recv_app_id` | `varchar(255)` | no | `''` |  | Receiving application ID (MSH-5.1) |
+| `recv_fac_id` | `varchar(255)` | no | `''` |  | Receiving facility ID (MSH-6.1) |
+| `DorP` | `char(1)` | no | `'D'` |  | Debugging or Production (MSH-11) |
+| `direction` | `char(1)` | no | `'B'` |  | Bidirectional or Results-only |
+| `protocol` | `varchar(15)` | no | `'DL'` |  |  |
+| `remote_host` | `varchar(255)` | no | `''` |  |  |
+| `login` | `varchar(255)` | no | `''` |  |  |
+| `password` | `varchar(255)` | no | `''` |  |  |
+| `orders_path` | `varchar(255)` | no | `''` |  |  |
+| `results_path` | `varchar(255)` | no | `''` |  |  |
+| `notes` | `text` | yes | `NULL` |  |  |
+| `lab_director` | `bigint(20)` | no | `0` |  |  |
+| `active` | `tinyint(1)` | no | `1` |  |  |
+| `type` | `varchar(31)` | yes | `NULL` |  |  |
+| `date_created` | `datetime` | no | `current_timestamp()` |  |  |
+| `last_updated` | `datetime` | no | `current_timestamp()` | on update current_timestamp() |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `ppid` |
+| `uuid` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.3:** added `date_created` datetime; added `last_updated` datetime
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

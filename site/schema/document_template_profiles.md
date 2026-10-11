@@ -1,0 +1,37 @@
+# `document_template_profiles`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(21) unsigned` | no |  | auto_increment |  |
+| `template_id` | `bigint(21) unsigned` | no |  |  |  |
+| `profile` | `varchar(64)` | no |  |  |  |
+| `template_name` | `varchar(255)` | no |  |  |  |
+| `category` | `varchar(64)` | no |  |  |  |
+| `provider` | `int(11) unsigned` | yes | `NULL` |  |  |
+| `modified_date` | `datetime` | no | `current_timestamp()` |  |  |
+| `member_of` | `varchar(64)` | no |  |  |  |
+| `active` | `tinyint(1)` | no | `0` |  |  |
+| `recurring` | `tinyint(1)` | no | `1` |  |  |
+| `event_trigger` | `varchar(31)` | no |  |  |  |
+| `period` | `int(4)` | no |  |  |  |
+| `notify_trigger` | `varchar(31)` | no |  |  |  |
+| `notify_period` | `int(4)` | no |  |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `location` | yes | `profile`, `template_id`, `member_of` |
+
+## Changes since 7.0.0
+
+- **7.0.2:** added `notify_trigger` varchar(31); added `notify_period` int(4)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

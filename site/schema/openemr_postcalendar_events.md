@@ -1,0 +1,65 @@
+# `openemr_postcalendar_events`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `pc_eid` | `int(11) unsigned` | no |  | auto_increment |  |
+| `pc_catid` | `int(11)` | no | `0` |  |  |
+| `pc_multiple` | `int(10) unsigned` | no |  |  |  |
+| `pc_aid` | `varchar(30)` | yes | `NULL` |  |  |
+| `pc_pid` | `varchar(11)` | yes | `NULL` |  |  |
+| `pc_gid` | `int(11)` | yes | `0` |  |  |
+| `pc_title` | `varchar(150)` | yes | `NULL` |  |  |
+| `pc_time` | `datetime` | yes | `NULL` |  |  |
+| `pc_hometext` | `text` | yes | `NULL` |  |  |
+| `pc_comments` | `int(11)` | yes | `0` |  |  |
+| `pc_counter` | `mediumint(8) unsigned` | yes | `0` |  |  |
+| `pc_topic` | `int(3)` | no | `1` |  |  |
+| `pc_informant` | `varchar(20)` | yes | `NULL` |  |  |
+| `pc_eventDate` | `date` | no |  |  |  |
+| `pc_endDate` | `date` | yes | `NULL` |  |  |
+| `pc_duration` | `bigint(20)` | no | `0` |  |  |
+| `pc_recurrtype` | `int(1)` | no | `0` |  |  |
+| `pc_recurrspec` | `text` | yes | `NULL` |  |  |
+| `pc_recurrfreq` | `int(3)` | no | `0` |  |  |
+| `pc_startTime` | `time` | yes | `NULL` |  |  |
+| `pc_endTime` | `time` | yes | `NULL` |  |  |
+| `pc_alldayevent` | `int(1)` | no | `0` |  |  |
+| `pc_location` | `text` | yes | `NULL` |  |  |
+| `pc_conttel` | `varchar(50)` | yes | `NULL` |  |  |
+| `pc_contname` | `varchar(50)` | yes | `NULL` |  |  |
+| `pc_contemail` | `varchar(255)` | yes | `NULL` |  |  |
+| `pc_website` | `varchar(255)` | yes | `NULL` |  |  |
+| `pc_fee` | `varchar(50)` | yes | `NULL` |  |  |
+| `pc_eventstatus` | `int(11)` | no | `0` |  |  |
+| `pc_sharing` | `int(11)` | no | `0` |  |  |
+| `pc_language` | `varchar(30)` | yes | `NULL` |  |  |
+| `pc_apptstatus` | `varchar(15)` | no | `'-'` |  |  |
+| `pc_prefcatid` | `int(11)` | no | `0` |  |  |
+| `pc_facility` | `int(11)` | no | `0` |  | facility id for this event |
+| `pc_sendalertsms` | `varchar(3)` | no | `'NO'` |  |  |
+| `pc_sendalertemail` | `varchar(3)` | no | `'NO'` |  |  |
+| `pc_billing_location` | `smallint(6)` | no | `0` |  |  |
+| `pc_room` | `varchar(20)` | no | `''` |  |  |
+| `uuid` | `binary(16)` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `pc_eid` |
+| `basic_event` |  | `pc_catid`, `pc_aid`, `pc_eventDate`, `pc_endDate`, `pc_eventstatus`, `pc_sharing`, `pc_topic` |
+| `pc_eventDate` |  | `pc_eventDate` |
+| `uuid` | yes | `uuid` |
+
+## Changes since 7.0.0
+
+- **7.0.1:** added `uuid` binary(16); index `uuid` added (uuid)
+- **8.1.0:** `pc_eventDate` default '0000-00-00' → none; `pc_endDate` nullable no → yes; `pc_endDate` default '0000-00-00' → NULL
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

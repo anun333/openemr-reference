@@ -1,0 +1,29 @@
+# `amc_misc_data`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `amc_id` | `varchar(31)` | no | `''` |  | Unique and maps to list_options list clinical_rules |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `map_category` | `varchar(255)` | no | `''` |  | Maps to an object category (such as prescriptions etc.) |
+| `map_id` | `bigint(20)` | no | `0` |  | Maps to an object id (such as prescription id etc.) |
+| `date_created` | `datetime` | yes | `NULL` |  |  |
+| `date_completed` | `datetime` | yes | `NULL` |  |  |
+| `soc_provided` | `datetime` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `amc_id` |  | `amc_id`, `pid`, `map_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

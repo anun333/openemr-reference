@@ -1,0 +1,48 @@
+# `form_eye_postseg`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  |  | Links to forms.form_id |
+| `pid` | `bigint(20)` | yes | `NULL` |  |  |
+| `ODDISC` | `text` | yes | `NULL` |  |  |
+| `OSDISC` | `text` | yes | `NULL` |  |  |
+| `ODCUP` | `text` | yes | `NULL` |  |  |
+| `OSCUP` | `text` | yes | `NULL` |  |  |
+| `ODMACULA` | `text` | yes | `NULL` |  |  |
+| `OSMACULA` | `text` | yes | `NULL` |  |  |
+| `ODVESSELS` | `text` | yes | `NULL` |  |  |
+| `OSVESSELS` | `text` | yes | `NULL` |  |  |
+| `ODVITREOUS` | `text` | yes | `NULL` |  |  |
+| `OSVITREOUS` | `text` | yes | `NULL` |  |  |
+| `ODPERIPH` | `text` | yes | `NULL` |  |  |
+| `OSPERIPH` | `text` | yes | `NULL` |  |  |
+| `ODCMT` | `text` | yes | `NULL` |  |  |
+| `OSCMT` | `text` | yes | `NULL` |  |  |
+| `RETINA_COMMENTS` | `text` | yes | `NULL` |  |  |
+| `DIL_RISKS` | `char(2)` | no | `'on'` |  |  |
+| `DIL_MEDS` | `mediumtext` | yes | `NULL` |  |  |
+| `WETTYPE` | `varchar(10)` | no |  |  |  |
+| `ATROPINE` | `varchar(25)` | no |  |  |  |
+| `CYCLOMYDRIL` | `varchar(25)` | no |  |  |  |
+| `TROPICAMIDE` | `varchar(25)` | no |  |  |  |
+| `CYCLOGYL` | `varchar(25)` | no |  |  |  |
+| `NEO25` | `varchar(25)` | no |  |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `id_pid` | yes | `id`, `pid` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

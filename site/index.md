@@ -1,0 +1,27 @@
+# OpenEMR reference, generated from the source
+
+Facts about each OpenEMR release, read from its source at the release tag: what it needs, what CI tested it with, what changes when you upgrade, its database schema and its settings. It is regenerated when OpenEMR tags a release, so it doesn't go stale, and nothing on it is written by hand.
+
+- [Upgrade notes](#releases): what changes between each release and the next
+- [Database schema](schema/index.md)
+- [Settings](settings/index.md)
+
+## Releases
+
+| Release | Tagged | PHP at least | Databases CI tested | DB version | Tables | Settings | Upgrade notes |
+|---|---|---|---|---|---|---|---|
+| [7.0.0](releases/7.0.0.md) | 2022-07-18 | 7.4.0 | MariaDB 10.3, 10.4, 10.5, 10.6, 10.7, 10.8; MySQL 5.7, 8 (PHP 7.4, 8.0, 8.1, 8.2) | 469 | 254 | 460 |  |
+| [7.0.1](releases/7.0.1.md) | 2023-04-25 | 8.0.0 | MariaDB 10.3, 10.4, 10.5, 10.6, 10.8, 10.9, 10.10, 10.11; MySQL 5.7, 8 (PHP 8.0, 8.1, 8.2, 8.3) | 486 | 258 | 468 | [from 7.0.0](upgrade/7.0.0-to-7.0.1.md) |
+| [7.0.2](releases/7.0.2.md) | 2023-11-15 | 8.1.0 | MariaDB 10.4, 10.5, 10.6, 10.10, 10.11, 11.0, 11.1; MySQL 5.7, 8.0, 8.2 (PHP 8.1, 8.2, 8.3) | 498 | 264 | 477 | [from 7.0.1](upgrade/7.0.1-to-7.0.2.md) |
+| [7.0.3](releases/7.0.3.md) | 2025-03-19 | 8.1.0 | MariaDB 10.5, 10.6, 10.11, 11.4, 11.6; MySQL 5.7, 8.0, 8.4 (PHP 8.1, 8.2, 8.3, 8.4, 8.5) | 506 | 264 | 489 | [from 7.0.2](upgrade/7.0.2-to-7.0.3.md) |
+| [7.0.4](releases/7.0.4.md) | 2025-12-18 | 8.2.0 | MariaDB 10.6, 10.11, 11.4, 11.8, 12.0; MySQL 5.7, 8.0, 8.4, 9.3 (PHP 8.2, 8.3, 8.4, 8.5, 8.6) | 529 | 283 | 491 | [from 7.0.3](upgrade/7.0.3-to-7.0.4.md) |
+| [8.0.0](releases/8.0.0.md) | 2026-02-09 | 8.2.0 | MariaDB 10.6, 10.11, 11.4, 11.8, 12.0; MySQL 5.7, 8.0, 8.4, 9.3 (PHP 8.2, 8.3, 8.4, 8.5, 8.6) | 531 | 283 | 493 | [from 7.0.4](upgrade/7.0.4-to-8.0.0.md) |
+| [8.1.0](releases/8.1.0.md) | 2026-06-01 | 8.2.0 | MariaDB 10.6, 10.11, 11.4, 11.8, 12.2; MySQL 5.7, 8.0, 8.4, 9.3 (PHP 8.2, 8.3, 8.4, 8.5, 8.6) | 538 | 283 | 494 | [from 8.0.0](upgrade/8.0.0-to-8.1.0.md) |
+| [8.2.0](releases/8.2.0.md) | 2026-07-08 | 8.2.0 | MariaDB 10.6, 10.11, 11.4, 11.8, 12.2; MySQL 5.7, 8.0, 8.4, 9.3 (PHP 8.2, 8.3, 8.4, 8.5, 8.6) | 541 | 283 | 492 | [from 8.1.0](upgrade/8.1.0-to-8.2.0.md) |
+| [8.3.0](releases/8.3.0.md) | 2026-08-18 | 8.3.0 | MariaDB 10.6, 10.11, 11.4, 11.8, 12.2; MySQL 5.7, 8.0, 8.4, 9.3 (PHP 8.3, 8.4, 8.5, 8.6) | 541 | 283 | 489 | [from 8.2.0](upgrade/8.2.0-to-8.3.0.md) |
+| [8.4.0](releases/8.4.0.md) | 2026-09-13 | 8.3.0 | MariaDB 10.11, 11.4, 11.8, 12.3; MySQL 8.4, 9.3 (PHP 8.3, 8.4, 8.5, 8.6) | 543 | 283 | 491 | [from 8.3.0](upgrade/8.3.0-to-8.4.0.md) |
+| [8.4.1](releases/8.4.1.md) | 2026-09-20 | 8.3.0 | MariaDB 10.11, 11.4, 11.8, 12.3; MySQL 8.4, 9.3 (PHP 8.3, 8.4, 8.5, 8.6) | 543 | 283 | 491 | [from 8.4.0](upgrade/8.4.0-to-8.4.1.md) |
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

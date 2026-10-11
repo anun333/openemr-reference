@@ -1,0 +1,24 @@
+# `clinical_plans_rules`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `plan_id` | `varchar(31)` | no | `''` |  | Unique and maps to list_options list clinical_plans |
+| `rule_id` | `varchar(31)` | no | `''` |  | Unique and maps to list_options list clinical_rules |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `plan_id`, `rule_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,38 @@
+# `lists_medication`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB. Holds additional data about patient medications.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `id` | `bigint(20)` | no |  | auto_increment |  |
+| `list_id` | `bigint(20)` | yes | `NULL` |  | FK Reference to lists.id |
+| `drug_dosage_instructions` | `longtext` | yes | `NULL` |  | Free text dosage instructions for taking the drug |
+| `usage_category` | `varchar(100)` | yes | `NULL` |  | option_id in list_options.list_id=medication-usage-category |
+| `usage_category_title` | `varchar(255)` | no |  |  | title in list_options.list_id=medication-usage-category |
+| `request_intent` | `varchar(100)` | yes | `NULL` |  | option_id in list_options.list_id=medication-request-intent |
+| `request_intent_title` | `varchar(255)` | no |  |  | title in list_options.list_id=medication-request-intent |
+| `medication_adherence_information_source` | `varchar(50)` | yes | `NULL` |  | fk to list_options.option_id where list_id=medication_adherence_information_source to indicate who provided the medication adherence information |
+| `medication_adherence` | `varchar(50)` | yes | `NULL` |  | fk to list_options.option_id where list_id=medication_adherence to indicate if patient is complying with medication regimen |
+| `medication_adherence_date_asserted` | `datetime` | yes | `NULL` |  | Date when the medication adherence information was asserted |
+| `prescription_id` | `bigint(20)` | yes | `NULL` |  | fk to prescriptions.prescription_id to link medication to prescription record |
+| `is_primary_record` | `tinyint(1)` | yes | `1` |  | Indicates if this medication is a primary record(1) or a reported record(0) |
+| `reporting_source_record_id` | `bigint(20)` | yes | `NULL` |  | If this is a reported record, this is the fk to the users.id column for the address book user that the medication was reported by |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `id` |
+| `lists_med_request_intent_idx` |  | `request_intent` |
+| `lists_med_usage_category_idx` |  | `usage_category` |
+| `lists_medication_list_idx` |  | `list_id` |
+
+## Changes since 7.0.0
+
+- **7.0.4:** added `medication_adherence_information_source` varchar(50); added `medication_adherence` varchar(50); added `medication_adherence_date_asserted` datetime; added `prescription_id` bigint(20); added `is_primary_record` tinyint(1); added `reporting_source_record_id` bigint(20)
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

@@ -1,0 +1,31 @@
+# `icd10_pcs_order_code`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `pcs_id` | `bigint(20) unsigned` | no |  | auto_increment |  |
+| `pcs_code` | `varchar(7)` | yes | `NULL` |  |  |
+| `valid_for_coding` | `char(1)` | yes | `NULL` |  |  |
+| `short_desc` | `varchar(60)` | yes | `NULL` |  |  |
+| `long_desc` | `text` | yes | `NULL` |  |  |
+| `active` | `tinyint(4)` | yes | `0` |  |  |
+| `revision` | `int(11)` | yes | `0` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `active` |  | `active` |
+| `pcs_code` |  | `pcs_code` |
+| `pcs_id` | yes | `pcs_id` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

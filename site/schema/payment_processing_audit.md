@@ -1,0 +1,41 @@
+# `payment_processing_audit`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `uuid` | `binary(16)` | no | `x'00000000000000000000000000000000'` |  |  |
+| `service` | `varchar(50)` | yes | `NULL` |  |  |
+| `pid` | `bigint(20)` | no |  |  |  |
+| `success` | `tinyint(4)` | yes | `0` |  |  |
+| `action_name` | `varchar(50)` | yes | `NULL` |  |  |
+| `amount` | `varchar(20)` | yes | `NULL` |  |  |
+| `ticket` | `varchar(100)` | yes | `NULL` |  |  |
+| `transaction_id` | `varchar(100)` | yes | `NULL` |  |  |
+| `audit_data` | `text` | yes | `NULL` |  |  |
+| `date` | `datetime` | yes | `NULL` |  |  |
+| `map_uuid` | `binary(16)` | yes | `NULL` |  |  |
+| `map_transaction_id` | `varchar(100)` | yes | `NULL` |  |  |
+| `reverted` | `tinyint(4)` | yes | `0` |  |  |
+| `revert_action_name` | `varchar(50)` | yes | `NULL` |  |  |
+| `revert_transaction_id` | `varchar(100)` | yes | `NULL` |  |  |
+| `revert_audit_data` | `text` | yes | `NULL` |  |  |
+| `revert_date` | `datetime` | yes | `NULL` |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `PRIMARY` | yes | `uuid` |
+| `pid` |  | `pid` |
+| `success` |  | `success` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*

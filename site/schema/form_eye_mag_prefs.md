@@ -1,0 +1,34 @@
+# `form_eye_mag_prefs`
+
+As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB.
+
+## Columns
+
+| Column | Type | Null | Default | Extra | Comment |
+|---|---|---|---|---|---|
+| `PEZONE` | `varchar(25)` | yes | `NULL` |  |  |
+| `LOCATION` | `varchar(25)` | yes | `NULL` |  |  |
+| `LOCATION_text` | `varchar(25)` | no |  |  |  |
+| `id` | `bigint(20)` | yes | `NULL` |  |  |
+| `selection` | `varchar(255)` | yes | `NULL` |  |  |
+| `ZONE_ORDER` | `int(11)` | yes | `NULL` |  |  |
+| `GOVALUE` | `varchar(10)` | yes | `'0'` |  |  |
+| `ordering` | `smallint(6)` | yes | `NULL` |  |  |
+| `FILL_ACTION` | `varchar(10)` | no | `'ADD'` |  |  |
+| `GORIGHT` | `varchar(50)` | no |  |  |  |
+| `GOLEFT` | `varchar(50)` | no |  |  |  |
+| `UNSPEC` | `varchar(50)` | no |  |  |  |
+
+## Indexes
+
+| Index | Unique | Columns |
+|---|---|---|
+| `id` | yes | `id`, `PEZONE`, `LOCATION`, `selection` |
+
+## Changes since 7.0.0
+
+None.
+
+---
+
+*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*
