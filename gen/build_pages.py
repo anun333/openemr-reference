@@ -119,7 +119,7 @@ def release_page(r: dict, prev: dict | None, nxt: dict | None) -> str:
     v = r["version"]
     rows = sorted({(row["php"] or "?", f"{'MySQL' if row['database'] == 'mysql' else 'MariaDB'} {row['database_version']}",
                     row["web"], row["variant"] or "", row["php_from"] or "") for row in r["ci"]["rows"]},
-                  key=lambda x: (version_key(x[0]), x[1]))
+                  key=lambda x: (version_key(x[0]), x[1], x[2], x[3], x[4]))
     lines = [
         f"# OpenEMR {r['release']}", "",
         f"Tagged `{r['tag']}` on {r['date']} (commit `{r['commit'][:10]}`).", "",
@@ -354,8 +354,10 @@ def index_page(releases: list[dict]) -> None:
 
 def main() -> None:
     releases = load()
-    if SITE.exists():
-        shutil.rmtree(SITE)
+    # Only what this builder writes; site/preflight/ belongs to build_preflight.py.
+    for part in ("releases", "upgrade", "schema", "settings"):
+        shutil.rmtree(SITE / part, ignore_errors=True)
+    (SITE / "index.md").unlink(missing_ok=True)
     index_page(releases)
     for i, r in enumerate(releases):
         write(SITE / "releases" / f"{r['release']}.md", release_page(r, releases[i - 1] if i else None, releases[i + 1] if i + 1 < len(releases) else None))
