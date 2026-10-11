@@ -6,7 +6,36 @@ Facts about each OpenEMR release (7.0.0 on), read from its source at the release
 - **[Database schema](site/schema/index.md):** every table and column as a fresh install creates it, with each table's changes by release.
 - **[Settings](site/settings/index.md):** everything under Administration > Config, with defaults, choices and the release each setting appeared in.
 
+- **[Upgrade pre-flight check](preflight/openemr-preflight.php):** run it on a server before upgrading, and it lists what to fix first.
+
 Nothing in `site/` is written by hand. It complements the OpenEMR wiki, which has the upgrade *procedure* and the release features; these pages have the version-specific facts the procedure doesn't.
+
+## Upgrade pre-flight check
+
+```
+php openemr-preflight.php --openemr=/var/www/html/openemr --target=8.4.1 --facts=site/preflight
+```
+
+Run it with the PHP the web server uses. It only reads: nothing in the install or its database changes, and no password or setting value is printed. It checks:
+
+| Check | Fails or warns when |
+|---|---|
+| PHP | older than the target needs (fail) |
+| PHP extensions | one the target's `composer.json` requires isn't loaded (fail) |
+| Database server | not a version CI tested the target with (warn) |
+| Previous upgrade | the `version` table and `version.php` disagree: an earlier `sql_upgrade.php` didn't finish, or code was rolled back without the database (fail) |
+| Settings | the target removes a setting this install changed from its default (warn) |
+| Modules | a module moved to Composer, or isn't part of the target (warn) |
+| Custom menus | a menu assigned to users links to a file the target removed (warn) |
+| Disk space | less free than twice the code's size (warn) |
+
+It then lists the upgrade scripts `sql_upgrade.php` will run and the upgrade notes for each step. It runs on PHP 7.4 and later, since it runs on the current install's PHP. Exit code 1 if any check fails.
+
+`preflight/test_preflight.sh` builds a throwaway OpenEMR 7.0.3 (official image, MariaDB 10.6) and checks four cases against the newest release:
+- as installed: missing `bcmath` and `imagick`, MariaDB 10.6 no longer tested, ClaimRev moved to Composer;
+- a user assigned a menu that links to the removed Backup page;
+- a removed setting turned on;
+- a half-finished earlier upgrade.
 
 ## How each fact is read
 
