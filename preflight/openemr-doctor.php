@@ -12,8 +12,9 @@
  * file into the OpenEMR folder and open http://localhost/openemr/openemr-doctor.php in a
  * browser on the server itself. It answers no one else. Delete it when you are done.
  *
- * It compares the install with the facts for its release (generated from OpenEMR's source,
- * openemr-reference site/preflight/) and with what OpenEMR needs to start. It only reads:
+ * It compares the install with the facts for its release (generated from OpenEMR's source and
+ * downloaded from https://github.com/anun333/openemr-reference, or read from --facts=DIR on a
+ * server without internet) and with what OpenEMR needs to start. It only reads:
  * nothing in the install or its database is changed. It never prints passwords or keys.
  *
  * Written for PHP 5.4 and later, so that it can explain a PHP that is too old instead of
@@ -23,11 +24,13 @@
  */
 
 error_reporting(E_ALL);
-// Facts: a folder beside this file (openemr-doctor-facts/), else the generator's own output.
-$factsDefault = '';
+// Facts: a folder beside this file (openemr-doctor-facts/), else the generator's own output,
+// else the published copy, which is updated from OpenEMR's release tags every day.
+$factsDefault = 'https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight';
 foreach (array(dirname(__FILE__) . '/openemr-doctor-facts', dirname(__FILE__) . '/../site/preflight') as $dir) {
-    if ($factsDefault === '' && is_file("$dir/releases.json")) {
+    if (is_file("$dir/releases.json")) {
         $factsDefault = $dir;
+        break;
     }
 }
 define('DOCTOR_FACTS_DEFAULT', $factsDefault);
@@ -76,7 +79,8 @@ function facts($base, $name)
     if ($base === '') {
         return null;
     }
-    $raw = @file_get_contents($base . '/' . $name . '.json');
+    $context = stream_context_create(array('http' => array('timeout' => 15, 'user_agent' => 'openemr-doctor')));
+    $raw = @file_get_contents($base . '/' . $name . '.json', false, $context);
     if ($raw === false) {
         return null;
     }
@@ -165,7 +169,9 @@ $releases = facts($factsBase, 'releases');
 $base = null;
 $f = null;
 if ($releases === null) {
-    report('NOTE', 'Release facts', 'not found' . ($factsBase !== '' ? " at $factsBase" : ''), 'Pass --facts=DIR_OR_URL for the checks that depend on the release (PHP range, extensions, files, database). The rest still run.');
+    $online = preg_match('#^https?://#', $factsBase);
+    report('NOTE', 'Release facts', $online ? "couldn't download them from $factsBase" . (ini_get('allow_url_fopen') ? '' : ' (allow_url_fopen is off)') . (extension_loaded('openssl') ? '' : ' (openssl is missing)') : "not found at $factsBase",
+        'The checks that depend on the release (PHP range, extensions, files) are skipped; the rest still run. For a server without internet, download site/preflight from https://github.com/anun333/openemr-reference and pass --facts=that folder.');
 } else {
     foreach ($releases as $r) {
         if (cmpVersion($r, $current) <= 0) {

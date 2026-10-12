@@ -9,12 +9,24 @@ Facts about each OpenEMR release (7.0.0 on), read from its source at the release
 - **[Upgrade pre-flight check](preflight/openemr-preflight.php):** run it on a server before upgrading, and it lists what to fix first.
 - **[Install doctor](preflight/openemr-doctor.php):** run it when an install shows a blank page, an error 500, a broken login or missing documents, and it names the cause.
 
-Nothing in `site/` is written by hand. It complements the OpenEMR wiki, which has the upgrade *procedure* and the release features; these pages have the version-specific facts the procedure doesn't.
+Nothing in `site/` is written by hand. It complements the OpenEMR wiki, which has the upgrade *procedure* and the release features; these pages have the version-specific facts the procedure doesn't. A daily job adds each new OpenEMR release.
+
+## Download
+
+Each tool is one PHP file. Download it to the server:
+
+- [openemr-doctor.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor.php)
+- [openemr-preflight.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php)
+- [SHA256SUMS](https://github.com/anun333/openemr-reference/releases/latest/download/SHA256SUMS), to check them (`sha256sum -c SHA256SUMS --ignore-missing`)
+
+**What they do and don't do.** They only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`; nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. Each is a single readable file: read it before you run it.
+
+Wrong answers are bugs: please [open an issue](https://github.com/anun333/openemr-reference/issues) with the output (it contains no patient data).
 
 ## Upgrade pre-flight check
 
 ```
-php openemr-preflight.php --openemr=/var/www/html/openemr --target=8.4.1 --facts=site/preflight
+php openemr-preflight.php --openemr=/var/www/html/openemr [--target=8.4.1] [--facts=DIR]
 ```
 
 Run it with the PHP the web server uses. It only reads: nothing in the install or its database changes, and no password or setting value is printed. It checks:
@@ -41,12 +53,12 @@ It then lists the upgrade scripts `sql_upgrade.php` will run and the upgrade not
 ## Install doctor
 
 ```
-php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=site/preflight]
+php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR]
 ```
 
 For an install that doesn't work: a blank page, an error 500, setup stopping part-way, a login page without styling, documents or encrypted data that won't open after a move. Each check comes from failures reported on the forum, and from OpenEMR's own code for what it needs to start. It only reads, and never prints a password or a key.
 
-The web server can run a different PHP from the command line's, with different settings. To check that one, copy the file (and `site/preflight` as `openemr-doctor-facts/`) into the OpenEMR folder and open `http://localhost/<folder>/openemr-doctor.php` in a browser on the server. It answers only requests from the server itself, refuses anything that came through a proxy, and asks to be deleted afterwards.
+The web server can run a different PHP from the command line's, with different settings. To check that one, copy the file into the OpenEMR folder and open `http://localhost/<folder>/openemr-doctor.php` in a browser on the server. It answers only requests from the server itself, refuses anything that came through a proxy, and asks to be deleted afterwards.
 
 | Check | Fails or warns when | Forum reports |
 |---|---|---|

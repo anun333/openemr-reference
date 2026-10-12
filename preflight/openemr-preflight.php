@@ -8,7 +8,8 @@
  *     php openemr-preflight.php --openemr=/var/www/html/openemr [--target=8.4.1] [--site=default] [--facts=DIR_OR_URL]
  *
  * It compares the install with what the target release needs and changes, from
- * facts generated from OpenEMR's source (openemr-reference, site/preflight/), and
+ * facts generated from OpenEMR's source (downloaded from https://github.com/anun333/openemr-reference,
+ * or read from --facts=DIR on a server without internet), and
  * lists what to fix first. It only reads: nothing in the install or its database is
  * changed. It never prints passwords or setting values.
  *
@@ -28,8 +29,11 @@ if (isset($opts['help']) || empty($opts['openemr'])) {
 }
 $root = rtrim((string)$opts['openemr'], '/');
 $site = isset($opts['site']) ? (string)$opts['site'] : 'default';
-$factsBase = isset($opts['facts']) ? rtrim((string)$opts['facts'], '/') : __DIR__ . '/../site/preflight';
-$notesBase = 'upgrade';
+// Facts: --facts, else the generator's own output beside this file, else the published copy
+// (updated from OpenEMR's release tags every day).
+$factsBase = isset($opts['facts']) ? rtrim((string)$opts['facts'], '/')
+    : (is_file(__DIR__ . '/../site/preflight/releases.json') ? __DIR__ . '/../site/preflight' : 'https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight');
+$notesBase = 'https://github.com/anun333/openemr-reference/blob/main/site/upgrade';
 
 $results = [];
 function report(string $status, string $check, string $detail, string $fix = ''): void
@@ -44,7 +48,8 @@ function report(string $status, string $check, string $detail, string $fix = '')
 
 function facts(string $base, string $name): ?array
 {
-    $raw = @file_get_contents($base . '/' . $name . '.json');
+    $context = stream_context_create(['http' => ['timeout' => 15, 'user_agent' => 'openemr-preflight']]);
+    $raw = @file_get_contents($base . '/' . $name . '.json', false, $context);
     if ($raw === false) {
         return null;
     }
