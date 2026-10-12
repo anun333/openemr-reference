@@ -28,4 +28,4 @@ As OpenEMR 8.4.1's `sql/database.sql` creates it. Engine InnoDB. Answer lists fo
 
 ---
 
-*Generated 2026-10-11 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*
+*Generated 2026-10-12 by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*
