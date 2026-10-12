@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# End-to-end test of openemr-doctor.php against a throwaway OpenEMR 8.4.1 (official image,
+# MariaDB 11.8). It first runs on the install as it is, then breaks one thing at a time the
+# way the forum reports describe, checks the doctor names it, and puts it back:
+#   files lost from templates/, a vendor package, the built assets, the theme stylesheet;
+#   OpenEMR's PHP-error display on; a switched-on module with no files; the keys folder
+#   emptied, and a key from another install; a document without its file, and one moved
+#   from another root; a half-finished upgrade; a wrong password, a missing site, setup not
+#   finished; then the browser mode (local only), and PHP 7.4, too old for 8.4.1.
+# Everything runs in containers that are deleted at the end. Synthetic data only.
+# Needs Docker and the facts in ../site/preflight (python3 gen/build_preflight.py).
+set -euo pipefail
+cd "$(dirname "$0")"
+P=doctor-test
+docker compose -p $P -f test-doctor-compose.yml up -d >/dev/null
+trap 'docker compose -p $P -f test-doctor-compose.yml down -v >/dev/null 2>&1' EXIT
+C=$P-openemr-1; D=$P-mysql-1; OE=/var/www/localhost/htdocs/openemr; S=$OE/sites/default
+echo "waiting for OpenEMR 8.4.1 to install itself (several minutes)..."
+until docker logs $C 2>&1 | grep -q "Setup Complete"; do sleep 6; done
+docker cp openemr-doctor.php $C:/tmp/doctor.php
+docker exec $C mkdir -p /tmp/facts
+for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-files.json; do docker cp "$f" $C:/tmp/facts/; done
+q() { docker exec $D mariadb -uroot -proot openemr -N -e "SET SESSION sql_mode=''; $1"; }
+x() { docker exec $C sh -c "$1"; }
+run() { docker exec -u apache $C php /tmp/doctor.php --openemr=$OE --facts=/tmp/facts "$@" || true; }
+fails=0
+expect() { if echo "$out" | grep -q -- "$1"; then echo "ok   $2"; else echo "FAIL $2"; echo "$out" | grep -E "^(PASS|WARN|FAIL|NOTE) " | sed 's/^/       | /'; fails=$((fails+1)); fi; }
+refute() { if echo "$out" | grep -q -- "$1"; then echo "FAIL $2"; fails=$((fails+1)); else echo "ok   $2"; fi; }
+
+# A fresh install has no keys until something is encrypted: encrypt a value the way OpenEMR does.
+docker exec -u apache -e HTTP_HOST=localhost $C php -r '$ignoreAuth = true; $_GET["site"] = "default"; $sessionAllowWrite = true;
+  require "/var/www/localhost/htdocs/openemr/interface/globals.php"; \OpenEMR\BC\ServiceContainer::getCrypto()->encryptStandard("doctor-test");' >/dev/null
+out=$(run); echo "$out"; echo
+expect "^PASS  PHP: 8" "1: PHP in range"
+expect "^PASS  PHP extensions" "1: extensions loaded"
+expect "^PASS  PHP libraries: all" "1: every Composer library present"
+expect "^PASS  Page assets" "1: built assets present"
+expect "^PASS  Files: all" "1: every package file present"
+expect "^PASS  Database version" "1: database matches code"
+expect "^PASS  Theme" "1: theme present"
+expect "^PASS  Encryption keys: 2 in the keys folder, and they match" "1: keys verified against the database"
+expect "^WARN  Modules: Composer installs oe-module-claimrev-connect" "1: the image's missing ClaimRev is reported"
+expect "^NOTE  Setup scripts: removed after setup, as the Docker image does" "1: the image's removed setup scripts are a note"
+refute "^FAIL" "1: no failures on a healthy install"
+
+x "mv $OE/templates/interface/main/tabs /tmp/tabs"; out=$(run)
+expect "^FAIL  Files: .* missing, in templates/interface" "2: lost template files fail (t/25717)"
+x "mv /tmp/tabs $OE/templates/interface/main/tabs"
+x "mv $OE/vendor/adodb /tmp/adodb"; out=$(run)
+expect "^FAIL  PHP libraries: 1 of the .* adodb/adodb-php" "3: a lost vendor package fails"
+x "mv /tmp/adodb $OE/vendor/adodb"
+x "mv $OE/public/assets/jquery /tmp/jquery"; out=$(run)
+expect "^FAIL  Page assets: 1 of the 3 .*assets/jquery/" "4: a missing built asset fails (t/26790)"
+x "mv /tmp/jquery $OE/public/assets/jquery"
+x "mv $OE/Documentation /tmp/Documentation"; out=$(run)
+expect "^PASS  Files: all .* optional ones" "5: missing documentation is optional"
+x "mv /tmp/Documentation $OE/Documentation"
+
+q "UPDATE globals SET gl_value='style_gone.css' WHERE gl_name='css_header'"; out=$(run)
+expect "^FAIL  Theme: the chosen theme public/themes/style_gone.css is missing" "6: a missing theme fails"
+q "UPDATE globals SET gl_value='style_light.css' WHERE gl_name='css_header'"
+q "UPDATE globals SET gl_value='1' WHERE gl_name='user_php_debug'"; out=$(run)
+expect "^WARN  Error display: OpenEMR's user_php_debug setting is on" "7: OpenEMR showing PHP errors warns (t/27005)"
+q "UPDATE globals SET gl_value='0' WHERE gl_name='user_php_debug'"
+q "INSERT INTO modules (mod_name, mod_directory, mod_active, type) VALUES ('Gone', 'oe-module-gone', 1, 0)"; out=$(run)
+expect "^WARN  Modules: switched on, but their files are missing: oe-module-gone" "8: a switched-on module without files warns (t/25702)"
+q "DELETE FROM modules WHERE mod_directory='oe-module-gone'"
+
+x "mkdir -p /tmp/keys && mv $S/documents/logs_and_misc/methods/seven? /tmp/keys/"; out=$(run)
+expect "^FAIL  Encryption keys: the database has encryption keys" "9: an emptied keys folder fails (t/25795)"
+x "cp -p /tmp/keys/seven? $S/documents/logs_and_misc/methods/"
+# A key from another install: same format, different HMAC key.
+x "php -r '\$k=random_bytes(32); \$iv=random_bytes(16); \$c=openssl_encrypt(random_bytes(32),\"aes-256-cbc\",\$k,OPENSSL_RAW_DATA,\$iv); echo \"007\".base64_encode(hash_hmac(\"sha384\",\$iv.\$c,random_bytes(32),true).\$iv.\$c);' > $S/documents/logs_and_misc/methods/sevenb"; out=$(run)
+expect "^FAIL  Encryption keys: the keys folder and the database don't belong together: sevenb" "10: a key from another install fails"
+x "cp -p /tmp/keys/sevenb $S/documents/logs_and_misc/methods/sevenb"
+out=$(run); expect "^PASS  Encryption keys: 2 .* match" "10: keys restored"
+
+q "INSERT INTO documents (id, type, url, path_depth, storagemethod, deleted, foreign_id, date) VALUES (990001, 'file_url', 'file://$S/documents/1/doctor-test.pdf', 1, 0, 0, 1, NOW())"; out=$(run)
+expect "^WARN  Documents: 1 of 1 documents checked have no file .*990001" "11: a document without its file warns (t/26815)"
+x "mkdir -p $S/documents/1 && echo synthetic > $S/documents/1/doctor-test.pdf"
+q "UPDATE documents SET url='file:///old/server/openemr/sites/default/documents/1/doctor-test.pdf' WHERE id=990001"; out=$(run)
+expect "^PASS  Documents: all 1 documents checked have their file" "11: a document moved from another root is found where OpenEMR looks"
+q "DELETE FROM documents WHERE id=990001"; x "rm -f $S/documents/1/doctor-test.pdf"
+
+q "UPDATE version SET v_database = v_database - 1"; out=$(run)
+expect "^FAIL  Database version: the code is 8.4.1" "12: a half-finished upgrade fails"
+q "UPDATE version SET v_database = v_database + 1"
+
+x "cp -a $S $OE/sites/wrongpass && sed -i \"s/^\\\$pass.*/\\\$pass = 'nope';/\" $OE/sites/wrongpass/sqlconf.php"; out=$(run --site=wrongpass)
+expect "^FAIL  Database: can't connect with sites/wrongpass/sqlconf.php (error 1045)" "13: a wrong password names error 1045"
+expect "user name or password" "13: and says what it means"
+x "rm -rf $OE/sites/wrongpass"
+out=$(run --site=nosuch)
+expect "^FAIL  Site: there is no sites/nosuch/sqlconf.php; sites here: default" "14: a missing site lists the real ones"
+x "cp -a $S $OE/sites/unfinished && sed -i 's/^\$config = 1;/\$config = 0;/' $OE/sites/unfinished/sqlconf.php"; out=$(run --site=unfinished)
+expect "^FAIL  Setup: sites/unfinished/sqlconf.php says setup hasn't finished, and setup.php is missing" "15: unfinished setup without setup.php (the image removed it) fails"
+refute "^PASS  Database" "15: and the database isn't checked"
+x "touch $OE/setup.php"; out=$(run --site=unfinished)
+expect "^NOTE  Setup: sites/unfinished/sqlconf.php says setup hasn't finished" "15: with setup.php in place it says to open it"
+x "rm -f $OE/setup.php"
+x "rm -rf $OE/sites/unfinished"
+
+# Browser mode: in the OpenEMR folder, facts beside it, local requests only.
+docker cp openemr-doctor.php $C:$OE/openemr-doctor.php
+x "mkdir -p $OE/openemr-doctor-facts && cp /tmp/facts/* $OE/openemr-doctor-facts/ && chown -R apache $OE/openemr-doctor.php $OE/openemr-doctor-facts"
+out=$(docker exec $C curl -s http://localhost/openemr-doctor.php)
+expect "Checked by the web server's PHP" "16: the browser mode runs as the web server"
+expect "^PASS  Documents folder: the web server can write it" "16: and checks what the web server can write"
+expect "^PASS  Encryption keys" "16: and the keys"
+expect "Delete openemr-doctor.php" "16: and asks to be deleted"
+out=$(docker exec $C curl -s -H 'X-Forwarded-For: 203.0.113.9' http://localhost/openemr-doctor.php)
+expect "only answers a browser on this server" "17: refused through a proxy"
+out=$(curl -s http://127.0.0.1:8372/openemr-doctor.php)
+expect "only answers a browser on this server" "17: refused from outside the container"
+refute "PASS" "17: and shows nothing"
+x "rm -rf $OE/openemr-doctor.php $OE/openemr-doctor-facts"
+
+# PHP 7.4 on a tree that says it is 8.4.1 (the image's tree isn't a volume to share).
+out=$(docker run --rm -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
+  'mkdir -p /oe && printf "<?php\n\$v_major = 8;\n\$v_minor = 4;\n\$v_patch = 1;\n\$v_realpatch = 0;\n\$v_database = 543;\n" > /oe/version.php && php /d/openemr-doctor.php --openemr=/oe --facts=/facts' || true)
+expect "^FAIL  PHP: 7.4.* is too old: OpenEMR 8.4.1 needs 8.3.0 or later" "18: PHP 7.4 is too old for 8.4.1, said plainly"
+expect "^FAIL  PHP extensions: missing: .*intl" "18: and its missing extensions, intl among them (t/25453)"
+
+echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

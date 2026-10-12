@@ -52,6 +52,18 @@ def releases() -> list[Release]:
     return sorted(found, key=lambda r: r.version)
 
 
+def patches(release: Release) -> list[tuple[int, Release]]:
+    """The release's patch tags (vX_Y_Z_N), as (N, a Release whose tag is the patch's)."""
+    out = []
+    for tag in str(git("tag", "-l", release.tag + "_*")).split():
+        rest = tag[len(release.tag) + 1:]
+        if not rest.isdigit():
+            continue
+        commit, date = str(git("log", "-1", "--format=%H %cs", tag)).split()
+        out.append((int(rest), Release(tag, release.version, commit, date)))
+    return sorted(out, key=lambda p: p[0])
+
+
 def show(release: Release, path: str) -> str | None:
     try:
         return str(git("show", f"{release.tag}:{path}"))

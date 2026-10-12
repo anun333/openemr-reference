@@ -42,6 +42,14 @@ def floors(tags: list[str]) -> None:
               and len(r["pages"]["files"]) >= 900)
         check(ok, f"{tag}: {len(s['tables'])} tables, {n_cols} columns, {n_settings} settings, {len(r['ci']['rows'])} CI setups, "
                   f"PHP {r['php']['requires']}, database version {r['version'].get('v_database')}, {len(r['pages']['files'])} PHP files")
+        pk = load(tag, "package")
+        # .gitattributes export-ignores tests/, ci/ and .github/ from 8.1.0 on; before that git archive lists them.
+        leaked = [f for f in pk["files"] if f.startswith(("tests/", ".github/", "ci/"))]
+        ignores = tuple(int(x) for x in tag[1:].split("_")) >= (8, 1, 0)
+        check(len(pk["files"]) >= 5000 and len(pk["composer"]) >= 100 and len(pk["assets"]) >= 3 and bool(leaked) != ignores
+              and "interface/login/login.php" in pk["files"] and "version.php" in pk["files"],
+              f"{tag}: package lists {len(pk['files'])} files from git, {len(pk['composer'])} Composer packages, {len(pk['assets'])} page assets, "
+              f"{len(leaked)} tests/ci/.github paths ({'none expected' if ignores else 'expected before 8.1.0'})")
 
 
 def known_facts(tags: list[str]) -> None:
@@ -62,6 +70,18 @@ def known_facts(tags: list[str]) -> None:
     # composer.json's PHP floor only ever rises across these releases.
     floors_seen = [tuple(map(int, load(t, "release")["php"]["requires"].lstrip(">=").split(".")[:2])) for t in tags]
     check(floors_seen == sorted(floors_seen), f"the PHP floor never falls ({' → '.join('.'.join(map(str, f)) for f in floors_seen)})")
+    # The 8.4.1 release tarball (sha256 checked, 2026-10-11) contains every file git archive lists
+    # and has ClaimRev, which Composer installs outside vendor/ (#11265, from 8.2.0).
+    claimrev = {c["name"]: c["path"] for c in load("v8_4_1", "package")["composer"]}.get("claimrevolution/oe-module-claimrev-connect")
+    check(claimrev == "interface/modules/custom_modules/oe-module-claimrev-connect"
+          and "claimrevolution/oe-module-claimrev-connect" not in {c["name"] for c in load("v8_1_0", "package")["composer"]},
+          f"ClaimRev is a Composer module installed to custom_modules from 8.2.0 ({claimrev})")
+    check("templates/interface/main/tabs/tabs_template.html.twig" in load("v8_4_1", "package")["files"],
+          "8.4.1's package has the tabs template whose absence blanked logins in t/25717")
+    # Patches delete files: 7.0.3 patch 4 dropped the old login template (seen on the official 7.0.3 image).
+    check("templates/login/login_core.html.twig" in load("v7_0_3", "package")["files"]
+          and "templates/login/login_core.html.twig" not in load("v7_0_3", "package-p4")["files"],
+          "7.0.3 has templates/login/login_core.html.twig and its patch 4 doesn't")
     # A setting key resolved from an enum, which the extractor must read from the enum file.
     check(has_setting("v8_4_1", "rest_fhir_api"), "8.4.1 has rest_fhir_api, whose key is an enum case (GlobalConnectorsEnum::REST_FHIR_API)")
 

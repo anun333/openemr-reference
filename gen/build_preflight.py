@@ -1,6 +1,8 @@
 """Writes the compact per-release facts the pre-flight check reads (site/preflight/<release>.json):
-requirements, CI-tested databases, modules, settings (key, section, label, default),
-PHP files, and upgrade scripts. Built from data/, like the pages.
+requirements, CI-tested PHP and databases, modules, settings (key, section, label, default),
+PHP files, upgrade scripts, Composer install paths and page assets; and, for the install
+doctor, the files each package ships from git (site/preflight/<release>-files.json).
+Built from data/, like the pages.
 """
 
 from __future__ import annotations
@@ -8,7 +10,7 @@ from __future__ import annotations
 import json
 
 from build_pages import load
-from sources import SITE
+from sources import DATA, SITE
 
 
 def facts(r: dict) -> dict:
@@ -24,6 +26,7 @@ def facts(r: dict) -> dict:
         "extensions": r["extensions"]["requires"],
         "node": r["node"]["requires"],
         "v_database": r["version"].get("v_database"),
+        "ci_php": sorted({row["php"] for row in r["ci"]["rows"] if row["php"]}, key=lambda v: tuple(map(int, v.split(".")))),
         "ci_databases": sorted({(row["database"], ".".join(row["database_version"].split(".")[:2])) for row in r["ci"]["rows"]}),
         "modules": {"bundled": r["modules"]["bundled"], "composer": r["modules"]["composer"]},
         "settings": settings,
@@ -32,12 +35,38 @@ def facts(r: dict) -> dict:
     }
 
 
+def grouped(files: list[str]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for f in files:
+        d, _, name = f.rpartition("/")
+        out.setdefault(d, []).append(name)
+    return out
+
+
+def package(r: dict) -> tuple[dict, dict[str, dict]]:
+    """The doctor's half: Composer install paths and page assets go in the release facts
+    (each patch's under "patches"); the file lists go in <release>-files.json and
+    <release>-p<N>-files.json, grouped by directory to keep them small."""
+    pk = json.loads((DATA / r["tag"] / "package.json").read_text())
+    extra = {"composer": [[c["path"], c["type"]] for c in pk["composer"]], "assets": pk["assets"], "patches": {}}
+    files = {f"{r['release']}-files": {"release": r["release"], "dirs": grouped(pk["files"])}}
+    for path in sorted((DATA / r["tag"]).glob("package-p*.json"), key=lambda p: int(p.stem.split("-p")[1])):
+        n = path.stem.split("-p")[1]
+        pp = json.loads(path.read_text())
+        extra["patches"][n] = {"tag": pp["tag"], "composer": [[c["path"], c["type"]] for c in pp["composer"]], "assets": pp["assets"]}
+        files[f"{r['release']}-p{n}-files"] = {"release": r["release"], "patch": int(n), "dirs": grouped(pp["files"])}
+    return extra, files
+
+
 def main() -> None:
     releases = load()
     out = SITE / "preflight"
     out.mkdir(parents=True, exist_ok=True)
     for r in releases:
-        (out / f"{r['release']}.json").write_text(json.dumps(facts(r), separators=(",", ":"), ensure_ascii=False) + "\n")
+        extra, files = package(r)
+        (out / f"{r['release']}.json").write_text(json.dumps({**facts(r), **extra}, separators=(",", ":"), ensure_ascii=False) + "\n")
+        for name, data in files.items():
+            (out / f"{name}.json").write_text(json.dumps(data, separators=(",", ":"), ensure_ascii=False) + "\n")
     (out / "releases.json").write_text(json.dumps([r["release"] for r in releases]) + "\n")
     print(f"{len(releases)} release fact files in {out}")
 

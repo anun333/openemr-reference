@@ -14,7 +14,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-for step in ("extract_release.py", "extract_settings.py", "extract_schema.py", "check.py", "build_pages.py", "build_preflight.py"):
+for step in ("extract_release.py", "extract_package.py", "extract_settings.py", "extract_schema.py", "check.py", "build_pages.py", "build_preflight.py"):
     print(f"== {step}", flush=True)
     args = sys.argv[1:] if step.startswith("extract") else []
     if subprocess.run([sys.executable, str(HERE / step), *args]).returncode != 0:
