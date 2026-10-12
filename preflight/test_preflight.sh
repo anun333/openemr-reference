@@ -5,6 +5,7 @@
 #   2 a user assigned the stock Custom.json menu, which links to removed files: Custom menus WARN
 #   3 a removed setting changed from its default: Settings WARN
 #   4 the database one version behind the code (a half-finished upgrade): Previous upgrade FAIL
+#   5 the same install reached through an xampp/ path: XAMPP FAIL with the migration guide
 # Everything runs in containers that are deleted at the end. Needs Docker and the facts in ../site/preflight.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -33,4 +34,8 @@ q "REPLACE INTO globals (gl_name, gl_index, gl_value) VALUES ('configuration_imp
 expect "^WARN  Settings: .* removes settings this install has changed: configuration_import_export" "3: a changed removed setting warns"
 q "UPDATE version SET v_database = v_database - 2"; out=$(run)
 expect "^FAIL  Previous upgrade: the code is" "4: a half-finished upgrade fails"
+docker exec $C sh -c 'mkdir -p /opt/xampp/htdocs && ln -sfn /var/www/localhost/htdocs/openemr /opt/xampp/htdocs/openemr'
+out=$(docker exec $C php /tmp/preflight.php --openemr=/opt/xampp/htdocs/openemr --facts=/tmp/pf-facts || true)
+expect "^FAIL  XAMPP: this install runs on XAMPP" "5: an install under an xampp directory is told why, with the migration guide"
+expect "XAMPP_to_Docker_Migration" "5: the migration guide is linked"
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

@@ -133,6 +133,16 @@ foreach ($releases as $r) {
     }
 }
 
+// ------------------------------------------------------------ XAMPP
+// XAMPP for Windows stopped at 8.2.12 (2023-11-21): PHP 8.2 and MariaDB 10.4, below what
+// OpenEMR 8.3.0 and later need. The project's answer is its XAMPP to Docker migration guide.
+$xamppPath = '#[/\\\\]xampp[/\\\\]#i';
+$onXampp = preg_match($xamppPath, $root) || preg_match($xamppPath, realpath($root) ?: '') || preg_match($xamppPath, PHP_BINARY);
+if ($onXampp && version_compare($to['php'], '8.3', '>=')) {
+    report('FAIL', 'XAMPP', "this install runs on XAMPP, whose newest release (8.2.12, November 2023) has PHP 8.2 and MariaDB 10.4; OpenEMR $target needs PHP {$to['php']} or later",
+        'Replacing PHP inside XAMPP is not enough (the database and extensions are too old too). The project supports moving to Docker: https://www.open-emr.org/wiki/index.php/XAMPP_to_Docker_Migration (migrate at your current version first, then upgrade).');
+}
+
 // ------------------------------------------------------------ PHP
 
 $phpNeed = $to['php'];
