@@ -318,6 +318,42 @@ if ($broken !== []) {
         . ($unused ? " ($unused more " . ($unused === 1 ? 'does' : 'do') . ', but no user is assigned it)' : ''));
 }
 
+// ------------------------------------------------------------ local changes to OpenEMR's own files
+// A file the release shipped whose content differs here was changed on this server, and the new
+// release's copy replaces it. Compared by git blob hash with the release (or patch) as published
+// (<release>[-p<N>]-hashes.json): on the official 8.4.1 image, every shipped file matches.
+
+if ($base === $current) {
+    $label = $current . ($patch > 0 ? " patch $patch" : '');
+    $hashes = facts($factsBase, $current . ($patch > 0 ? "-p$patch" : '') . '-hashes');
+    if ($hashes === null || !isset($hashes['dirs'])) {
+        echo "NOTE  Local changes: the facts have no file hashes for $label, so changed files can't be found\n";
+    } else {
+        $changedFiles = [];
+        // Its own variable names: this file is one scope, and $name and $c are used elsewhere.
+        foreach ($hashes['dirs'] as $hashDir => $hashNames) {
+            foreach ($hashNames as $hashName => $hashSha) {
+                $hashRel = $hashDir === '' ? $hashName : "$hashDir/$hashName";
+                $hashFile = "$root/$hashRel";
+                // Not sites/: it holds this install's own settings, and is carried over whole.
+                if (strpos($hashRel, 'sites/') !== 0 && is_file($hashFile) && !is_link($hashFile)) {
+                    $hashContent = (string) file_get_contents($hashFile);
+                    if (substr(sha1('blob ' . strlen($hashContent) . "\0" . $hashContent), 0, strlen($hashSha)) !== $hashSha) {
+                        $changedFiles[] = $hashRel;
+                    }
+                }
+            }
+        }
+        if ($changedFiles === []) {
+            report('PASS', 'Local changes', "every file OpenEMR ships is as $label released it");
+        } else {
+            report('WARN', 'Local changes', count($changedFiles) . " of OpenEMR's own files were changed here, and the new release's copies replace them: "
+                . implode(', ', array_slice($changedFiles, 0, 8)) . (count($changedFiles) > 8 ? ', ...' : ''),
+                'openemr-upgrade.sh saves them, and with --customizations=apply carries over the changes that still apply; the rest need merging by hand.');
+        }
+    }
+}
+
 // ------------------------------------------------------------ room for the whole process
 // Each step needs room on a particular disk, and an upgrade that runs out part-way is the worst
 // outcome. The backup needs the database (a dump holds about its data, not its indexes) and the

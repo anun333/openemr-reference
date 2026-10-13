@@ -2,18 +2,22 @@
 # Upgrade an OpenEMR installed from the release tarball (not the Docker image), with a way back.
 #
 #   openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--tarball=FILE] [--backup-dir=DIR]
-#                      [--service=apache2] [--force] [--yes]
+#                      [--service=apache2] [--customizations=apply|leave] [--force] [--yes]
 #   openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr
 #
 # It does what the manual upgrade does, in order, and stops at the first thing that goes wrong:
 #   1. checks the server with openemr-preflight.php (stops on a FAIL unless --force);
-#   2. stops the web server (--service), or asks you to keep users out;
-#   3. backs up each site's database (mysqldump) and the whole sites/ folder: documents, keys;
-#   4. unpacks the target release (downloaded from GitHub and its sha256 checked, or --tarball)
-#      beside the old folder, and carries over sites/ and any modules the release doesn't have;
-#   5. runs the target's own sql_upgrade.php --from=<current> for each site, as the web server's user;
-#   6. checks the new folder with openemr-doctor.php (stops on a FAIL unless --force);
-#   7. swaps the folders (the old one is kept as <folder>.old-<version>) and starts the web server.
+#   2. gets the target release (downloaded from GitHub and its sha256 checked, or --tarball);
+#   3. unpacks it beside the old folder;
+#   4. finds OpenEMR's own files changed or added here, saves them, and tries each change on the
+#      target; stops unless --customizations=apply (carry what applies) or =leave. Until here
+#      nothing on the server has changed, and a stop removes the unpacked folder;
+#   5. stops the web server (--service), or asks you to keep users out, and backs up each site's
+#      database (mysqldump) and the whole sites/ folder: documents, keys;
+#   6. carries over sites/, the modules this install added and, with =apply, its changes;
+#   7. runs the target's own sql_upgrade.php --from=<current> for each site, as the web server's user;
+#   8. checks the new folder with openemr-doctor.php (stops on a FAIL unless --force);
+#   9. swaps the folders (the old one is kept as <folder>.old-<version>) and starts the web server.
 # Nothing is deleted. --rollback first saves each database as it is (everything entered since the
 # upgrade) and, apart, the tables the upgrade created; then restores the backup and swaps the folders back.
 #
@@ -21,7 +25,7 @@
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
 
-OE="" TO="" TARBALL="" BACKUP="" SERVICE="" FORCE=0 YES=0 ROLLBACK=0
+OE="" TO="" TARBALL="" BACKUP="" SERVICE="" CUSTOM="" FORCE=0 YES=0 ROLLBACK=0
 for arg in "$@"; do
     case "$arg" in
         --openemr=*) OE="${arg#*=}" ;;
@@ -29,10 +33,11 @@ for arg in "$@"; do
         --tarball=*) TARBALL="${arg#*=}" ;;
         --backup-dir=*) BACKUP="${arg#*=}" ;;
         --service=*) SERVICE="${arg#*=}" ;;
+        --customizations=*) CUSTOM="${arg#*=}" ;;
         --force) FORCE=1 ;;
         --yes) YES=1 ;;
         --rollback) ROLLBACK=1 ;;
-        -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $arg (see --help)" >&2; exit 2 ;;
     esac
 done
@@ -142,6 +147,7 @@ FROM="$(version_of "$OE")"
 [[ "$(printf '%s\n%s\n' "$FROM" "$TO" | sort -V | tail -1)" == "$TO" && "$FROM" != "$TO" ]] || die "$OE is $FROM; --to=$TO isn't newer"
 SITES="$(sites | tr '\n' ' ' | sed 's/ *$//')"
 [[ -n "$SITES" ]] || die "no site in $OE/sites has a sqlconf.php"
+[[ -z "$CUSTOM" || "$CUSTOM" == apply || "$CUSTOM" == leave ]] || die "--customizations is apply or leave, not '$CUSTOM'"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="${BACKUP:-$PARENT}/$NAME-backup-$FROM-to-$TO-$STAMP"
 NEW="$PARENT/$NAME.new-$TO"
@@ -151,17 +157,162 @@ OLD_DIR="$PARENT/$NAME.old-$FROM"
 say "Upgrading OpenEMR $FROM -> $TO in $OE (sites: $SITES; web server user: $WEBUSER)"
 say "Backup to: $BACKUP_DIR"
 
+patch="$(php -r 'include $argv[1] . "/version.php"; echo (int)($v_realpatch ?? 0);' "$OE")"
+facts="$HERE/../site/preflight"; [[ -f "$facts/releases.json" ]] || facts="https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight"
+
+# Which of OpenEMR's own files this install changed or added, and what each change would do on the
+# target. Run before anything on the server changes; writes into the backup folder's customizations/.
+customizations_php() { cat <<'PHP'
+<?php
+// Which of OpenEMR's own files this install changed or added, and what each change would do on the
+// target, unpacked beside it. Reads only; writes into the backup folder's customizations/.
+[, $oe, $facts, $from, $patch, $new, $out] = $argv;
+$patch = (int)$patch;
+$fromTag = 'v' . str_replace('.', '_', $from) . ($patch > 0 ? "_$patch" : '');
+$get = function (string $name) use ($facts) {
+    $raw = @file_get_contents("$facts/$name");
+    return $raw === false ? null : json_decode($raw, true);
+};
+$hashes = $get($patch > 0 ? "$from-p$patch-hashes.json" : "$from-hashes.json");
+$files = $get($patch > 0 ? "$from-p$patch-files.json" : "$from-files.json");
+if (!is_array($hashes) || !is_array($files)) {
+    file_put_contents("$out/report.json", json_encode(['facts' => false]));
+    echo "  couldn't read the facts for $fromTag, so local changes can't be told apart; nothing checked\n";
+    exit(0);
+}
+$join = function (string $dir, string $name): string { return $dir === '' ? $name : "$dir/$name"; };
+$under = function (string $rel, array $prefixes): bool {
+    foreach ($prefixes as $p) {
+        if ($rel === $p || strpos($rel, "$p/") === 0) {
+            return true;
+        }
+    }
+    return false;
+};
+// Changed: a shipped file whose git blob hash differs from the release's, modules the release ships
+// included. Not sites/: it is carried over whole, and configured on every install.
+$changed = [];
+foreach ($hashes['dirs'] as $dir => $names) {
+    foreach ($names as $name => $sha) {
+        $rel = $join($dir, $name);
+        $f = "$oe/$rel";
+        if (!$under($rel, ['sites']) && is_file($f) && !is_link($f)) {
+            $c = (string)file_get_contents($f);
+            if (substr(sha1('blob ' . strlen($c) . "\0" . $c), 0, strlen($sha)) !== $sha) {
+                $changed[] = $rel;
+            }
+        }
+    }
+}
+// Added: files the release's source doesn't have, outside what installing and running puts there.
+// One the target's package has too is built by the release (compiled CSS, for one), not the site's.
+$shipped = [];
+foreach ($files['dirs'] as $dir => $names) {
+    foreach ($names as $name) {
+        $shipped[$join($dir, $name)] = true;
+    }
+}
+// Module folders are carried whole, as modules, when this install added them (step 6).
+$skip = ['sites', 'interface/modules/custom_modules', 'interface/modules/zend_modules/module', 'vendor', 'node_modules', 'public/assets', '.git'];
+$filter = function (SplFileInfo $f) use ($oe, $skip, $under): bool {
+    $rel = substr($f->getPathname(), strlen($oe) + 1);
+    return !$f->isDir() || (!$under($rel, $skip) && basename($rel) !== 'node_modules');
+};
+$added = [];
+$built = 0;
+$walk = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(new RecursiveDirectoryIterator($oe, FilesystemIterator::SKIP_DOTS), $filter));
+foreach ($walk as $f) {
+    $rel = substr($f->getPathname(), strlen($oe) + 1);
+    if ($f->isFile() && !isset($shipped[$rel])) {
+        if (file_exists("$new/$rel")) {
+            $built++;
+        } else {
+            $added[] = $rel;
+        }
+    }
+}
+sort($changed);
+sort($added);
+$keep = function (string $kind, string $rel) use ($oe, $out): void {
+    @mkdir(dirname("$out/$kind/$rel"), 0700, true);
+    copy("$oe/$rel", "$out/$kind/$rel");
+};
+foreach ($changed as $rel) {
+    $keep('changed', $rel);
+}
+foreach ($added as $rel) {
+    $keep('added', $rel);
+}
+// Each change against the release's original (from GitHub, at the installed tag), tried on the target.
+$fetch = function (string $tag, string $rel): ?string {
+    $url = "https://raw.githubusercontent.com/openemr/openemr/$tag/" . implode('/', array_map('rawurlencode', explode('/', $rel)));
+    $body = @file_get_contents($url, false, stream_context_create(['http' => ['ignore_errors' => true, 'timeout' => 30]]));
+    $ok = isset($http_response_header[0]) && strpos($http_response_header[0], ' 200 ') !== false;
+    return $ok && $body !== false ? $body : null;
+};
+$have = function (string $tool): bool { return trim((string)shell_exec('command -v ' . $tool . ' 2>/dev/null')) !== ''; };
+$diffOk = $have('diff');
+$patchOk = $have('patch');
+$result = [];
+foreach ($changed as $rel) {
+    $orig = $fetch($fromTag, $rel);
+    if ($orig === null) {
+        $result[$rel] = ['status' => 'nofetch'];
+        continue;
+    }
+    $work = sys_get_temp_dir() . '/oe-custom-' . bin2hex(random_bytes(4));
+    foreach (['a' => $orig, 'b' => (string)file_get_contents("$oe/$rel")] as $side => $content) {
+        @mkdir(dirname("$work/$side/$rel"), 0700, true);
+        file_put_contents("$work/$side/$rel", $content);
+    }
+    @mkdir(dirname("$out/patches/$rel"), 0700, true);
+    if ($diffOk) {
+        file_put_contents("$out/patches/$rel.patch", (string)shell_exec('cd ' . escapeshellarg($work) . ' && diff -u ' . escapeshellarg("a/$rel") . ' ' . escapeshellarg("b/$rel")));
+    }
+    if (!file_exists("$new/$rel")) {
+        $result[$rel] = ['status' => 'gone'];
+    } elseif ((string)file_get_contents("$new/$rel") === $orig) {
+        $result[$rel] = ['status' => 'applies', 'how' => 'copy'];   // the target left the file as it was: yours replaces it
+    } elseif (!$patchOk || !$diffOk) {
+        $result[$rel] = ['status' => 'needs-patch'];
+    } else {
+        @mkdir(dirname("$work/t/$rel"), 0700, true);
+        copy("$new/$rel", "$work/t/$rel");
+        exec('patch -d ' . escapeshellarg("$work/t") . ' -p1 -s -i ' . escapeshellarg("$out/patches/$rel.patch") . ' >/dev/null 2>&1', $o, $rc);
+        $result[$rel] = $rc === 0 ? ['status' => 'applies', 'how' => 'patch'] : ['status' => 'conflicts'];
+    }
+    exec('rm -rf ' . escapeshellarg($work));
+}
+file_put_contents("$out/report.json", json_encode(['facts' => true, 'from' => $fromTag, 'changed' => $result, 'added' => $added, 'built' => $built], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+$to = basename($new);
+$why = [
+    'applies' => 'applies to the new release',
+    'conflicts' => 'the new release changed the same lines: merge by hand',
+    'gone' => 'the new release no longer has this file',
+    'nofetch' => "couldn't fetch the original from GitHub to compare",
+    'needs-patch' => 'the new release changed this file too: install patch (and diff) to check whether yours applies',
+];
+printf("  %d of OpenEMR's own files changed here and %d added (compared with %s as released)%s\n", count($result), count($added), $fromTag,
+    $built ? "; $built more files the old release's package built aren't counted" : '');
+foreach ($result as $rel => $r) {
+    printf("    changed  %-60s %s\n", $rel, $why[$r['status']]);
+}
+foreach (array_slice($added, 0, 40) as $rel) {
+    printf("    added    %s\n", $rel);
+}
+if (count($added) > 40) {
+    printf("    ... and %d more added (all in %s/added)\n", count($added) - 40, $out);
+}
+PHP
+}
+
 step "1. Pre-flight check"
 pf="$HERE/openemr-preflight.php"
-[[ -f "$pf" ]] || { pf="$(mktemp --suffix=.php)"; curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php -o "$pf"; chmod 644 "$pf"; }
+[[ -f "$pf" ]] || { pf="$(mktemp)"; curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php -o "$pf"; chmod 644 "$pf"; }
 # As root: it only reads, and it must see the backup folder, which may be one the web server's user can't.
 set +e; php "$pf" --openemr="$OE" --target="$TO" --backup-dir="${BACKUP:-$PARENT}"; rc=$?; set -e
 (( rc == 0 )) || (( FORCE )) || die "the pre-flight check found something to fix first (above); fix it, or pass --force"
 
-if (( ! YES )); then
-    printf '\nContinue? Users must stay out of OpenEMR until it finishes%s. [y/N] ' "${SERVICE:+ ($SERVICE will be stopped)}"
-    read -r answer; [[ "$answer" == [yY]* ]] || die "stopped at your request; nothing changed"
-fi
 
 step "2. Getting OpenEMR $TO"
 work="$(mktemp -d)"
@@ -180,7 +331,38 @@ else
     say "  no $TARBALL.sha256 beside it: not verified"
 fi
 
-step "3. Stopping the web server and backing up"
+step "3. Unpacking $TO beside the current folder"
+mkdir "$NEW"
+# Until the backup is taken, nothing on the live site has changed: if anything stops the run before
+# then, the unpacked folder goes too.
+trap '[[ -f "$STATE" ]] || rm -rf "$NEW"' EXIT
+tar -xzf "$TARBALL" -C "$NEW" --strip-components=1
+say "  $NEW"
+
+step "4. Local changes to OpenEMR's own files"
+CUSTOM_DIR="$BACKUP_DIR/customizations"
+mkdir -p "$CUSTOM_DIR"; chmod 700 "$BACKUP_DIR" "$CUSTOM_DIR"
+helper="$(mktemp)"; customizations_php > "$helper"
+php "$helper" "$OE" "$facts" "$FROM" "$patch" "$NEW" "$CUSTOM_DIR"
+rm -f "$helper"
+found="$(php -r '$r = json_decode((string)@file_get_contents($argv[1]), true); echo count($r["changed"] ?? []) + count($r["added"] ?? []);' "$CUSTOM_DIR/report.json")"
+if (( found > 0 )); then
+    say "  saved: the changed and added files, and each change as a patch, in $CUSTOM_DIR"
+    case "$CUSTOM" in
+        apply) say "  --customizations=apply: the changes that apply, and the added files, go into $TO at step 6" ;;
+        leave) say "  --customizations=leave: $TO goes in without them; they stay in $CUSTOM_DIR" ;;
+        *) die "this install has local changes to OpenEMR's own files (above). Nothing on the server has changed. Rerun with --customizations=apply to carry over the changes that apply and the added files, or --customizations=leave to upgrade without them (they stay saved in $CUSTOM_DIR)." ;;
+    esac
+else
+    say "  none: every shipped file is as $FROM${patch:+ patch $patch} released it"
+fi
+
+if (( ! YES )); then
+    printf '\nContinue? Users must stay out of OpenEMR until it finishes%s. [y/N] ' "${SERVICE:+ ($SERVICE will be stopped)}"
+    read -r answer; [[ "$answer" == [yY]* ]] || die "stopped at your request; nothing on the server changed"
+fi
+
+step "5. Stopping the web server and backing up"
 service_do stop
 mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
 for site in $SITES; do
@@ -203,16 +385,12 @@ NEW_DIR=$NEW
 SWITCHED=0
 EOF
 
-step "4. Unpacking $TO beside the current folder"
-mkdir "$NEW"
-tar -xzf "$TARBALL" -C "$NEW" --strip-components=1
+step "6. Carrying over sites/, this install's modules and its changes"
 rm -rf "$NEW/sites"
 cp -a "$OE/sites" "$NEW/sites"
 # What the site added: module folders and Composer packages that aren't in the current release's own
 # lists (this repository's facts, at the patch level installed). Those, and only those, are carried
 # over; a module the release itself had and the target dropped stays behind, as upstream intended.
-patch="$(php -r 'include $argv[1] . "/version.php"; echo (int)($v_realpatch ?? 0);' "$OE")"
-facts="$HERE/../site/preflight"; [[ -f "$facts/releases.json" ]] || facts="https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight"
 added="$(php -r '
     [$oe, $facts, $from, $patch] = array_slice($argv, 1);
     $get = function (string $name) use ($facts) { $raw = @file_get_contents("$facts/$name"); return $raw === false ? null : json_decode($raw, true); };
@@ -237,7 +415,7 @@ added="$(php -r '
 if [[ "$added" == NOFACTS* ]]; then
     say "  couldn't read the facts for $FROM, so nothing is carried over beyond sites/. Folders here that $TO doesn't have:"
     for kind in interface/modules/custom_modules interface/modules/zend_modules/module; do
-        for d in "$OE/$kind"/*/; do [[ -d "$d" && ! -e "$NEW/$kind/$(basename "$d")" ]] && say "    $kind/$(basename "$d"): yours? copy it into $NEW before step 5"; done
+        for d in "$OE/$kind"/*/; do [[ -d "$d" && ! -e "$NEW/$kind/$(basename "$d")" ]] && say "    $kind/$(basename "$d"): yours? copy it into $NEW before step 7"; done
     done
 else
     while read -r what rel; do
@@ -249,10 +427,25 @@ else
         esac
     done <<<"$added"
 fi
+if [[ "$CUSTOM" == apply && -f "$CUSTOM_DIR/report.json" ]]; then
+    while IFS=$'\t' read -r what how rel; do
+        case "$what" in
+            applies)
+                if [[ "$how" == copy ]]; then cp -a "$CUSTOM_DIR/changed/$rel" "$NEW/$rel"; say "  carried over your change to $rel ($TO left the file as it was)"
+                elif patch -d "$NEW" -p1 -s -i "$CUSTOM_DIR/patches/$rel.patch"; then say "  applied your change to $rel"
+                else say "  NOT carried: your change to $rel no longer applies; see $CUSTOM_DIR/patches/$rel.patch"; fi ;;
+            added)
+                mkdir -p "$(dirname "$NEW/$rel")"; cp -a "$CUSTOM_DIR/added/$rel" "$NEW/$rel"; say "  carried over $rel (added here)" ;;
+            *) say "  NOT carried: your change to $rel ($what); see $CUSTOM_DIR/patches/$rel.patch" ;;
+        esac
+    done < <(php -r '$r = json_decode((string)file_get_contents($argv[1]), true);
+        foreach ($r["changed"] ?? [] as $p => $w) { echo $w["status"], "\t", $w["how"] ?? "-", "\t", $p, "\n"; }
+        foreach ($r["added"] ?? [] as $p) { echo "added\t-\t", $p, "\n"; }' "$CUSTOM_DIR/report.json")
+fi
 chown -R "$(stat -c %u:%g "$OE")" "$NEW"
 chown -R "$WEBUSER" "$NEW/sites"
 
-step "5. Upgrading the databases with $TO's sql_upgrade.php --from=$FROM"
+step "7. Upgrading the databases with $TO's sql_upgrade.php --from=$FROM"
 failed=0
 for site in $SITES; do
     mapfile -t c < <(sqlconf "$OE/sites/$site/sqlconf.php")
@@ -278,9 +471,9 @@ if (( failed )); then
     die "the database upgrade didn't finish cleanly. The old folder is untouched but the database is part-upgraded: run '$0 --rollback --openemr=$OE' to put everything back, then look at the log."
 fi
 
-step "6. Checking the new folder with the install doctor"
+step "8. Checking the new folder with the install doctor"
 dr="$HERE/openemr-doctor.php"
-[[ -f "$dr" ]] || { dr="$(mktemp --suffix=.php)"; curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor.php -o "$dr"; chmod 644 "$dr"; }
+[[ -f "$dr" ]] || { dr="$(mktemp)"; curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor.php -o "$dr"; chmod 644 "$dr"; }
 # As the web server's user, since it checks what that user can read and write; from a folder it can read.
 drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; chmod 644 "$drdir/openemr-doctor.php"
 doctor_failed=0
@@ -293,7 +486,7 @@ if (( doctor_failed && ! FORCE )); then
     die "the install doctor found a problem in $NEW (above). Nothing is switched yet; fix it and run '$0 --rollback --openemr=$OE' or switch by hand. --force switches anyway."
 fi
 
-step "7. Switching to $TO"
+step "9. Switching to $TO"
 if [[ -L "$OE" ]]; then
     target="$(readlink -f "$OE")"; ln -sfn "$NEW" "$OE.tmp-link" && mv -T "$OE.tmp-link" "$OE"
     sed -i "s|^OLD_DIR=.*|OLD_DIR=$target|" "$STATE"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end test of openemr-preflight.php against a throwaway OpenEMR 7.0.3 (official image,
-# MariaDB 10.6), targeting the newest release with facts. Seven scenarios, each adding one problem:
+# MariaDB 10.6), targeting the newest release with facts. Eight scenarios, each adding one problem:
 #   1 as installed: expects a FAIL for missing PHP extensions, WARNs for the database and ClaimRev
 #   2 a user assigned the stock Custom.json menu, which links to removed files: Custom menus WARN
 #   3 a removed setting changed from its default: Settings WARN
@@ -8,6 +8,7 @@
 #   5 the same install reached through an xampp/ path: XAMPP FAIL with the migration guide
 #   6 a backup directory on a 1 MB disk: Room FAIL
 #   7 (facts altered) a target needing a newer PHP than the old release was tested on: one-window warning
+#   8 a local change to one of OpenEMR's own files (and one to sites/, which doesn't count): Local changes WARN
 # Everything runs in containers that are deleted at the end. Needs Docker and the facts in ../site/preflight.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -30,6 +31,7 @@ expect "^WARN  Database server: MariaDB 10.6 is older" "1: MariaDB 10.6 warns"
 expect "^WARN  Modules: oe-module-claimrev-connect is installed by Composer" "1: ClaimRev moved to Composer"
 expect "^PASS  Custom menus: .*no user is assigned it" "1: an unassigned stock menu doesn't warn"
 expect "^PASS  Previous upgrade" "1: database matches code"
+expect "^PASS  Local changes: every file OpenEMR ships is as 7.0.3 patch 4 released it" "1: the image's shipped files match the patch's hashes"
 expect "^PASS  Room: .* has .* free; need about .*backup: database .*new release 8.4.1" "1: room for the backup and the new release is reported"
 expect "^NOTE  Room in the database: [0-9]* tables altered from 7.0.3 to 8.4.1, the largest here" "1: the tables the upgrade alters are measured; the database's folder is in another container"
 expect "^The plan, from what was found:" "1: a plan is printed"
@@ -56,4 +58,9 @@ docker exec $C php -r '$t = json_decode(file_get_contents("/tmp/pf-facts2/8.4.1.
 out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts2 || true)
 expect "Move to PHP 8.9 or later" "7: the plan moves PHP first when the target needs a newer one"
 expect "was tested on PHP 8.1, 8.2 only, so it may not run on PHP 8.9: do this and the next step in one maintenance window" "7: and warns when the old release may not run on it"
+# A local change to one of OpenEMR's own files (synthetic), and one to sites/, which isn't one.
+docker exec $C sh -c 'echo "{# synthetic local change #}" >> /var/www/localhost/htdocs/openemr/interface/forms/newpatient/templates/newpatient/partials/common/_form-heading.html.twig && echo "// synthetic" >> /var/www/localhost/htdocs/openemr/sites/default/config.php'
+out=$(run)
+expect "^WARN  Local changes: 1 of OpenEMR's own files were changed here.*_form-heading.html.twig" "8: a changed shipped file warns, and sites/ doesn't count"
+expect "openemr-upgrade.sh saves them" "8: and says what the upgrade script does with them"
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

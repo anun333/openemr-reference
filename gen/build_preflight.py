@@ -43,6 +43,17 @@ def grouped(files: list[str]) -> dict[str, list[str]]:
     return out
 
 
+def grouped_hashes(hashes: dict[str, str]) -> dict[str, dict[str, str]]:
+    """Each shipped file's git blob hash prefix, by directory (extract_hashes.py): for telling which of
+    OpenEMR's own files were changed on a server. In <release>-hashes.json, apart from the release
+    facts, so only the tools that compare contents download them."""
+    out: dict[str, dict[str, str]] = {}
+    for path, sha in sorted(hashes.items()):
+        d, _, name = path.rpartition("/")
+        out.setdefault(d, {})[name] = sha
+    return out
+
+
 def package(r: dict) -> tuple[dict, dict[str, dict]]:
     """The doctor's half: Composer install paths and page assets go in the release facts
     (each patch's under "patches"); the file lists go in <release>-files.json and
@@ -53,11 +64,18 @@ def package(r: dict) -> tuple[dict, dict[str, dict]]:
              "upgrade_alters": {name: s["alters"] for name, s in up["scripts"].items()},
              "package_unpacked_bytes": up["package_unpacked_bytes"]}
     files = {f"{r['release']}-files": {"release": r["release"], "dirs": grouped(pk["files"])}}
+    hashes = DATA / r["tag"] / "hashes.json"
+    if hashes.exists():
+        files[f"{r['release']}-hashes"] = {"release": r["release"], "tag": r["tag"], "dirs": grouped_hashes(json.loads(hashes.read_text())["hashes"])}
     for path in sorted((DATA / r["tag"]).glob("package-p*.json"), key=lambda p: int(p.stem.split("-p")[1])):
         n = path.stem.split("-p")[1]
         pp = json.loads(path.read_text())
         extra["patches"][n] = {"tag": pp["tag"], "composer": [[c["path"], c["type"]] for c in pp["composer"]], "assets": pp["assets"]}
         files[f"{r['release']}-p{n}-files"] = {"release": r["release"], "patch": int(n), "dirs": grouped(pp["files"])}
+        ph = DATA / r["tag"] / f"hashes-p{n}.json"
+        if ph.exists():
+            files[f"{r['release']}-p{n}-hashes"] = {"release": r["release"], "patch": int(n), "tag": pp["tag"],
+                                                    "dirs": grouped_hashes(json.loads(ph.read_text())["hashes"])}
     return extra, files
 
 

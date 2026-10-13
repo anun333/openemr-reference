@@ -45,6 +45,7 @@ Run it with the PHP the web server uses. It only reads: nothing in the install o
 | Custom menus | a menu assigned to users links to a file the target removed (warn) |
 | Room | for each disk involved, less free than the backup (database and documents) and the new release need, plus 20% (fail); the backup disk is chosen with `--backup-dir` |
 | Room in the database | the database's data folder has less free space than the largest table the upgrade scripts alter, plus 20%, which a rebuild of it can take (fail); where the folder isn't visible, it says how much to check for |
+| Local changes | files OpenEMR ships that were changed on this server, compared by git hash with the release or patch as published (warn) |
 | Memory | under 1 GB available, on Linux (warn) |
 
 It then prints **the plan, in order, from what it found**: the backup (including the encryption keys), the PHP and extension changes and the database server upgrade the target needs, the upgrade itself beside the old folder, the check with the install doctor, and the way back. When the current release was never tested on the PHP the target needs, it says to change PHP and upgrade in one maintenance window, since the old version may not run on the new PHP. Then it lists the upgrade scripts `sql_upgrade.php` will run and the upgrade notes for each step. It runs on PHP 7.4 and later, since it runs on the current install's PHP. Exit code 1 if any check fails.
@@ -106,21 +107,23 @@ Needs Docker with compose, and the target must be 8.2.0 or later (`sql_upgrade.p
 ## Upgrade
 
 ```
-sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE]
+sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE] [--customizations=apply|leave]
 sudo preflight/openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr
 ```
 
 For an OpenEMR installed from the release tarball (with the official Docker image, upgrading means changing the image tag). After the pre-flight check and a rehearsal, it does the manual upgrade in order and stops at the first thing that goes wrong:
 
 1. runs the pre-flight check, and stops on a FAIL unless `--force`;
-2. stops the web server (`--service`), or asks you to keep users out;
-3. backs up each site's database (`mysqldump`) and the whole `sites/` folder, which holds documents and encryption keys;
-4. unpacks the target release beside the old folder: downloaded from GitHub with its published sha256 checked, or `--tarball`. It carries over `sites/` and any module the release doesn't have, and lists packages installed with Composer that need installing again;
-5. runs the target's own `sql_upgrade.php --from=<current>` for each site, as the web server's user. It stops on any failed statement;
-6. checks the new folder with the install doctor, and stops on a FAIL unless `--force`;
-7. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
+2. gets the target release: downloaded from GitHub with its published sha256 checked, or `--tarball`;
+3. unpacks it beside the old folder;
+4. finds OpenEMR's own files that were changed here, each shipped file's git hash compared with the release or patch as published, and the files added outside `sites/`, `vendor/` and modules. A file the target's package also has counts as built by the release, such as compiled CSS. It saves them all and writes each change as a patch against the original. Then it tries each change on the target's copy: a file the target left as it was takes yours as is, and otherwise `patch` decides. If there are any changes, it stops unless `--customizations=apply` (carry the changes that apply and the added files, list the rest) or `--customizations=leave`. Until here nothing on the server has changed, and a stop removes the unpacked folder;
+5. stops the web server (`--service`), or asks you to keep users out, and backs up each site's database (`mysqldump`) and the whole `sites/` folder, which holds documents and encryption keys;
+6. carries over `sites/`, the modules this install added (module folders and Composer packages not in its release's own lists) and, with `apply`, the changes from step 4;
+7. runs the target's own `sql_upgrade.php --from=<current>` for each site, as the web server's user, from inside the new folder. It stops on any failed statement;
+8. checks the new folder with the install doctor, and stops on a FAIL unless `--force`;
+9. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
 
-Nothing is deleted. A rollback brings back the databases as they were before the upgrade, so anything entered since would be lost; `--rollback` therefore first saves each database as it is (`<site>.before-rollback-<time>.sql`) and, in a file of their own, the tables the upgrade created (`<site>.created-tables-<time>.sql`). Then it restores the backup, drops those tables, and swaps the folders back. The upgraded folder, with any documents uploaded since, is kept as `<folder>.failed-<version>-<time>`. The target must be 8.2.0 or later. Not covered yet: files you changed inside the old release's own folders (other than `sites/` and modules), and multisite setups with more than one database server.
+Nothing is deleted. A rollback brings back the databases as they were before the upgrade, so anything entered since would be lost; `--rollback` therefore first saves each database as it is (`<site>.before-rollback-<time>.sql`) and, in a file of their own, the tables the upgrade created (`<site>.created-tables-<time>.sql`). Then it restores the backup, drops those tables, and swaps the folders back. The upgraded folder, with any documents uploaded since, is kept as `<folder>.failed-<version>-<time>`. The target must be 8.2.0 or later. A change the target conflicts with needs merging by hand: its patch is in the backup's `customizations/patches/`. Not covered yet: multisite setups with more than one database server.
 
 ## Install doctor
 
@@ -173,6 +176,7 @@ On the official 8.4.1 image as installed, it reports one real gap: the image has
 | Settings | `library/globals.inc.php` | parsed with nikic/php-parser, not run; enum-case keys resolved from `src/Services/Globals/*Enum.php` |
 | Package files | the tag | `git archive`, which applies the tag's `export-ignore`; every file it lists is in the 8.4.1 release tarball (checked 2026-10-11). Before 8.1.0 it also lists `tests/`, `ci/` and `.github/` |
 | Patch file lists | each `vX_Y_Z_N` tag | as the package files |
+| File hashes | each release and patch tag | `git ls-tree`: each shipped file's git blob hash (first 10 hex digits), in `site/preflight/<release>[-p<N>]-hashes.json`. A file whose hash matches is byte for byte what the release shipped: on the official 8.4.1 image all 9,060 files git tracks at the tag match (checked 2026-10-13), so a mismatch is a local change |
 | Upgrade scripts' tables, package size | `sql/*_upgrade.sql` at each tag; the GitHub release tarball | the tables each script alters, creates and writes; the tarball's unpacked size, listed as it downloads (8.2.0 on) |
 | Composer packages, page assets | `composer.lock`, `config/config.yaml` | each package's install directory (`openemr-module` packages go to `custom_modules/`); the built files with `autoload: true` |
 
