@@ -44,7 +44,7 @@ Run it with the PHP the web server uses. It only reads: nothing in the install o
 | Room in the database | the database's data folder has less free space than the largest table the upgrade scripts alter, plus 20%, which a rebuild of it can take (fail); where the folder isn't visible, it says how much to check for |
 | Memory | under 1 GB available, on Linux (warn) |
 
-It then lists the upgrade scripts `sql_upgrade.php` will run and the upgrade notes for each step. It runs on PHP 7.4 and later, since it runs on the current install's PHP. Exit code 1 if any check fails.
+It then prints **the plan, in order, from what it found**: the backup (including the encryption keys), the PHP and extension changes and the database server upgrade the target needs, the upgrade itself beside the old folder, the check with the install doctor, and the way back. When the current release was never tested on the PHP the target needs, it says to change PHP and upgrade in one maintenance window, since the old version may not run on the new PHP. Then it lists the upgrade scripts `sql_upgrade.php` will run and the upgrade notes for each step. It runs on PHP 7.4 and later, since it runs on the current install's PHP. Exit code 1 if any check fails.
 
 `preflight/test_preflight.sh` builds a throwaway OpenEMR 7.0.3 (official image, MariaDB 10.6) and checks four cases against the newest release:
 - as installed: missing `bcmath` and `imagick`, MariaDB 10.6 no longer tested, ClaimRev moved to Composer;

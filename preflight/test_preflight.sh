@@ -7,6 +7,7 @@
 #   4 the database one version behind the code (a half-finished upgrade): Previous upgrade FAIL
 #   5 the same install reached through an xampp/ path: XAMPP FAIL with the migration guide
 #   6 a backup directory on a 1 MB disk: Room FAIL
+#   7 (facts altered) a target needing a newer PHP than the old release was tested on: one-window warning
 # Everything runs in containers that are deleted at the end. Needs Docker and the facts in ../site/preflight.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -31,6 +32,10 @@ expect "^PASS  Custom menus: .*no user is assigned it" "1: an unassigned stock m
 expect "^PASS  Previous upgrade" "1: database matches code"
 expect "^PASS  Room: .* has .* free; need about .*backup: database .*new release 8.4.1" "1: room for the backup and the new release is reported"
 expect "^NOTE  Room in the database: [0-9]* tables altered from 7.0.3 to 8.4.1, the largest here" "1: the tables the upgrade alters are measured; the database's folder is in another container"
+expect "^The plan, from what was found:" "1: a plan is printed"
+expect "with the extensions bcmath, imagick" "1: the plan installs the missing extensions"
+expect "Upgrade the database server from MariaDB 10.6 to one CI tested 8.4.1 with" "1: the plan upgrades the database server first"
+expect "run sql_upgrade.php from 7.0.3 (it runs [0-9]* upgrade scripts)" "1: the plan runs the upgrade from the right release"
 q "UPDATE users SET main_menu_role='Custom.json' WHERE username='admin'"; out=$(run)
 expect "^WARN  Custom menus: menus in use point to files removed .*interface/main/backup.php" "2: an assigned menu linking a removed file warns"
 q "REPLACE INTO globals (gl_name, gl_index, gl_value) VALUES ('configuration_import_export', 0, '1')"; out=$(run)
@@ -44,4 +49,11 @@ expect "XAMPP_to_Docker_Migration" "5: the migration guide is linked"
 out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --backup-dir=/tinybackup || true)
 expect "^FAIL  Room: /tinybackup has .* free" "6: a backup disk too small for the backup fails"
 expect "put the backup on another disk with --backup-dir" "6: and says what to do"
+# A target needing a newer PHP than the old release was tested with: one maintenance window.
+docker exec $C sh -c 'rm -rf /tmp/pf-facts2 && cp -r /tmp/pf-facts /tmp/pf-facts2'
+docker exec $C php -r '$t = json_decode(file_get_contents("/tmp/pf-facts2/8.4.1.json"), true); $t["php"] = "8.9.0"; file_put_contents("/tmp/pf-facts2/8.4.1.json", json_encode($t));
+  $f = json_decode(file_get_contents("/tmp/pf-facts2/7.0.3.json"), true); $f["ci_php"] = ["8.1", "8.2"]; file_put_contents("/tmp/pf-facts2/7.0.3.json", json_encode($f));'
+out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts2 || true)
+expect "Move to PHP 8.9 or later" "7: the plan moves PHP first when the target needs a newer one"
+expect "was tested on PHP 8.1, 8.2 only, so it may not run on PHP 8.9: do this and the next step in one maintenance window" "7: and warns when the old release may not run on it"
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

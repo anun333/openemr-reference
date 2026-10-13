@@ -446,8 +446,34 @@ if (is_string($meminfo) && preg_match('/^MemAvailable:\s+(\d+) kB/m', $meminfo, 
 
 // ------------------------------------------------------------ summary
 
-echo "\nThe upgrade itself: back up the database and sites/ first, then follow the wiki's Linux Upgrade guide.\n";
-echo "sql_upgrade.php will run, from $base: " . ($scripts ? implode(', ', $scripts) : 'no version-to-version script') . "\n";
+// The plan: what to do, in order, from what the checks found. The platform comes first, because
+// the target's code won't run on the old PHP; when the current release was never tested on the PHP
+// the target needs, the old version may not run on it either, so the platform change and the
+// upgrade belong in one maintenance window, with the site down between them.
+$phpShort = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+$needPhp = cmpVersion(PHP_VERSION, $to['php']) < 0;
+$oldTested = $from['ci_php'] ?? [];
+$newPhp = $needPhp ? implode('.', array_slice(versionKey($to['php']), 0, 2)) : $phpShort;
+$oldRunsOnNew = $oldTested === [] || in_array($newPhp, $oldTested, true);
+$plan = [];
+$plan[] = 'Back up the database, all of sites/ (documents and the keys in sites/' . $site . '/documents/logs_and_misc/methods), and check the backup restores.';
+if ($needPhp || $missing !== []) {
+    $plan[] = ($needPhp ? "Move to PHP $newPhp or later (now " . PHP_VERSION . ')' : 'Keep PHP ' . $phpShort)
+        . ($missing !== [] ? ', with the extensions ' . implode(', ', $missing) : '') . '.'
+        . ($needPhp && !$oldRunsOnNew ? " OpenEMR $base was tested on PHP " . implode(', ', $oldTested) . " only, so it may not run on PHP $newPhp: do this and the next step in one maintenance window, with OpenEMR closed between them." : '');
+}
+if ($connected && $tested !== [] && !in_array($short, $tested, true) && cmpVersion($short, $tested[0]) < 0) {
+    $plan[] = "Upgrade the database server from $name $short to one CI tested $target with (" . implode(', ', $tested) . ').';
+}
+$plan[] = "Unpack OpenEMR $target beside the current folder, copy sites/ into it, and run sql_upgrade.php from $base"
+    . ($scripts ? ' (it runs ' . count($scripts) . ' upgrade scripts)' : '') . '. Keep the old folder until the new one works.';
+$plan[] = 'Check the result with openemr-doctor.php, then switch the web server to the new folder.';
+$plan[] = 'If anything fails: point the web server back at the old folder and restore the database backup.';
+echo "\nThe plan, from what was found:\n";
+foreach ($plan as $i => $line) {
+    echo '  ' . ($i + 1) . '. ' . $line . "\n";
+}
+echo "\nsql_upgrade.php will run, from $base: " . ($scripts ? implode(', ', $scripts) : 'no version-to-version script') . "\n";
 echo "What changes at each step:\n";
 foreach ($steps as $s) {
     echo "  $s\n";
