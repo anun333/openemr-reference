@@ -1,0 +1,1267 @@
+{
+ "release": "8.1.0",
+ "scripts": {
+  "2_6_0-to-2_6_1_upgrade.sql": {
+   "from": "2.6.0",
+   "to": "2.6.1",
+   "alters": [
+    "billing",
+    "facility",
+    "history_data",
+    "insurance_companies",
+    "phone_numbers",
+    "prescriptions"
+   ],
+   "creates": [
+    "categories",
+    "categories_seq",
+    "categories_to_documents",
+    "config",
+    "config_seq",
+    "documents",
+    "geo_country_reference",
+    "geo_zone_reference",
+    "integration_mapping",
+    "notes",
+    "openemr_postcalendar_topics",
+    "x12_partners"
+   ],
+   "writes": [
+    "categories_seq",
+    "config_seq",
+    "geo_country_reference",
+    "geo_zone_reference",
+    "openemr_module_vars"
+   ]
+  },
+  "2_6_1-to-2_6_5_upgrade.sql": {
+   "from": "2.6.1",
+   "to": "2.6.5",
+   "alters": [
+    "openemr_postcalendar_categories"
+   ],
+   "creates": [
+    "openemr_postcalendar_limits"
+   ],
+   "writes": []
+  },
+  "2_6_5-to-2_7_0_upgrade.sql": {
+   "from": "2.6.5",
+   "to": "2.7.0",
+   "alters": [
+    "form_encounter",
+    "patient_data"
+   ],
+   "creates": [],
+   "writes": []
+  },
+  "2_7_0-to-2_7_2_upgrade.sql": {
+   "from": "2.7.0",
+   "to": "2.7.2",
+   "alters": [
+    "users"
+   ],
+   "creates": [
+    "immunization",
+    "immunizations",
+    "issue_encounter"
+   ],
+   "writes": [
+    "immunization",
+    "immunizations"
+   ]
+  },
+  "2_7_2-to-2_7_3_upgrade.sql": {
+   "from": "2.7.2",
+   "to": "2.7.3",
+   "alters": [
+    "billing",
+    "history_data",
+    "insurance_numbers",
+    "lists",
+    "openemr_postcalendar_events",
+    "patient_data"
+   ],
+   "creates": [
+    "batchcom"
+   ],
+   "writes": [
+    "history_data",
+    "insurance_numbers"
+   ]
+  },
+  "2_7_3-to-2_8_0_upgrade.sql": {
+   "from": "2.7.3",
+   "to": "2.8.0",
+   "alters": [
+    "billing"
+   ],
+   "creates": [
+    "batchcom"
+   ],
+   "writes": []
+  },
+  "2_8_0-to-2_8_1_upgrade.sql": {
+   "from": "2.8.0",
+   "to": "2.8.1",
+   "alters": [
+    "form_clinical_notes",
+    "form_vitals",
+    "lists",
+    "pnotes",
+    "users"
+   ],
+   "creates": [
+    "lang_constants",
+    "lang_definitions",
+    "lang_languages",
+    "payments"
+   ],
+   "writes": [
+    "lang_languages",
+    "users"
+   ]
+  },
+  "2_8_1-to-2_8_2_upgrade.sql": {
+   "from": "2.8.1",
+   "to": "2.8.2",
+   "alters": [
+    "facility",
+    "form_encounter",
+    "form_vitals",
+    "lists",
+    "openemr_postcalendar_events",
+    "patient_data",
+    "prescriptions",
+    "registry",
+    "users"
+   ],
+   "creates": [
+    "array",
+    "drug_inventory",
+    "drug_sales",
+    "drug_templates",
+    "drugs"
+   ],
+   "writes": [
+    "lang_constants",
+    "lang_definitions",
+    "lang_languages"
+   ]
+  },
+  "2_8_2-to-2_8_3_upgrade.sql": {
+   "from": "2.8.2",
+   "to": "2.8.3",
+   "alters": [
+    "billing",
+    "documents",
+    "facility",
+    "form_encounter",
+    "form_football_injury_audit",
+    "form_vitals",
+    "history_data",
+    "insurance_data",
+    "lists",
+    "openemr_postcalendar_events",
+    "users"
+   ],
+   "creates": [
+    "claims",
+    "form_misc_billing_options"
+   ],
+   "writes": [
+    "claims"
+   ]
+  },
+  "2_8_3-to-2_9_0_upgrade.sql": {
+   "from": "2.8.3",
+   "to": "2.9.0",
+   "alters": [
+    "billing",
+    "codes",
+    "drug_sales",
+    "drug_templates",
+    "drugs",
+    "form_encounter",
+    "history_data",
+    "openemr_postcalendar_events",
+    "patient_data",
+    "payments",
+    "prescriptions",
+    "transactions",
+    "users"
+   ],
+   "creates": [
+    "fee_sheet_options",
+    "layout_options",
+    "list_options",
+    "prices"
+   ],
+   "writes": [
+    "drug_sales",
+    "fee_sheet_options",
+    "history_data",
+    "layout_options",
+    "list_options",
+    "prices"
+   ]
+  },
+  "2_9_0-to-3_0_0_upgrade.sql": {
+   "from": "2.9.0",
+   "to": "3.0.0",
+   "alters": [
+    "form_encounter",
+    "form_misc_billing_options",
+    "forms",
+    "immunizations",
+    "insurance_data",
+    "users"
+   ],
+   "creates": [
+    "ar_activity",
+    "ar_session",
+    "chart_tracker"
+   ],
+   "writes": [
+    "layout_options",
+    "list_options"
+   ]
+  },
+  "3_0_0-to-3_0_1_upgrade.sql": {
+   "from": "3.0.0",
+   "to": "3.0.1",
+   "alters": [],
+   "creates": [],
+   "writes": []
+  },
+  "3_0_1-to-3_1_0_upgrade.sql": {
+   "from": "3.0.1",
+   "to": "3.1.0",
+   "alters": [
+    "codes",
+    "drugs",
+    "form_encounter",
+    "form_reviewofs",
+    "gacl_acl",
+    "gacl_acl_sections",
+    "gacl_aco",
+    "gacl_aco_map",
+    "gacl_aco_sections",
+    "gacl_aro",
+    "gacl_aro_groups",
+    "gacl_aro_map",
+    "gacl_aro_sections",
+    "gacl_axo",
+    "gacl_axo_groups",
+    "gacl_axo_map",
+    "gacl_axo_sections",
+    "gacl_phpgacl",
+    "pnotes",
+    "prices"
+   ],
+   "creates": [
+    "users_facility"
+   ],
+   "writes": [
+    "layout_options",
+    "list_options"
+   ]
+  },
+  "3_1_0-to-3_2_0_upgrade.sql": {
+   "from": "3.1.0",
+   "to": "3.2.0",
+   "alters": [
+    "form_encounter",
+    "insurance_companies",
+    "list_options",
+    "users",
+    "x12_partners"
+   ],
+   "creates": [
+    "gprelations",
+    "lbf_data"
+   ],
+   "writes": [
+    "list_options",
+    "users"
+   ]
+  },
+  "3_2_0-to-4_0_0_upgrade.sql": {
+   "from": "3.2.0",
+   "to": "4.0.0",
+   "alters": [
+    "ar_activity",
+    "ar_session",
+    "codes",
+    "documents",
+    "drug_inventory",
+    "drug_sales",
+    "drugs",
+    "facility",
+    "form_encounter",
+    "history_data",
+    "layout_options",
+    "list_options",
+    "lists",
+    "log",
+    "openemr_postcalendar_events",
+    "patient_data",
+    "pnotes",
+    "transactions",
+    "users"
+   ],
+   "creates": [
+    "code_types",
+    "eligibility_response",
+    "eligibility_verification",
+    "extended_log",
+    "globals",
+    "lang_custom",
+    "procedure_order",
+    "procedure_report",
+    "procedure_result",
+    "procedure_type",
+    "syndromic_surveillance",
+    "user_settings",
+    "version"
+   ],
+   "writes": [
+    "categories",
+    "categories_seq",
+    "code_types",
+    "globals",
+    "layout_options",
+    "list_options",
+    "patient_data",
+    "registry",
+    "user_settings",
+    "users",
+    "version"
+   ]
+  },
+  "4_0_0-to-4_1_0_upgrade.sql": {
+   "from": "4.0.0",
+   "to": "4.1.0",
+   "alters": [
+    "ar_activity",
+    "facility",
+    "form_encounter",
+    "form_misc_billing_options",
+    "immunizations",
+    "lbf_data",
+    "lists",
+    "openemr_postcalendar_categories",
+    "openemr_postcalendar_events",
+    "patient_data",
+    "prescriptions",
+    "users"
+   ],
+   "creates": [
+    "amc_misc_data",
+    "audit_details",
+    "audit_master",
+    "automatic_notification",
+    "clinical_plans",
+    "clinical_plans_rules",
+    "clinical_rules",
+    "customlists",
+    "documents_legal_categories",
+    "documents_legal_detail",
+    "documents_legal_master",
+    "enc_category_map",
+    "lists_touch",
+    "notification_log",
+    "notification_settings",
+    "patient_access_offsite",
+    "patient_access_onsite",
+    "patient_reminders",
+    "rule_action",
+    "rule_action_item",
+    "rule_filter",
+    "rule_patient_data",
+    "rule_reminder",
+    "rule_target",
+    "standardized_tables_track",
+    "temp_table_one",
+    "template_users"
+   ],
+   "writes": [
+    "automatic_notification",
+    "categories",
+    "categories_seq",
+    "clinical_plans",
+    "clinical_plans_rules",
+    "clinical_rules",
+    "code_types",
+    "codes",
+    "customlists",
+    "documents_legal_categories",
+    "enc_category_map",
+    "form_encounter",
+    "globals",
+    "layout_options",
+    "list_options",
+    "notification_settings",
+    "openemr_postcalendar_categories",
+    "rule_action",
+    "rule_action_item",
+    "rule_filter",
+    "rule_reminder",
+    "rule_target",
+    "temp_table_one"
+   ]
+  },
+  "4_1_0-to-4_1_1_upgrade.sql": {
+   "from": "4.1.0",
+   "to": "4.1.1",
+   "alters": [
+    "ar_activity",
+    "billing",
+    "code_types",
+    "codes",
+    "documents",
+    "drugs",
+    "extended_log",
+    "facility",
+    "form_encounter",
+    "form_vitals",
+    "forms",
+    "history_data",
+    "immunizations",
+    "insurance_data",
+    "layout_options",
+    "lists",
+    "openemr_postcalendar_events",
+    "patient_access_offsite",
+    "patient_data",
+    "pnotes",
+    "prescriptions",
+    "procedure_order",
+    "standardized_tables_track",
+    "transactions",
+    "version",
+    "x12_partners"
+   ],
+   "creates": [
+    "dated_reminders",
+    "dated_reminders_link",
+    "facility_user_ids",
+    "icd10_dx_order_code",
+    "icd10_gem_dx_10_9",
+    "icd10_gem_dx_9_10",
+    "icd10_gem_pcs_10_9",
+    "icd10_gem_pcs_9_10",
+    "icd10_pcs_order_code",
+    "icd10_reimbr_dx_9_10",
+    "icd10_reimbr_pcs_9_10",
+    "icd9_dx_code",
+    "icd9_dx_long_code",
+    "icd9_sg_code",
+    "icd9_sg_long_code",
+    "payment_gateway_details",
+    "product_warehouse",
+    "supported_external_dataloads",
+    "temp_table_one"
+   ],
+   "writes": [
+    "ar_activity",
+    "ar_session",
+    "billing",
+    "code_types",
+    "layout_options",
+    "list_options",
+    "patient_data",
+    "supported_external_dataloads",
+    "temp_table_one"
+   ]
+  },
+  "4_1_1-to-4_1_2_upgrade.sql": {
+   "from": "4.1.1",
+   "to": "4.1.2",
+   "alters": [
+    "ar_activity",
+    "billing",
+    "code_types",
+    "codes",
+    "documents",
+    "documents_legal_detail",
+    "documents_legal_master",
+    "immunizations",
+    "list_options",
+    "lists",
+    "patient_access_onsite",
+    "procedure_order",
+    "procedure_report",
+    "procedure_result",
+    "procedure_type",
+    "version"
+   ],
+   "creates": [
+    "background_services",
+    "direct_message_log",
+    "issue_types",
+    "misc_address_book",
+    "procedure_answers",
+    "procedure_order_code",
+    "procedure_providers",
+    "procedure_questions",
+    "report_results",
+    "temp_table_one",
+    "users_secure"
+   ],
+   "writes": [
+    "background_services",
+    "code_types",
+    "issue_types",
+    "list_options",
+    "procedure_order",
+    "procedure_order_code",
+    "temp_table_one",
+    "users"
+   ]
+  },
+  "4_1_2-to-4_2_0_upgrade.sql": {
+   "from": "4.1.2",
+   "to": "4.2.0",
+   "alters": [
+    "billing",
+    "clinical_plans",
+    "clinical_rules",
+    "code_types",
+    "codes",
+    "documents",
+    "form_misc_billing_options",
+    "history_data",
+    "immunizations",
+    "layout_options",
+    "patient_data",
+    "procedure_order",
+    "procedure_providers",
+    "users"
+   ],
+   "creates": [
+    "amendments",
+    "amendments_history",
+    "erx_ttl_touch",
+    "esign_signatures",
+    "log_comment_encrypt",
+    "module_acl_group_settings",
+    "module_acl_sections",
+    "module_acl_user_settings",
+    "module_configuration",
+    "modules",
+    "modules_hooks_settings",
+    "modules_settings",
+    "report_itemized",
+    "shared_attributes",
+    "temp_table_one"
+   ],
+   "writes": [
+    "clinical_plans",
+    "clinical_rules",
+    "code_types",
+    "layout_options",
+    "list_options",
+    "supported_external_dataloads",
+    "temp_table_one"
+   ]
+  },
+  "4_2_0-to-4_2_1_upgrade.sql": {
+   "from": "4.2.0",
+   "to": "4.2.1",
+   "alters": [
+    "billing",
+    "clinical_rules",
+    "documents",
+    "facility",
+    "form_encounter",
+    "form_vitals",
+    "immunizations",
+    "lang_custom",
+    "list_options",
+    "lists",
+    "log",
+    "openemr_postcalendar_events",
+    "patient_access_offsite",
+    "patient_data",
+    "pnotes",
+    "prescriptions",
+    "procedure_order",
+    "procedure_order_code",
+    "procedure_providers",
+    "procedure_report",
+    "transactions",
+    "users"
+   ],
+   "creates": [
+    "ccda",
+    "ccda_components",
+    "ccda_field_mapping",
+    "ccda_sections",
+    "ccda_table_mapping",
+    "clinical_rules_log",
+    "external_encounters",
+    "external_procedures",
+    "form_care_plan",
+    "form_clinical_instructions",
+    "form_functional_cognitive_status",
+    "form_observation",
+    "lbt_data",
+    "patient_portal_menu",
+    "patient_tracker",
+    "patient_tracker_element",
+    "temp_table_one"
+   ],
+   "writes": [
+    "categories",
+    "categories_seq",
+    "ccda_components",
+    "ccda_sections",
+    "clinical_rules",
+    "code_types",
+    "globals",
+    "layout_options",
+    "lbt_data",
+    "list_options",
+    "patient_portal_menu",
+    "registry",
+    "rule_action",
+    "rule_action_item",
+    "rule_filter",
+    "rule_reminder",
+    "rule_target",
+    "supported_external_dataloads",
+    "temp_table_one",
+    "transactions"
+   ]
+  },
+  "4_2_1-to-4_2_2_upgrade.sql": {
+   "from": "4.2.1",
+   "to": "4.2.2",
+   "alters": [
+    "lang_languages",
+    "list_options",
+    "lists",
+    "patient_data",
+    "procedure_report"
+   ],
+   "creates": [],
+   "writes": [
+    "clinical_rules",
+    "lang_languages",
+    "layout_options",
+    "list_options",
+    "patient_data",
+    "rule_action",
+    "rule_reminder",
+    "rule_target"
+   ]
+  },
+  "4_2_2-to-5_0_0_upgrade.sql": {
+   "from": "4.2.2",
+   "to": "5.0.0",
+   "alters": [
+    "amc_misc_data",
+    "ar_activity",
+    "billing",
+    "claims",
+    "documents",
+    "drug_sales",
+    "drugs",
+    "facility",
+    "form_care_plan",
+    "form_encounter",
+    "form_misc_billing_options",
+    "immunizations",
+    "insurance_companies",
+    "layout_options",
+    "list_options",
+    "log",
+    "openemr_postcalendar_categories",
+    "patient_data",
+    "prescriptions",
+    "procedure_answers",
+    "procedure_order",
+    "procedure_order_code",
+    "user_settings",
+    "users"
+   ],
+   "creates": [
+    "calendar_external",
+    "codes_history",
+    "form_eye_mag",
+    "form_eye_mag_dispense",
+    "form_eye_mag_impplan",
+    "form_eye_mag_orders",
+    "form_eye_mag_prefs",
+    "form_eye_mag_wearing",
+    "form_taskman",
+    "immunization_observation",
+    "log_validator",
+    "product_registration",
+    "temp_table_one",
+    "valueset",
+    "voids"
+   ],
+   "writes": [
+    "categories",
+    "categories_seq",
+    "clinical_rules",
+    "code_types",
+    "codes",
+    "enc_category_map",
+    "form_eye_mag_prefs",
+    "globals",
+    "layout_options",
+    "list_options",
+    "openemr_postcalendar_categories",
+    "registry",
+    "supported_external_dataloads",
+    "temp_table_one"
+   ]
+  },
+  "5_0_0-to-5_0_1_upgrade.sql": {
+   "from": "5.0.0",
+   "to": "5.0.1",
+   "alters": [
+    "billing",
+    "categories",
+    "claims",
+    "codes",
+    "facility",
+    "form_misc_billing_options",
+    "forms",
+    "issue_types",
+    "layout_options",
+    "lbf_data",
+    "list_options",
+    "log_comment_encrypt",
+    "openemr_postcalendar_categories",
+    "openemr_postcalendar_events",
+    "pharmacies",
+    "prescriptions",
+    "registry",
+    "users",
+    "x12_partners"
+   ],
+   "creates": [
+    "erx_drug_paid",
+    "erx_narcotics",
+    "erx_rx_log",
+    "form_group_attendance",
+    "form_groups_encounter",
+    "layout_group_properties",
+    "medex_icons",
+    "medex_outgoing",
+    "medex_prefs",
+    "medex_recalls",
+    "multiple_db",
+    "onsite_documents",
+    "onsite_mail",
+    "onsite_messages",
+    "onsite_online",
+    "onsite_portal_activity",
+    "onsite_signatures",
+    "patient_birthday_alert",
+    "therapy_groups",
+    "therapy_groups_counselors",
+    "therapy_groups_participant_attendance",
+    "therapy_groups_participants"
+   ],
+   "writes": [
+    "background_services",
+    "categories",
+    "categories_seq",
+    "globals",
+    "list_options",
+    "medex_icons",
+    "openemr_postcalendar_categories",
+    "registry",
+    "supported_external_dataloads",
+    "user_settings"
+   ]
+  },
+  "5_0_1-to-5_0_2_upgrade.sql": {
+   "from": "5.0.1",
+   "to": "5.0.2",
+   "alters": [
+    "amendments",
+    "ar_session",
+    "batchcom",
+    "billing",
+    "claims",
+    "dated_reminders",
+    "documents",
+    "drug_sales",
+    "eligibility_verification",
+    "facility",
+    "form_eye_mag_dispense",
+    "form_eye_mag_orders",
+    "form_eye_mag_wearing",
+    "form_ros",
+    "immunizations",
+    "insurance_companies",
+    "issue_encounter",
+    "lists",
+    "medex_prefs",
+    "notification_log",
+    "onsite_documents",
+    "onsite_messages",
+    "patient_access_offsite",
+    "patient_access_onsite",
+    "pnotes",
+    "prescriptions",
+    "procedure_order",
+    "therapy_groups_participant_attendance",
+    "therapy_groups_participants",
+    "users_secure",
+    "x12_partners"
+   ],
+   "creates": [
+    "api_token",
+    "benefit_eligibility",
+    "erx_weno_drugs",
+    "form_eye_acuity",
+    "form_eye_antseg",
+    "form_eye_base",
+    "form_eye_biometrics",
+    "form_eye_external",
+    "form_eye_hpi",
+    "form_eye_locking",
+    "form_eye_neuro",
+    "form_eye_postseg",
+    "form_eye_refraction",
+    "form_eye_ros",
+    "form_eye_vitals",
+    "keys",
+    "login_mfa_registrations"
+   ],
+   "writes": [
+    "background_services",
+    "form_eye_acuity",
+    "form_eye_antseg",
+    "form_eye_base",
+    "form_eye_biometrics",
+    "form_eye_external",
+    "form_eye_hpi",
+    "form_eye_locking",
+    "form_eye_neuro",
+    "form_eye_postseg",
+    "form_eye_refraction",
+    "form_eye_ros",
+    "form_eye_vitals",
+    "list_options",
+    "supported_external_dataloads"
+   ]
+  },
+  "5_0_2-to-6_0_0_upgrade.sql": {
+   "from": "5.0.2",
+   "to": "6.0.0",
+   "alters": [
+    "amendments",
+    "amendments_history",
+    "api_token",
+    "ar_activity",
+    "automatic_notification",
+    "batchcom",
+    "ccda",
+    "codes",
+    "codes_history",
+    "documents",
+    "drug_inventory",
+    "drugs",
+    "facility",
+    "facility_user_ids",
+    "form_bronchitis",
+    "form_encounter",
+    "form_eye_mag_prefs",
+    "form_eye_neuro",
+    "form_prior_auth",
+    "icd10_dx_order_code",
+    "icd10_pcs_order_code",
+    "immunizations",
+    "insurance_data",
+    "layout_options",
+    "lists",
+    "log_comment_encrypt",
+    "modules",
+    "onsite_documents",
+    "onsite_signatures",
+    "patient_access_offsite",
+    "patient_access_onsite",
+    "patient_data",
+    "prescriptions",
+    "procedure_order",
+    "procedure_providers",
+    "procedure_result",
+    "product_registration",
+    "users",
+    "users_secure"
+   ],
+   "creates": [
+    "api_log",
+    "oauth_clients",
+    "oauth_trusted_user",
+    "pro_assessments",
+    "session_tracker",
+    "uuid_mapping",
+    "uuid_registry"
+   ],
+   "writes": [
+    "amendments",
+    "amendments_history",
+    "batchcom",
+    "codes",
+    "drug_inventory",
+    "drugs",
+    "form_prior_auth",
+    "globals",
+    "icd10_dx_order_code",
+    "insurance_data",
+    "layout_options",
+    "list_options",
+    "onsite_documents",
+    "openemr_postcalendar_categories",
+    "patient_access_onsite",
+    "supported_external_dataloads",
+    "users_secure"
+   ]
+  },
+  "6_0_0-to-6_1_0_upgrade.sql": {
+   "from": "6.0.0",
+   "to": "6.1.0",
+   "alters": [
+    "api_token",
+    "ar_activity",
+    "audit_details",
+    "audit_master",
+    "billing",
+    "documents",
+    "drug_sales",
+    "drug_templates",
+    "drugs",
+    "employer_data",
+    "external_procedures",
+    "facility",
+    "form_care_plan",
+    "form_encounter",
+    "form_observation",
+    "form_vitals",
+    "history_data",
+    "insurance_companies",
+    "insurance_data",
+    "layout_group_properties",
+    "layout_options",
+    "lists",
+    "log",
+    "modules",
+    "patient_data",
+    "prescriptions",
+    "procedure_answers",
+    "procedure_order",
+    "procedure_order_code",
+    "procedure_providers",
+    "procedure_report",
+    "procedure_type",
+    "sct2_description",
+    "sct_description",
+    "users",
+    "users_facility",
+    "uuid_mapping",
+    "voids",
+    "x12_partners"
+   ],
+   "creates": [
+    "api_refresh_token",
+    "document_template_profiles",
+    "document_templates",
+    "export_job",
+    "form_clinical_notes",
+    "form_vital_details",
+    "insurance_type_codes",
+    "jwt_grant_history",
+    "lists_medication",
+    "patient_history",
+    "payment_processing_audit",
+    "temp_table_one",
+    "verify_email",
+    "x12_remote_tracker"
+   ],
+   "writes": [
+    "ar_activity",
+    "background_services",
+    "categories",
+    "categories_seq",
+    "ccda_components",
+    "ccda_sections",
+    "code_types",
+    "codes",
+    "document_templates",
+    "drug_sales",
+    "forms",
+    "gacl_aro",
+    "gacl_aro_seq",
+    "gacl_groups_aro_map",
+    "globals",
+    "insurance_type_codes",
+    "issue_types",
+    "layout_options",
+    "list_options",
+    "medex_icons",
+    "module_acl_group_settings",
+    "module_acl_sections",
+    "modules",
+    "patient_data",
+    "patient_history",
+    "registry",
+    "supported_external_dataloads",
+    "temp_table_one",
+    "users"
+   ]
+  },
+  "6_1_0-to-7_0_0_upgrade.sql": {
+   "from": "6.1.0",
+   "to": "7.0.0",
+   "alters": [
+    "addresses",
+    "api_token",
+    "categories",
+    "ccda",
+    "clinical_rules",
+    "form_care_plan",
+    "form_encounter",
+    "form_observation",
+    "form_vital_details",
+    "form_vitals",
+    "history_data",
+    "immunizations",
+    "insurance_companies",
+    "lists",
+    "module_configuration",
+    "patient_access_onsite",
+    "patient_data",
+    "patient_history",
+    "prescriptions",
+    "procedure_order",
+    "procedure_order_code",
+    "procedure_result",
+    "procedure_type",
+    "report_itemized"
+   ],
+   "creates": [
+    "contact",
+    "contact_address",
+    "temp_table_one",
+    "valueset_oid"
+   ],
+   "writes": [
+    "categories",
+    "clinical_rules",
+    "code_types",
+    "form_vitals",
+    "lang_updates_610",
+    "layout_options",
+    "list_options",
+    "patient_data",
+    "temp_table_one"
+   ]
+  },
+  "7_0_0-to-7_0_1_upgrade.sql": {
+   "from": "7.0.0",
+   "to": "7.0.1",
+   "alters": [
+    "ar_activity",
+    "audit_details",
+    "audit_master",
+    "ccda",
+    "form_encounter",
+    "insurance_data",
+    "layout_group_properties",
+    "module_configuration",
+    "openemr_postcalendar_events",
+    "prescriptions",
+    "registry"
+   ],
+   "creates": [
+    "form_questionnaire_assessments",
+    "onetime_auth",
+    "questionnaire_repository",
+    "questionnaire_response"
+   ],
+   "writes": [
+    "background_services",
+    "categories",
+    "globals",
+    "list_options",
+    "registry",
+    "supported_external_dataloads"
+   ]
+  },
+  "7_0_1-to-7_0_2_upgrade.sql": {
+   "from": "7.0.1",
+   "to": "7.0.2",
+   "alters": [
+    "document_template_profiles",
+    "facility",
+    "oauth_clients",
+    "onsite_documents",
+    "patient_data",
+    "users_secure",
+    "x12_partners"
+   ],
+   "creates": [
+    "edi_sequences",
+    "email_queue",
+    "fee_schedule",
+    "ip_tracking",
+    "patient_settings",
+    "recent_patients"
+   ],
+   "writes": [
+    "background_services",
+    "categories",
+    "categories_seq",
+    "edi_sequences",
+    "globals",
+    "layout_options",
+    "list_options",
+    "supported_external_dataloads"
+   ]
+  },
+  "7_0_2-to-7_0_3_upgrade.sql": {
+   "from": "7.0.2",
+   "to": "7.0.3",
+   "alters": [
+    "clinical_rules",
+    "clinical_rules_log",
+    "drugs",
+    "facility",
+    "facility_user_ids",
+    "form_clinical_notes",
+    "form_encounter",
+    "form_vitals",
+    "insurance_companies",
+    "list_options",
+    "oauth_clients",
+    "onetime_auth",
+    "openemr_postcalendar_categories",
+    "patient_data",
+    "procedure_providers",
+    "sct2_description",
+    "session_tracker",
+    "users"
+   ],
+   "creates": [
+    "dsi_source_attributes"
+   ],
+   "writes": [
+    "list_options",
+    "supported_external_dataloads"
+   ]
+  },
+  "7_0_3-to-7_0_4_upgrade.sql": {
+   "from": "7.0.3",
+   "to": "7.0.4",
+   "alters": [
+    "contact_address",
+    "drug_sales",
+    "employer_data",
+    "form_care_plan",
+    "form_misc_billing_options",
+    "form_observation",
+    "form_questionnaire_assessments",
+    "immunizations",
+    "issue_encounter",
+    "lists_medication",
+    "onetime_auth",
+    "patient_data",
+    "prescriptions",
+    "procedure_order",
+    "product_registration",
+    "questionnaire_repository",
+    "users"
+   ],
+   "creates": [
+    "care_team_member",
+    "care_teams",
+    "clinical_notes_documents",
+    "clinical_notes_procedure_results",
+    "contact_relation",
+    "contact_telecom",
+    "form_history_sdoh",
+    "form_history_sdoh_health_concerns",
+    "form_vitals_calculation",
+    "form_vitals_calculation_components",
+    "form_vitals_calculation_form_vitals",
+    "patient_care_experience_preferences",
+    "patient_treatment_intervention_preferences",
+    "person",
+    "person_patient_link",
+    "preference_value_sets",
+    "procedure_order_relationships",
+    "procedure_specimen",
+    "track_events"
+   ],
+   "writes": [
+    "care_team_member",
+    "care_teams",
+    "categories",
+    "issue_types",
+    "layout_group_properties",
+    "layout_options",
+    "list_options",
+    "lists_medication",
+    "patient_data",
+    "preference_value_sets",
+    "procedure_order",
+    "supported_external_dataloads",
+    "uuid_mapping",
+    "uuid_registry"
+   ]
+  },
+  "7_0_4-to-8_0_0_upgrade.sql": {
+   "from": "7.0.4",
+   "to": "8.0.0",
+   "alters": [
+    "lang_definitions",
+    "patient_data"
+   ],
+   "creates": [],
+   "writes": [
+    "layout_options",
+    "list_options"
+   ]
+  },
+  "8_0_0-to-8_1_0_upgrade.sql": {
+   "from": "8.0.0",
+   "to": "8.1.0",
+   "alters": [
+    "background_services",
+    "facility",
+    "form_eye_antseg",
+    "medex_recalls",
+    "onetime_auth",
+    "openemr_postcalendar_events",
+    "patient_data",
+    "questionnaire_repository"
+   ],
+   "creates": [
+    "migrations"
+   ],
+   "writes": [
+    "document_templates",
+    "globals",
+    "layout_options",
+    "list_options",
+    "openemr_postcalendar_events",
+    "patient_data"
+   ]
+  }
+ },
+ "package_unpacked_bytes": null,
+ "source": {
+  "tag": "v8_1_0",
+  "commit": "28dc4f9ba3",
+  "file": "sql/*_upgrade.sql; the GitHub release tarball"
+ }
+}

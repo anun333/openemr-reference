@@ -78,6 +78,11 @@ def known_facts(tags: list[str]) -> None:
           f"ClaimRev is a Composer module installed to custom_modules from 8.2.0 ({claimrev})")
     check("templates/interface/main/tabs/tabs_template.html.twig" in load("v8_4_1", "package")["files"],
           "8.4.1's package has the tabs template whose absence blanked logins in t/25717")
+    # Upgrade scripts: every release has them, and 8.3.0 to 8.4.0 alters api_log (read from the script).
+    up = load("v8_4_1", "upgrades")
+    check(len(up["scripts"]) >= 30 and "api_log" in up["scripts"]["8_3_0-to-8_4_0_upgrade.sql"]["alters"]
+          and up["package_unpacked_bytes"] and up["package_unpacked_bytes"] > 400_000_000,
+          f"8.4.1 has {len(up['scripts'])} upgrade scripts; 8.3.0 to 8.4.0 alters api_log; the package unpacks to {up['package_unpacked_bytes']} bytes")
     # Patches delete files: 7.0.3 patch 4 dropped the old login template (seen on the official 7.0.3 image).
     check("templates/login/login_core.html.twig" in load("v7_0_3", "package")["files"]
           and "templates/login/login_core.html.twig" not in load("v7_0_3", "package-p4")["files"],

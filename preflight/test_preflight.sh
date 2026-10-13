@@ -6,6 +6,7 @@
 #   3 a removed setting changed from its default: Settings WARN
 #   4 the database one version behind the code (a half-finished upgrade): Previous upgrade FAIL
 #   5 the same install reached through an xampp/ path: XAMPP FAIL with the migration guide
+#   6 a backup directory on a 1 MB disk: Room FAIL
 # Everything runs in containers that are deleted at the end. Needs Docker and the facts in ../site/preflight.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -28,6 +29,8 @@ expect "^WARN  Database server: MariaDB 10.6 is older" "1: MariaDB 10.6 warns"
 expect "^WARN  Modules: oe-module-claimrev-connect is installed by Composer" "1: ClaimRev moved to Composer"
 expect "^PASS  Custom menus: .*no user is assigned it" "1: an unassigned stock menu doesn't warn"
 expect "^PASS  Previous upgrade" "1: database matches code"
+expect "^PASS  Room: .* has .* free; need about .*backup: database .*new release 8.4.1" "1: room for the backup and the new release is reported"
+expect "^NOTE  Room in the database: [0-9]* tables altered from 7.0.3 to 8.4.1, the largest here" "1: the tables the upgrade alters are measured; the database's folder is in another container"
 q "UPDATE users SET main_menu_role='Custom.json' WHERE username='admin'"; out=$(run)
 expect "^WARN  Custom menus: menus in use point to files removed .*interface/main/backup.php" "2: an assigned menu linking a removed file warns"
 q "REPLACE INTO globals (gl_name, gl_index, gl_value) VALUES ('configuration_import_export', 0, '1')"; out=$(run)
@@ -38,4 +41,7 @@ docker exec $C sh -c 'mkdir -p /opt/xampp/htdocs && ln -sfn /var/www/localhost/h
 out=$(docker exec $C php /tmp/preflight.php --openemr=/opt/xampp/htdocs/openemr --facts=/tmp/pf-facts || true)
 expect "^FAIL  XAMPP: this install runs on XAMPP" "5: an install under an xampp directory is told why, with the migration guide"
 expect "XAMPP_to_Docker_Migration" "5: the migration guide is linked"
+out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --backup-dir=/tinybackup || true)
+expect "^FAIL  Room: /tinybackup has .* free" "6: a backup disk too small for the backup fails"
+expect "put the backup on another disk with --backup-dir" "6: and says what to do"
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

@@ -22,9 +22,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'stderr');
 
-$opts = getopt('', ['openemr:', 'target:', 'site:', 'facts:', 'help']);
+$opts = getopt('', ['openemr:', 'target:', 'site:', 'facts:', 'backup-dir:', 'help']);
 if (isset($opts['help']) || empty($opts['openemr'])) {
-    fwrite(STDERR, "usage: php openemr-preflight.php --openemr=/path/to/openemr [--target=X.Y.Z] [--site=default] [--facts=DIR_OR_URL]\n");
+    fwrite(STDERR, "usage: php openemr-preflight.php --openemr=/path/to/openemr [--target=X.Y.Z] [--site=default] [--facts=DIR_OR_URL] [--backup-dir=DIR]\n");
     exit(2);
 }
 $root = rtrim((string)$opts['openemr'], '/');
@@ -318,40 +318,40 @@ if ($broken !== []) {
         . ($unused ? " ($unused more " . ($unused === 1 ? 'does' : 'do') . ', but no user is assigned it)' : ''));
 }
 
-// ------------------------------------------------------------ disk
+// ------------------------------------------------------------ room for the whole process
+// Each step needs room on a particular disk, and an upgrade that runs out part-way is the worst
+// outcome. The backup needs the database (a dump holds about its data, not its indexes) and the
+// site's documents; the new release unpacks beside the old one; and MariaDB or MySQL may rebuild
+// each table an upgrade script alters, which needs free space in its data directory about as
+// large as that table (the facts list each script's altered tables).
 
-$free = @disk_free_space($root);
-$size = 0;
-$deadline = microtime(true) + 20;
-$capped = false;
-$it = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(
-    new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
-    function ($f, $key, $it) use ($root) {
-        return !($it->hasChildren() && preg_match('#/sites/[^/]+/documents$#', $f->getPathname()));
+$gb = function ($b) { return $b >= 1073741824 ? number_format($b / 1073741824, 1) . ' GB' : number_format($b / 1048576) . ' MB'; };
+$measure = function (string $dir, ?string $skip, float $seconds): array {
+    $size = 0;
+    $deadline = microtime(true) + $seconds;
+    if (!is_dir($dir)) {
+        return [0, false];
     }
-));
-foreach ($it as $f) {
-    if ($f->isFile()) {
-        $size += $f->getSize();
+    $it = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(
+        new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
+        function ($f, $key, $it) use ($skip) {
+            return $skip === null || !($it->hasChildren() && preg_match($skip, $f->getPathname()));
+        }
+    ));
+    foreach ($it as $f) {
+        if ($f->isFile()) {
+            $size += $f->getSize();
+        }
+        if (microtime(true) > $deadline) {
+            return [$size, true];
+        }
     }
-    if (microtime(true) > $deadline) {
-        $capped = true;
-        break;
-    }
-}
-$gb = function ($b) { return number_format($b / 1073741824, 1) . ' GB'; };
-if ($free === false) {
-    report('WARN', 'Disk space', "can't read the free space for $root");
-} elseif ($free < 2 * $size) {
-    report('WARN', 'Disk space', $gb($free) . ' free; the code (not counting documents) is ' . ($capped ? 'at least ' : '') . $gb($size),
-        'The upgrade unpacks a new copy beside the old one, and the backup needs room too.');
-} else {
-    report('PASS', 'Disk space', $gb($free) . ' free; the code (not counting documents) is ' . ($capped ? 'at least ' : '') . $gb($size));
-}
+    return [$size, false];
+};
+[$codeSize, $codeCapped] = $measure($root, '#/sites/[^/]+/documents$#', 20);
+[$docsSize, $docsCapped] = $measure("$root/sites/$site/documents", null, 30);
+$atLeast = function (bool $capped) { return $capped ? 'at least ' : ''; };
 
-// ------------------------------------------------------------ summary
-
-echo "\nThe upgrade itself: back up the database and sites/ first, then follow the wiki's Linux Upgrade guide.\n";
 $scripts = [];
 foreach ($to['upgrade_scripts'] as $f) {
     if (preg_match('/^(\d+)_(\d+)_(\d+)-to-(\d+)_(\d+)_(\d+)_upgrade\.sql$/', $f, $m)
@@ -360,6 +360,93 @@ foreach ($to['upgrade_scripts'] as $f) {
     }
 }
 usort($scripts, function ($a, $b) { return cmpVersion(preg_replace('/\D+/', '.', $a), preg_replace('/\D+/', '.', $b)); });
+$altered = [];
+foreach ($scripts as $f) {
+    foreach ($to['upgrade_alters'][$f] ?? [] as $t) {
+        $altered[$t] = true;
+    }
+}
+
+$dbData = 0;
+$dbTotal = 0;
+$largest = ['', 0];
+$datadir = null;
+if ($connected) {
+    $res = $mysqli->query('SELECT table_name AS t, COALESCE(data_length, 0) AS d, COALESCE(index_length, 0) AS i FROM information_schema.tables WHERE table_schema = DATABASE()');
+    while ($res && ($r = $res->fetch_assoc())) {
+        $dbData += (int)$r['d'];
+        $dbTotal += (int)$r['d'] + (int)$r['i'];
+        if (isset($altered[$r['t']]) && (int)$r['d'] + (int)$r['i'] > $largest[1]) {
+            $largest = [$r['t'], (int)$r['d'] + (int)$r['i']];
+        }
+    }
+    $row = $mysqli->query('SELECT @@datadir AS d');
+    $datadir = $row ? (string)($row->fetch_assoc()['d'] ?? '') : null;
+}
+
+// The backup and the new release, on whichever disks they land; when they share one, they add up.
+$backupDir = isset($opts['backup-dir']) ? rtrim((string)$opts['backup-dir'], '/') : dirname($root);
+$needs = [
+    $backupDir => ['what' => [], 'bytes' => 0],
+];
+$needs[$backupDir]['what'][] = 'backup: database ' . $gb($dbData) . ', documents ' . $atLeast($docsCapped) . $gb($docsSize);
+$needs[$backupDir]['bytes'] += $dbData + $docsSize;
+$release = $to['package_unpacked_bytes'] ?? null;
+$releaseBytes = is_int($release) ? $release : $codeSize;
+$installDisk = dirname($root);
+$sameDisk = @stat($backupDir) && @stat($installDisk) && stat($backupDir)['dev'] === stat($installDisk)['dev'];
+$key = $sameDisk ? $backupDir : $installDisk;
+$needs[$key] = $needs[$key] ?? ['what' => [], 'bytes' => 0];
+$needs[$key]['what'][] = "new release $target " . (is_int($release) ? $gb($release) : 'about ' . $atLeast($codeCapped) . $gb($codeSize) . ' (the current code\'s size)');
+$needs[$key]['bytes'] += $releaseBytes;
+foreach ($needs as $dir => $need) {
+    $want = (int)($need['bytes'] * 1.2);
+    $free = @disk_free_space($dir);
+    $detail = 'need about ' . $gb($want) . ' with a 20% margin (' . implode('; ', $need['what']) . ')';
+    if ($free === false) {
+        report('WARN', 'Room', "can't read the free space at $dir; $detail");
+    } elseif ($free < $want) {
+        report('FAIL', 'Room', "$dir has " . $gb($free) . " free; $detail",
+            $dir === $backupDir ? 'Free space there, or put the backup on another disk with --backup-dir.' : 'Free space on this disk before unpacking the new release.');
+    } else {
+        report('PASS', 'Room', "$dir has " . $gb($free) . " free; $detail");
+    }
+}
+
+// The database server's own disk, for the tables the upgrade alters.
+if (!$connected) {
+    report('WARN', 'Room in the database', "can't connect, so the tables the upgrade alters can't be measured");
+} elseif ($altered === []) {
+    report('PASS', 'Room in the database', "the upgrade scripts from $base to $target alter no existing table");
+} else {
+    $need = (int)($largest[1] * 1.2);
+    $what = count($altered) . ' tables altered from ' . $base . ' to ' . $target . ($largest[0] !== '' ? ', the largest here `' . $largest[0] . '` (' . $gb($largest[1]) . ')' : '');
+    $free = ($datadir !== null && $datadir !== '' && @is_dir($datadir)) ? @disk_free_space($datadir) : false;
+    if ($free === false) {
+        report('NOTE', 'Room in the database', "$what; the database's data folder isn't visible from here",
+            'Check that the database server has at least ' . $gb($need) . ' free where it keeps its data (' . ($datadir ?: 'its datadir') . '): rebuilding a table needs about as much again as the table.');
+    } elseif ($free < $need) {
+        report('FAIL', 'Room in the database', "$what; its data folder $datadir has " . $gb($free) . ' free, under the ' . $gb($need) . ' a rebuild of it can take',
+            'Free space on the database server first, or archive old rows from that table.');
+    } else {
+        report('PASS', 'Room in the database', "$what; its data folder has " . $gb($free) . ' free');
+    }
+}
+
+// Memory, on Linux.
+$meminfo = @file_get_contents('/proc/meminfo');
+if (is_string($meminfo) && preg_match('/^MemAvailable:\s+(\d+) kB/m', $meminfo, $mm)) {
+    $available = (int)$mm[1] * 1024;
+    if ($available < 1073741824) {
+        report('WARN', 'Memory', $gb($available) . ' available', 'Upgrades of large databases can need more; close other work or add memory first.');
+    } else {
+        report('PASS', 'Memory', $gb($available) . ' available');
+    }
+}
+
+// ------------------------------------------------------------ summary
+
+echo "\nThe upgrade itself: back up the database and sites/ first, then follow the wiki's Linux Upgrade guide.\n";
 echo "sql_upgrade.php will run, from $base: " . ($scripts ? implode(', ', $scripts) : 'no version-to-version script') . "\n";
 echo "What changes at each step:\n";
 foreach ($steps as $s) {

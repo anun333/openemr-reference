@@ -40,7 +40,9 @@ Run it with the PHP the web server uses. It only reads: nothing in the install o
 | Settings | the target removes a setting this install changed from its default (warn) |
 | Modules | a module moved to Composer, or isn't part of the target (warn) |
 | Custom menus | a menu assigned to users links to a file the target removed (warn) |
-| Disk space | less free than twice the code's size (warn) |
+| Room | for each disk involved, less free than the backup (database and documents) and the new release need, plus 20% (fail); the backup disk is chosen with `--backup-dir` |
+| Room in the database | the database's data folder has less free space than the largest table the upgrade scripts alter, plus 20%, which a rebuild of it can take (fail); where the folder isn't visible, it says how much to check for |
+| Memory | under 1 GB available, on Linux (warn) |
 
 It then lists the upgrade scripts `sql_upgrade.php` will run and the upgrade notes for each step. It runs on PHP 7.4 and later, since it runs on the current install's PHP. Exit code 1 if any check fails.
 
@@ -101,6 +103,7 @@ On the official 8.4.1 image as installed, it reports one real gap: the image has
 | Settings | `library/globals.inc.php` | parsed with nikic/php-parser, not run; enum-case keys resolved from `src/Services/Globals/*Enum.php` |
 | Package files | the tag | `git archive`, which applies the tag's `export-ignore`; every file it lists is in the 8.4.1 release tarball (checked 2026-10-11). Before 8.1.0 it also lists `tests/`, `ci/` and `.github/` |
 | Patch file lists | each `vX_Y_Z_N` tag | as the package files |
+| Upgrade scripts' tables, package size | `sql/*_upgrade.sql` at each tag; the GitHub release tarball | the tables each script alters, creates and writes; the tarball's unpacked size, listed as it downloads (8.2.0 on) |
 | Composer packages, page assets | `composer.lock`, `config/config.yaml` | each package's install directory (`openemr-module` packages go to `custom_modules/`); the built files with `autoload: true` |
 
 ## Checks

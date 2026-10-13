@@ -48,7 +48,10 @@ def package(r: dict) -> tuple[dict, dict[str, dict]]:
     (each patch's under "patches"); the file lists go in <release>-files.json and
     <release>-p<N>-files.json, grouped by directory to keep them small."""
     pk = json.loads((DATA / r["tag"] / "package.json").read_text())
-    extra = {"composer": [[c["path"], c["type"]] for c in pk["composer"]], "assets": pk["assets"], "patches": {}}
+    up = json.loads((DATA / r["tag"] / "upgrades.json").read_text())
+    extra = {"composer": [[c["path"], c["type"]] for c in pk["composer"]], "assets": pk["assets"], "patches": {},
+             "upgrade_alters": {name: s["alters"] for name, s in up["scripts"].items()},
+             "package_unpacked_bytes": up["package_unpacked_bytes"]}
     files = {f"{r['release']}-files": {"release": r["release"], "dirs": grouped(pk["files"])}}
     for path in sorted((DATA / r["tag"]).glob("package-p*.json"), key=lambda p: int(p.stem.split("-p")[1])):
         n = path.stem.split("-p")[1]
