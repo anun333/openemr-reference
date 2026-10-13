@@ -41,6 +41,10 @@ check "$l1" 200 "upgrade: the login page answers from the new folder"
 check "$(docker exec $C sh -c "test -d $OE.old-${v0%% db *} && echo kept")" kept "upgrade: the old folder is kept"
 check "$(docker exec $C sh -c "ls /root/backups/*/*.sql /root/backups/*/sites.tar.gz | wc -l")" 2 "upgrade: the database dump and sites/ are backed up"
 
+# Work done after the upgrade, which a rollback must not throw away: a row in a table the upgrade
+# created (care_teams) and a note in one that was already there (pnotes). Synthetic.
+q "INSERT INTO care_teams (uuid, pid, team_name, status) VALUES (NULL, 1, 'Synthetic team added after the upgrade', 'active')"
+q "INSERT INTO pnotes (date, body, pid, user, groupname, activity, authorized, title, assigned_to, deleted, message_status) VALUES (NOW(), 'Synthetic note added after the upgrade', 1, 'synthetic', 'Default', 1, 0, 'Synthetic', 'synthetic', 0, 'New')"
 set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --rollback --openemr=$OE > "$LOG/rollback.log" 2>&1; rc=$?; set -e
 grep -E "dropping|restoring|^Rolled back|^STOP" "$LOG/rollback.log" | sed 's/^/    /' | head -20
 check "$rc" 0 "rollback: the script finished"
@@ -49,5 +53,11 @@ check "$v2" "$v0" "rollback: the database is back to $v0"
 check "$t2" "$t0" "rollback: the same tables as before"
 check "$p2" "$p0" "rollback: every patient is still there"
 check "$l2" 200 "rollback: the login page answers from the old folder"
+check "$(q "SELECT COUNT(*) FROM pnotes WHERE body = 'Synthetic note added after the upgrade'")" 0 "rollback: the database is as before the upgrade (the later note is gone from it)"
+saved() { docker exec $C sh -c "grep -c \"$1\" /root/backups/*/default.$2-*.sql 2>/dev/null || true"; }
+check "$(saved 'Synthetic note added after the upgrade' before-rollback)" 1 "rollback: the later note is kept in the database saved before the rollback"
+check "$(saved 'Synthetic team added after the upgrade' before-rollback)" 1 "rollback: so is the row in the new table"
+check "$(saved 'Synthetic team added after the upgrade' created-tables)" 1 "rollback: the new tables are saved on their own, with their rows"
+check "$(saved 'CREATE TABLE \`pnotes\`' created-tables)" 0 "rollback: and only the new tables are in that file"
 echo "full output: $LOG/upgrade.log, $LOG/sql_upgrade.log, $LOG/rollback.log"
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

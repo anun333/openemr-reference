@@ -14,7 +14,8 @@
 #   5. runs the target's own sql_upgrade.php --from=<current> for each site, as the web server's user;
 #   6. checks the new folder with openemr-doctor.php (stops on a FAIL unless --force);
 #   7. swaps the folders (the old one is kept as <folder>.old-<version>) and starts the web server.
-# Nothing is deleted. --rollback restores the databases from the backup and swaps the folders back.
+# Nothing is deleted. --rollback first saves each database as it is (everything entered since the
+# upgrade) and, apart, the tables the upgrade created; then restores the backup and swaps the folders back.
 #
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
@@ -31,7 +32,7 @@ for arg in "$@"; do
         --force) FORCE=1 ;;
         --yes) YES=1 ;;
         --rollback) ROLLBACK=1 ;;
-        -h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $arg (see --help)" >&2; exit 2 ;;
     esac
 done
@@ -83,26 +84,38 @@ if (( ROLLBACK )); then
     fi
     step "Rolling back $NAME to $FROM_VERSION (backup in $BACKUP_DIR)"
     service_do stop
+    RB="$(date +%Y%m%d-%H%M%S)"
     for site in $SITES; do
         mapfile -t c < <(sqlconf "$CONF_DIR/sites/$site/sqlconf.php")
         cnf="$(mycnf "${c[0]}" "${c[1]}" "${c[2]}" "${c[3]}")"
-        say "  $site: restoring ${c[4]} from $BACKUP_DIR/$site.sql"
-        "$(client)" --defaults-extra-file="$cnf" "${c[4]}" < "$BACKUP_DIR/$site.sql"
-        # Drop only what the upgrade created: a table that is neither in the dump nor in the list taken
-        # just before the upgrade. (A lookup, not "printf | grep -q": under pipefail, grep -q closing the
-        # pipe early makes printf fail and a table that IS there look missing.)
+        # The tables the upgrade created: neither in the dump nor in the list taken just before the
+        # upgrade. (A lookup, not "printf | grep -q": under pipefail, grep -q closing the pipe early
+        # makes printf fail and a table that IS there look missing.)
         declare -A keep=()
         while IFS= read -r t; do keep["$t"]=1; done < <(grep -oE '^CREATE TABLE `[^`]+`' "$BACKUP_DIR/$site.sql" | cut -d'`' -f2)
         [[ -f "$BACKUP_DIR/$site.tables" ]] && while IFS= read -r t; do [[ -n "$t" ]] && keep["$t"]=1; done < "$BACKUP_DIR/$site.tables"
-        (( ${#keep[@]} > 0 )) || die "found no tables in $BACKUP_DIR/$site.sql; not dropping anything"
+        (( ${#keep[@]} > 0 )) || die "found no tables in $BACKUP_DIR/$site.sql; not touching ${c[4]}"
         mapfile -t now < <("$(client)" --defaults-extra-file="$cnf" -N -B "${c[4]}" -e 'SHOW FULL TABLES WHERE Table_type = "BASE TABLE"' | cut -f1)
+        created=()
         for t in "${now[@]}"; do
-            if [[ -z "${keep[$t]:-}" ]]; then
-                say "    dropping $t (created by the upgrade)"
-                "$(client)" --defaults-extra-file="$cnf" "${c[4]}" -e "DROP TABLE \`$t\`"
-            fi
+            if [[ -z "${keep[$t]:-}" ]]; then created+=("$t"); fi
         done
         unset keep
+        # Nothing is discarded: the restore below replaces every table with its pre-upgrade copy, so
+        # whatever was entered since the upgrade is saved first, all of it and the new tables apart.
+        saved="$BACKUP_DIR/$site.before-rollback-$RB.sql"
+        "$(dumper)" --defaults-extra-file="$cnf" --single-transaction --skip-lock-tables --routines --triggers "${c[4]}" > "$saved"
+        say "  $site: saved ${c[4]} as it is now, with everything entered since the upgrade -> $saved"
+        if (( ${#created[@]} )); then
+            "$(dumper)" --defaults-extra-file="$cnf" --single-transaction --skip-lock-tables "${c[4]}" "${created[@]}" > "$BACKUP_DIR/$site.created-tables-$RB.sql"
+            say "  $site: and the ${#created[@]} tables the upgrade created, on their own -> $BACKUP_DIR/$site.created-tables-$RB.sql"
+        fi
+        say "  $site: restoring ${c[4]} from $BACKUP_DIR/$site.sql"
+        "$(client)" --defaults-extra-file="$cnf" "${c[4]}" < "$BACKUP_DIR/$site.sql"
+        for t in "${created[@]}"; do
+            say "    dropping $t (created by the upgrade; saved above)"
+            "$(client)" --defaults-extra-file="$cnf" "${c[4]}" -e "DROP TABLE \`$t\`"
+        done
         rm -f "$cnf"
     done
     if (( SWITCHED )); then
@@ -114,6 +127,9 @@ if (( ROLLBACK )); then
     service_do start
     rm -f "$STATE"
     say ""; say "Rolled back: $OE is $FROM_VERSION again, and its databases are as they were at $STAMP."
+    say "Kept, nothing discarded: each database as it was before this rollback ($BACKUP_DIR/*.before-rollback-$RB.sql),"
+    say "the tables the upgrade created on their own (*.created-tables-$RB.sql), and the $TO_VERSION folder with any"
+    say "documents uploaded since the upgrade ($OE.failed-$TO_VERSION-*)."
     exit 0
 fi
 

@@ -120,7 +120,7 @@ For an OpenEMR installed from the release tarball (with the official Docker imag
 6. checks the new folder with the install doctor, and stops on a FAIL unless `--force`;
 7. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
 
-Nothing is deleted. `--rollback` restores each database from the dump, drops the tables the upgrade created, and swaps the folders back. The target must be 8.2.0 or later. Not covered yet: files you changed inside the old release's own folders (other than `sites/` and modules), and multisite setups with more than one database server.
+Nothing is deleted. A rollback brings back the databases as they were before the upgrade, so anything entered since would be lost; `--rollback` therefore first saves each database as it is (`<site>.before-rollback-<time>.sql`) and, in a file of their own, the tables the upgrade created (`<site>.created-tables-<time>.sql`). Then it restores the backup, drops those tables, and swaps the folders back. The upgraded folder, with any documents uploaded since, is kept as `<folder>.failed-<version>-<time>`. The target must be 8.2.0 or later. Not covered yet: files you changed inside the old release's own folders (other than `sites/` and modules), and multisite setups with more than one database server.
 
 ## Install doctor
 
