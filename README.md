@@ -15,14 +15,15 @@ Nothing in `site/` is written by hand. It complements the OpenEMR wiki, which ha
 
 ## Download
 
-The two PHP tools run on the server; the rehearsal runs on any machine with Docker:
+The two PHP tools and the upgrade script run on the server; the rehearsal runs on any machine with Docker:
 
 - [openemr-doctor.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor.php)
 - [openemr-preflight.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php)
 - [openemr-rehearse.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-rehearse.sh) and [openemr-utf8mb4.sql](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-utf8mb4.sql)
+- [openemr-upgrade.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-upgrade.sh), for installs from the release tarball
 - [SHA256SUMS](https://github.com/anun333/openemr-reference/releases/latest/download/SHA256SUMS), to check them (`sha256sum -c SHA256SUMS --ignore-missing`)
 
-**What they do and don't do.** The doctor and the pre-flight check only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`; nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. The rehearsal never touches the live site: it works on a copy of a database dump, in containers it deletes afterwards, and downloads only the official OpenEMR and MariaDB images and the same facts. `openemr-utf8mb4.sql` only prints statements; nothing changes until you run them. Each is a single readable file: read it before you run it.
+**What they do and don't do.** The doctor and the pre-flight check only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`; nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. The rehearsal never touches the live site: it works on a copy of a database dump, in containers it deletes afterwards, and downloads only the official OpenEMR and MariaDB images and the same facts. `openemr-utf8mb4.sql` only prints statements; nothing changes until you run them. `openemr-upgrade.sh` does change the server, in the order described below, after backing up, and keeps a way back. Each is a single readable file: read it before you run it.
 
 Wrong answers are bugs: please [open an issue](https://github.com/anun333/openemr-reference/issues) with the output (it contains no patient data).
 
