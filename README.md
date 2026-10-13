@@ -8,6 +8,7 @@ Facts about each OpenEMR release (7.0.0 on), read from its source at the release
 
 - **[Upgrade pre-flight check](preflight/openemr-preflight.php):** run it on a server before upgrading, and it lists what to fix first.
 - **[Upgrade rehearsal](preflight/openemr-rehearse.sh):** run the upgrade on a copy of the site's database in Docker first, and it reports what the upgrade did to the schema and to the data.
+- **[Upgrade](preflight/openemr-upgrade.sh):** for an install from the release tarball: backs up, unpacks the new release beside the old, upgrades the databases, checks with the doctor, switches, and rolls back on request.
 - **[Install doctor](preflight/openemr-doctor.php):** run it when an install shows a blank page, an error 500, a broken login or missing documents, and it names the cause.
 
 Nothing in `site/` is written by hand. It complements the OpenEMR wiki, which has the upgrade *procedure* and the release features; these pages have the version-specific facts the procedure doesn't. A daily job adds each new OpenEMR release.
@@ -101,6 +102,25 @@ What it finds that a site should know about, from rehearsals of real installs of
 - **Restoring into a database created with the new server's default collation** (`utf8mb4_uca1400_ai_ci` on the official MariaDB images from 11.4 on) leaves the tables the upgrade creates in another collation than the restored ones. From 6.1.0 one upgrade statement then fails (openemr/openemr#7784), and afterwards queries joining old and new tables fail too, such as the patient dashboard's Care Team. Create the database `CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci` before restoring.
 
 Needs Docker with compose, and the target must be 8.2.0 or later (`sql_upgrade.php` runs from the command line from 8.2.0). The dump is restored into MariaDB, not the site's own server, so it rehearses a move to a current server too.
+
+## Upgrade
+
+```
+sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE]
+sudo preflight/openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr
+```
+
+For an OpenEMR installed from the release tarball (with the official Docker image, upgrading means changing the image tag). After the pre-flight check and a rehearsal, it does the manual upgrade in order and stops at the first thing that goes wrong:
+
+1. runs the pre-flight check, and stops on a FAIL unless `--force`;
+2. stops the web server (`--service`), or asks you to keep users out;
+3. backs up each site's database (`mysqldump`) and the whole `sites/` folder, which holds documents and encryption keys;
+4. unpacks the target release beside the old folder: downloaded from GitHub with its published sha256 checked, or `--tarball`. It carries over `sites/` and any module the release doesn't have, and lists packages installed with Composer that need installing again;
+5. runs the target's own `sql_upgrade.php --from=<current>` for each site, as the web server's user. It stops on any failed statement;
+6. checks the new folder with the install doctor, and stops on a FAIL unless `--force`;
+7. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
+
+Nothing is deleted. `--rollback` restores each database from the dump, drops the tables the upgrade created, and swaps the folders back. The target must be 8.2.0 or later. Not covered yet: files you changed inside the old release's own folders (other than `sites/` and modules), and multisite setups with more than one database server.
 
 ## Install doctor
 
