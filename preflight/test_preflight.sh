@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end test of openemr-preflight.php against a throwaway OpenEMR 7.0.3 (official image,
-# MariaDB 10.6), targeting the newest release with facts. Four scenarios, each adding one problem:
+# MariaDB 10.6), targeting the newest release with facts. Seven scenarios, each adding one problem:
 #   1 as installed: expects a FAIL for missing PHP extensions, WARNs for the database and ClaimRev
 #   2 a user assigned the stock Custom.json menu, which links to removed files: Custom menus WARN
 #   3 a removed setting changed from its default: Settings WARN
