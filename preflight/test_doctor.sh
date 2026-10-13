@@ -6,7 +6,8 @@
 #   OpenEMR's PHP-error display on; a switched-on module with no files; the keys folder
 #   emptied, and a key from another install; a document without its file, and one moved
 #   from another root; a half-finished upgrade; a wrong password, a missing site, setup not
-#   finished; then the browser mode (local only), and PHP 7.4, too old for 8.4.1.
+#   finished; an edited file, and one that no longer parses; then the browser mode (local
+#   only), and PHP 7.4, too old for 8.4.1.
 # Everything runs in containers that are deleted at the end. Synthetic data only.
 # Needs Docker and the facts in ../site/preflight (python3 gen/build_preflight.py).
 set -euo pipefail
@@ -19,7 +20,7 @@ echo "waiting for OpenEMR 8.4.1 to install itself (several minutes)..."
 until docker logs $C 2>&1 | grep -q "Setup Complete"; do sleep 6; done
 docker cp openemr-doctor.php $C:/tmp/doctor.php
 docker exec $C mkdir -p /tmp/facts
-for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-files.json; do docker cp "$f" $C:/tmp/facts/; done
+for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-files.json ../site/preflight/8.4.1-hashes.json; do docker cp "$f" $C:/tmp/facts/; done
 q() { docker exec $D mariadb -uroot -proot openemr -N -e "SET SESSION sql_mode=''; $1"; }
 x() { docker exec $C sh -c "$1"; }
 run() { docker exec -u apache $C php /tmp/doctor.php --openemr=$OE --facts=/tmp/facts "$@" || true; }
@@ -36,6 +37,7 @@ expect "^PASS  PHP extensions" "1: extensions loaded"
 expect "^PASS  PHP libraries: all" "1: every Composer library present"
 expect "^PASS  Page assets" "1: built assets present"
 expect "^PASS  Files: all" "1: every package file present"
+expect "^PASS  Local changes: all [0-9]* files of the OpenEMR 8.4.1 package that are here are as released" "1: no shipped file edited"
 expect "^PASS  Database version" "1: database matches code"
 expect "^PASS  Theme" "1: theme present"
 expect "^PASS  Encryption keys: 2 in the keys folder, and they match" "1: keys verified against the database"
@@ -55,6 +57,15 @@ x "mv /tmp/jquery $OE/public/assets/jquery"
 x "mv $OE/Documentation /tmp/Documentation"; out=$(run)
 expect "^PASS  Files: all .* optional ones" "5: missing documentation is optional"
 x "mv /tmp/Documentation $OE/Documentation"
+# An edited file is named; an edit that doesn't parse fails with its line.
+x "cp -p $OE/interface/main/about_page.php /tmp/about_page.php && printf '\n' >> $OE/interface/main/about_page.php"; out=$(run)
+expect "^NOTE  Local changes: 1 of OpenEMR's own files differ from OpenEMR 8.4.1 as released: interface/main/about_page.php" "5b: an edited file is named"
+refute "^FAIL  Local changes" "5b: and an edit that parses isn't a failure"
+x "cp -p $OE/interface/main/main_screen.php /tmp/main_screen.php && sed -i '2i this is not php;' $OE/interface/main/main_screen.php"; out=$(run)
+expect "^FAIL  Local changes: 1 edited file of OpenEMR's own doesn't parse with this PHP: interface/main/main_screen.php line 2" "5b: an edit that doesn't parse fails, with its line"
+expect "^NOTE  Local changes: 2 of OpenEMR's own files differ" "5b: both edited files are named"
+x "cp -p /tmp/about_page.php $OE/interface/main/about_page.php && cp -p /tmp/main_screen.php $OE/interface/main/main_screen.php"
+out=$(run); expect "^PASS  Local changes: all" "5b: restored files pass again"
 
 q "UPDATE globals SET gl_value='style_gone.css' WHERE gl_name='css_header'"; out=$(run)
 expect "^FAIL  Theme: the chosen theme public/themes/style_gone.css is missing" "6: a missing theme fails"
@@ -120,5 +131,6 @@ out=$(docker run --rm -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:
   'mkdir -p /oe && printf "<?php\n\$v_major = 8;\n\$v_minor = 4;\n\$v_patch = 1;\n\$v_realpatch = 0;\n\$v_database = 543;\n" > /oe/version.php && php /d/openemr-doctor.php --openemr=/oe --facts=/facts' || true)
 expect "^FAIL  PHP: 7.4.* is too old: OpenEMR 8.4.1 needs 8.3.0 or later" "18: PHP 7.4 is too old for 8.4.1, said plainly"
 expect "^FAIL  PHP extensions: missing: .*intl" "18: and its missing extensions, intl among them (t/25453)"
+expect "^NOTE  Local changes: 1 of OpenEMR's own files differ from OpenEMR 8.4.1 as released: version.php" "18: the hand-written version.php is named as edited"
 
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

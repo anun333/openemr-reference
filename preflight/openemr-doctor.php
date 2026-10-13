@@ -410,6 +410,61 @@ if ($manifest !== null) {
     }
 }
 
+// ------------------------------------------------------------ local changes
+// A shipped file whose content differs from the release ($label's git blob hashes,
+// <release>[-p<N>]-hashes.json) was edited on this server: by a quick fix, a customization,
+// or a patch unpacked over the wrong release. Edited files are named, and edited PHP files are
+// parsed with this PHP (7.0 and later can): one that doesn't parse blanks every page that
+// loads it. Only when the facts are for exactly this release and patch, or every file the
+// patch changed would show as edited. sites/ is this install's own and isn't compared.
+$hashFacts = ($fileFacts !== null && $base === $current && ($patch === 0 || strpos($fileFacts, "-p$patch-") !== false))
+    ? preg_replace('/-files$/', '-hashes', $fileFacts) : null;
+$hashes = $hashFacts !== null && $manifest !== null ? facts($factsBase, $hashFacts) : null;
+if ($hashFacts !== null && $manifest !== null && ($hashes === null || !isset($hashes['dirs']))) {
+    report('NOTE', 'Local changes', "the file hashes for $label ($hashFacts.json) aren't in the facts; edited files not checked");
+}
+if ($hashes !== null && isset($hashes['dirs'])) {
+    $compared = 0;
+    $edited = array();
+    $unparsable = array();
+    foreach ($hashes['dirs'] as $dir => $names) {
+        foreach ($names as $name => $sha) {
+            $path = $dir === '' ? $name : "$dir/$name";
+            $file = "$root/$path";
+            if (strpos($path, 'sites/') === 0 || !is_file($file) || is_link($file)) {
+                continue;
+            }
+            $compared++;
+            $content = (string)file_get_contents($file);
+            if (substr(sha1('blob ' . strlen($content) . "\0" . $content), 0, strlen($sha)) === $sha) {
+                continue;
+            }
+            $edited[] = $path;
+            // PHP 7.0+ only, behind defined('TOKEN_PARSE'); PHP 5 never reaches it.
+            // phpcs:disable PHPCompatibility.FunctionUse.NewFunctionParameters, PHPCompatibility.Constants.NewConstants, PHPCompatibility.Classes.NewClasses
+            if (substr($path, -4) === '.php' && defined('TOKEN_PARSE')) {
+                try {
+                    token_get_all($content, TOKEN_PARSE);
+                } catch (ParseError $e) {
+                    $unparsable[] = "$path line " . $e->getLine() . ' (' . $e->getMessage() . ')';
+                }
+            }
+            // phpcs:enable
+        }
+    }
+    if ($unparsable !== array()) {
+        report('FAIL', 'Local changes', count($unparsable) . ' edited ' . (count($unparsable) === 1 ? "file of OpenEMR's own doesn't" : "files of OpenEMR's own don't") . ' parse with this PHP: ' . listSome($unparsable, 3),
+            "Every page that loads one is blank or an error 500. Fix the line, or put back the file from the $label package.");
+    }
+    // version.php is one of them, and the doctor stops earlier without it, so $compared > 0.
+    if ($edited === array()) {
+        report('PASS', 'Local changes', "all $compared files of the $label package that are here are as released");
+    } else {
+        report('NOTE', 'Local changes', count($edited) . " of OpenEMR's own files differ from $label as released: " . listSome($edited, 8),
+            'Edited here, or copied from another release. If a screen broke after one was changed, compare it with the package\'s copy.');
+    }
+}
+
 // ------------------------------------------------------------ the site
 
 if (!is_file("$root/sites/$site/sqlconf.php")) {
