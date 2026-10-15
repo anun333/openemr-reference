@@ -7,7 +7,8 @@
 #   emptied, and a key from another install; a document without its file, and one moved
 #   from another root; a half-finished upgrade; a wrong password, a missing site, setup not
 #   finished; an edited file, and one that no longer parses; then the browser mode (local
-#   only), PHP 7.4, too old for 8.4.1, and when intl is required before 7.0.0.
+#   only), PHP 7.4, too old for 8.4.1, when intl is required before 7.0.0, and
+#   openemr-doctor-docker.sh.
 # Everything runs in containers that are deleted at the end. Synthetic data only.
 # Needs Docker and the facts in ../site/preflight (python3 gen/build_preflight.py).
 set -euo pipefail
@@ -145,5 +146,11 @@ out=$(intl_run "$(tree 6 1 0)" '<?php echo Normalizer::normalize("a");')
 expect "^FAIL  PHP extensions: missing: .*intl" "19: 6.1.0 whose code uses Normalizer: intl is required"
 out=$(intl_run "$(tree 7 0 3)" '<?php echo 1;')
 expect "^FAIL  PHP extensions: missing: .*intl" "19: 7.0.3 requires intl, as before"
+
+# openemr-doctor-docker.sh on this compose project: sites/ isn't on a volume here, so it runs inside the container.
+out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openemr-doctor.php bash openemr-doctor-docker.sh 2>&1 || true)
+expect "OpenEMR install doctor: /var/www/localhost/htdocs/openemr (site default), OpenEMR 8.4.1" "20: openemr-doctor-docker.sh finds the OpenEMR container"
+expect "^PASS  Database version" "20: and, without a sites/ volume, runs inside it with the database checks"
+refute "^FAIL" "20: with no failures"
 
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

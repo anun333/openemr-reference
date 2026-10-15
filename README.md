@@ -18,6 +18,7 @@ Nothing in `site/` is written by hand. It complements the OpenEMR wiki, which ha
 The two PHP tools and the upgrade script run on the server; the rehearsal runs on any machine with Docker:
 
 - [openemr-doctor.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor.php)
+- [openemr-doctor-docker.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor-docker.sh), to run the doctor on an install from OpenEMR's Docker images
 - [openemr-preflight.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php)
 - [openemr-rehearse.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-rehearse.sh) and [openemr-utf8mb4.sql](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-utf8mb4.sql)
 - [openemr-upgrade.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-upgrade.sh), for installs from the release tarball
@@ -134,6 +135,8 @@ php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts
 
 For an install that doesn't work: a blank page, an error 500, setup stopping part-way, a login page without styling, documents or encrypted data that won't open after a move. Each check comes from failures reported on the forum, and from OpenEMR's own code for what it needs to start. It only reads, and never prints a password or a key.
 
+**On Docker**, run `openemr-doctor-docker.sh` in the directory with your `docker-compose.yml`. It finds the OpenEMR container by the image it was started from, so it still works after the tag has been pulled again (`docker compose ps` then shows `sha256:…`), and runs the doctor with that exact image's PHP. With `sites/` on a volume, as in OpenEMR's compose files, it runs from a throwaway container sharing the OpenEMR container's volumes and network, so it works even when that container won't stay up. Without the volume it runs inside the running container instead. It works with `docker compose` and the older `docker-compose`. The idea and first version are Asher Densmore-Lynn's ([t/27118](https://community.open-emr.org/t/27118/8)).
+
 The web server can run a different PHP from the command line's, with different settings. To check that one, copy the file into the OpenEMR folder and open `http://localhost/<folder>/openemr-doctor.php` in a browser on the server. It answers only requests from the server itself, refuses anything that came through a proxy, and asks to be deleted afterwards.
 
 | Check | Fails or warns when | Forum reports |
@@ -161,7 +164,7 @@ It runs on PHP 5.4 and later, so it can explain a PHP that is too old instead of
 A patched install is compared with its patch's files (`site/preflight/<release>-p<N>-files.json`, from the `vX_Y_Z_N` tags): patches delete files, and 7.0.3 patch 4 dropped the old login templates. The setup scripts the Docker image deletes after setup (`setup.php`, `admin.php`, `sql_upgrade.php`…) are noted, not failed.
 
 Two end-to-end tests build throwaway installs from the official images, break one thing at a time and check the doctor names it:
-- `preflight/test_doctor.sh` (8.4.1, MariaDB 11.8), 50 checks: lost templates, a lost vendor package, missing built assets, optional documentation, an edited file and one that no longer parses, a missing theme, PHP errors shown, a module without files, an emptied keys folder, a key from another install, a document without its file and one moved from another root, a half-finished upgrade, a wrong password, a missing site, unfinished setup, the browser mode and its refusals (from outside, through a proxy), PHP 7.4, and when `intl` is required before 7.0.0.
+- `preflight/test_doctor.sh` (8.4.1, MariaDB 11.8), 53 checks: lost templates, a lost vendor package, missing built assets, optional documentation, an edited file and one that no longer parses, a missing theme, PHP errors shown, a module without files, an emptied keys folder, a key from another install, a document without its file and one moved from another root, a half-finished upgrade, a wrong password, a missing site, unfinished setup, the browser mode and its refusals (from outside, through a proxy), PHP 7.4, when `intl` is required before 7.0.0, and `openemr-doctor-docker.sh` on the same stack.
 - `preflight/test_doctor_patch.sh` (7.0.3 patch 4, MariaDB 10.6), 10 checks: the patch's file list, the extension fallback, `user_debug`, a patch whose `sql_patch.php` didn't run, and a missing file list.
 
 On the official 8.4.1 image as installed, it reports one real gap: the image has no ClaimRev module, which Composer installs outside `vendor/` and the image's Dockerfile doesn't copy.
