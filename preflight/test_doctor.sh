@@ -7,7 +7,7 @@
 #   emptied, and a key from another install; a document without its file, and one moved
 #   from another root; a half-finished upgrade; a wrong password, a missing site, setup not
 #   finished; an edited file, and one that no longer parses; then the browser mode (local
-#   only), and PHP 7.4, too old for 8.4.1.
+#   only), PHP 7.4, too old for 8.4.1, and when intl is required before 7.0.0.
 # Everything runs in containers that are deleted at the end. Synthetic data only.
 # Needs Docker and the facts in ../site/preflight (python3 gen/build_preflight.py).
 set -euo pipefail
@@ -132,5 +132,18 @@ out=$(docker run --rm -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:
 expect "^FAIL  PHP: 7.4.* is too old: OpenEMR 8.4.1 needs 8.3.0 or later" "18: PHP 7.4 is too old for 8.4.1, said plainly"
 expect "^FAIL  PHP extensions: missing: .*intl" "18: and its missing extensions, intl among them (t/25453)"
 expect "^NOTE  Local changes: 1 of OpenEMR's own files differ from OpenEMR 8.4.1 as released: version.php" "18: the hand-written version.php is named as edited"
+
+# intl before 7.0.0: required only if the install's own code uses it (5.0.2's image ships without it).
+# php:7.4-cli has no intl and no mysqli; fake trees with only version.php and one PHP file.
+tree() { printf '<?php\n$v_major = %s;\n$v_minor = %s;\n$v_patch = %s;\n$v_realpatch = 0;\n$v_database = 1;\n' "$1" "$2" "$3"; }
+intl_run() { docker run --rm -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
+  "mkdir -p /oe/library && printf '%s' '$1' > /oe/version.php && printf '%s' '$2' > /oe/library/x.php && php /d/openemr-doctor.php --openemr=/oe --facts=/facts" 2>&1 || true; }
+out=$(intl_run "$(tree 6 1 0)" '<?php echo 1;')
+expect "^FAIL  PHP extensions: missing: mysqli " "19: 6.1.0 without intl in its code: mysqli is missing"
+refute "^FAIL  PHP extensions: .*intl" "19: and intl isn't required"
+out=$(intl_run "$(tree 6 1 0)" '<?php echo Normalizer::normalize("a");')
+expect "^FAIL  PHP extensions: missing: .*intl" "19: 6.1.0 whose code uses Normalizer: intl is required"
+out=$(intl_run "$(tree 7 0 3)" '<?php echo 1;')
+expect "^FAIL  PHP extensions: missing: .*intl" "19: 7.0.3 requires intl, as before"
 
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

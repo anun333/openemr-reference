@@ -137,6 +137,32 @@ function bytes($v)
     return (float)$n;
 }
 
+/** Whether OpenEMR's own PHP (not vendor/, node_modules/ or sites/) uses a class or function of the intl extension. */
+function codeUsesIntl($root)
+{
+    $tokens = array('Normalizer::', 'IntlDateFormatter', 'NumberFormatter', 'Locale::', 'Collator', 'MessageFormatter',
+        'Transliterator', 'IntlCalendar', 'grapheme_', 'idn_to_');
+    $skip = array('vendor', 'node_modules', 'sites', '.git');
+    $dirs = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(
+        new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+        function ($file, $key, $iterator) use ($skip) {
+            return !($iterator->hasChildren() && in_array($file->getFilename(), $skip, true));
+        }
+    ));
+    foreach ($dirs as $file) {
+        if (substr($file->getFilename(), -4) !== '.php' || !$file->isReadable()) {
+            continue;
+        }
+        $content = (string)file_get_contents($file->getPathname());
+        foreach ($tokens as $token) {
+            if (strpos($content, $token) !== false) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 function listSome($items, $n = 5)
 {
     return implode(', ', array_slice($items, 0, $n)) . (count($items) > $n ? ' and ' . (count($items) - $n) . ' more' : '');
@@ -244,9 +270,21 @@ $why = array(
     'sodium' => 'encryption needs it',
     'gd' => 'images and charts need it',
 );
-$baseline = array('xml', 'mysqli', 'mbstring', 'openssl', 'intl');
+// intl is in the fallback from 7.0.0 on: OpenEMR's own code uses it from 7.0.3 (Normalizer in
+// library/sanitize.inc.php), and the forum's intl failures are all on 7.0.3 or later. 5.0.2 and
+// 6.1.0 use no intl class, and 5.0.2's own Docker image ships without it, so before 7.0.0 it is
+// required only if this install's code uses it.
+$baseline = array('xml', 'mysqli', 'mbstring', 'openssl');
+$intlWhy = '';
+if (cmpVersion($current, '7.0.0') >= 0) {
+    $baseline[] = 'intl';
+    $intlWhy = ' and intl';
+} elseif (codeUsesIntl($root)) {
+    $baseline[] = 'intl';
+    $intlWhy = ' and intl, which this install\'s code uses';
+}
 $wanted = ($f !== null && $f['extensions'] !== array()) ? $f['extensions'] : $baseline;
-$wantedFrom = ($f !== null && $f['extensions'] !== array()) ? " by $base" : ($f !== null ? " ($base's composer.json lists none, so OpenEMR setup's own four and intl)" : ' (OpenEMR setup\'s own four and intl)');
+$wantedFrom = ($f !== null && $f['extensions'] !== array()) ? " by $base" : ($f !== null ? " ($base's composer.json lists none, so OpenEMR setup's own four$intlWhy)" : " (OpenEMR setup's own four$intlWhy)");
 $missing = array();
 foreach ($wanted as $ext) {
     if (!extension_loaded($ext)) {

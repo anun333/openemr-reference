@@ -139,7 +139,7 @@ The web server can run a different PHP from the command line's, with different s
 | Check | Fails or warns when | Forum reports |
 |---|---|---|
 | PHP | older than the release needs (fail), newer than CI tested it with (warn) | t/24361, t/24048, t/24282, t/26133 |
-| PHP extensions | one the release's `composer.json` requires isn't loaded; `intl` is named as the cause of a calendar showing "Unknown" (fail) | t/25453, t/25214, t/26800 |
+| PHP extensions | one the release's `composer.json` requires isn't loaded; `intl` is named as the cause of a calendar showing "Unknown" (fail). Releases whose `composer.json` lists none get setup's own four, plus `intl` from 7.0.0 on, or before that only if the install's code uses it (5.0.2's image ships without it) | t/25453, t/25214, t/26800 |
 | php.ini | errors shown on pages, or below the limits OpenEMR's setup recommends (warn in the browser, note on the command line) | t/24048, t/25023 |
 | PHP libraries | `vendor/` missing (a git checkout), or a Composer package missing from it (fail) | t/23699 |
 | Page assets | a built file every page loads is missing: the npm build didn't run (fail) | t/26790 |
@@ -161,7 +161,7 @@ It runs on PHP 5.4 and later, so it can explain a PHP that is too old instead of
 A patched install is compared with its patch's files (`site/preflight/<release>-p<N>-files.json`, from the `vX_Y_Z_N` tags): patches delete files, and 7.0.3 patch 4 dropped the old login templates. The setup scripts the Docker image deletes after setup (`setup.php`, `admin.php`, `sql_upgrade.php`…) are noted, not failed.
 
 Two end-to-end tests build throwaway installs from the official images, break one thing at a time and check the doctor names it:
-- `preflight/test_doctor.sh` (8.4.1, MariaDB 11.8), 46 checks: lost templates, a lost vendor package, missing built assets, optional documentation, an edited file and one that no longer parses, a missing theme, PHP errors shown, a module without files, an emptied keys folder, a key from another install, a document without its file and one moved from another root, a half-finished upgrade, a wrong password, a missing site, unfinished setup, the browser mode and its refusals (from outside, through a proxy), and PHP 7.4.
+- `preflight/test_doctor.sh` (8.4.1, MariaDB 11.8), 50 checks: lost templates, a lost vendor package, missing built assets, optional documentation, an edited file and one that no longer parses, a missing theme, PHP errors shown, a module without files, an emptied keys folder, a key from another install, a document without its file and one moved from another root, a half-finished upgrade, a wrong password, a missing site, unfinished setup, the browser mode and its refusals (from outside, through a proxy), PHP 7.4, and when `intl` is required before 7.0.0.
 - `preflight/test_doctor_patch.sh` (7.0.3 patch 4, MariaDB 10.6), 10 checks: the patch's file list, the extension fallback, `user_debug`, a patch whose `sql_patch.php` didn't run, and a missing file list.
 
 On the official 8.4.1 image as installed, it reports one real gap: the image has no ClaimRev module, which Composer installs outside `vendor/` and the image's Dockerfile doesn't copy.
