@@ -135,7 +135,13 @@ php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts
 
 For an install that doesn't work: a blank page, an error 500, setup stopping part-way, a login page without styling, documents or encrypted data that won't open after a move. Each check comes from failures reported on the forum, and from OpenEMR's own code for what it needs to start. It only reads, and never prints a password or a key.
 
-**On Docker**, run `openemr-doctor-docker.sh` in the directory with your `docker-compose.yml`. It finds the OpenEMR container by the image it was started from, so it still works after the tag has been pulled again (`docker compose ps` then shows `sha256:…`), and runs the doctor with that exact image's PHP. With `sites/` on a volume, as in OpenEMR's compose files, it runs from a throwaway container sharing the OpenEMR container's volumes and network, so it works even when that container won't stay up. Without the volume it runs inside the running container instead. It works with `docker compose` and the older `docker-compose`. The idea and first version are Asher Densmore-Lynn's ([t/27118](https://community.open-emr.org/t/27118/8)).
+**On Docker**, run `openemr-doctor-docker.sh` in the directory with your `docker-compose.yml`. It finds the OpenEMR container by the image it was started from, so it still works after the tag has been pulled again (`docker compose ps` then shows `sha256:…`), and runs the doctor with that exact image's PHP. With `sites/` on a volume, as in OpenEMR's compose files, it runs from a throwaway container sharing the OpenEMR container's volumes and network, so it works even when that container won't stay up. Without the volume it runs inside the running container instead. It works with `docker compose` and the older `docker-compose`. It can be piped straight from curl, since the script runs only from its last line, so a download cut short does nothing:
+
+```
+curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor-docker.sh | bash
+```
+
+The idea came from Asher Densmore-Lynn ([t/27118](https://community.open-emr.org/t/27118/8)).
 
 The web server can run a different PHP from the command line's, with different settings. To check that one, copy the file into the OpenEMR folder and open `http://localhost/<folder>/openemr-doctor.php` in a browser on the server. It answers only requests from the server itself, refuses anything that came through a proxy, and asks to be deleted afterwards.
 
