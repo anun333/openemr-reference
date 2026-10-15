@@ -26,6 +26,8 @@ The two PHP tools and the upgrade script run on the server; the rehearsal runs o
 
 **What they do and don't do.** The doctor and the pre-flight check only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`; nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. The rehearsal never touches the live site: it works on a copy of a database dump, in containers it deletes afterwards, and downloads only the official OpenEMR and MariaDB images and the same facts. `openemr-utf8mb4.sql` only prints statements; nothing changes until you run them. `openemr-upgrade.sh` does change the server, in the order described below, after backing up, and keeps a way back. Each is a single readable file: read it before you run it.
 
+Every push runs ShellCheck on the scripts, parses the PHP tools with each PHP they support (5.5 to 8.5 for the doctor, 7.4 on for the pre-flight check), and runs `gen/check.py` (`.github/workflows/lint.yml`). The end-to-end suites below need Docker and several minutes each, so they run before each release.
+
 Wrong answers are bugs: please [open an issue](https://github.com/anun333/openemr-reference/issues) with the output (it contains no patient data).
 
 ## Upgrade pre-flight check
@@ -139,7 +141,7 @@ The rollback checks each restored database and the folder the same way.
 
 **Everything it prints also goes to a log** in the backup folder (`openemr-upgrade.log`, and `openemr-rollback-<time>.log`), so a request for help can include it. `--debug` adds every command it runs; the database password stays out of both.
 
-**Only one run at a time** per install: a second refuses to start while the first holds `.<folder>-upgrade.lock`.
+**Only one run at a time** per install: a second refuses to start while the first holds `.<folder>-upgrade.lock`. The web server it starts doesn't inherit the lock, so a later run, or the rollback, isn't refused because of it.
 
 **The pre-flight check and the doctor** it runs are the copies beside it, else they're downloaded from this script's own release and checked against that release's `SHA256SUMS`. One that doesn't match isn't run.
 
@@ -150,6 +152,8 @@ The rollback checks each restored database and the folder the same way.
 - a second run refused while the first holds the lock;
 - a stop before the backup, which changes nothing;
 - a stop after it, which names the rollback, and that rollback;
+- a failure partway through `sql_upgrade.php`: a planted duplicate makes one statement fail while the others run, and after the rollback a full dump of the database is byte-for-byte the one taken before;
+- `--service`, with a stand-in SysV service whose child process keeps the descriptors it's given, as a web server does: the rollback after it still gets the lock;
 - each self-check;
 - a `--debug` log that traces every command, with the database password in no line of it.
 

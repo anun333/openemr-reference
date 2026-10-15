@@ -32,7 +32,7 @@
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.3.5
+SCRIPT_VERSION=0.3.6
 # Where the helpers come from when they aren't beside this script: this script's own release.
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 
@@ -143,9 +143,12 @@ sqlconf() {
 client() { command -v mariadb >/dev/null && echo mariadb || echo mysql; }
 dumper() { command -v mariadb-dump >/dev/null && echo mariadb-dump || echo mysqldump; }
 sites() { for d in "$OE"/sites/*/; do [[ -f "$d/sqlconf.php" ]] && basename "$d"; done; }
+# The lock's descriptor (9) is closed for the web server: a server started by a SysV "service"
+# script keeps the descriptors it was given, and would hold the lock long after this script ends,
+# refusing the next run, the rollback included.
 service_do() {
     [[ -n "$SERVICE" ]] || return 0
-    if command -v systemctl >/dev/null; then systemctl "$1" "$SERVICE"; else service "$SERVICE" "$1"; fi
+    if command -v systemctl >/dev/null; then systemctl "$1" "$SERVICE" 9>&-; else service "$SERVICE" "$1" 9>&-; fi
 }
 # A client option file from the site settings in the array c (host port login pass dbase), so the
 # password is never on a command line, nor in a --debug trace: tracing is off while it's written.

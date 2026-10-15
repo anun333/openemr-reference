@@ -154,7 +154,8 @@ out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openem
 expect "OpenEMR install doctor: /var/www/localhost/htdocs/openemr (site default), OpenEMR 8.4.1" "20: openemr-doctor-docker.sh finds the OpenEMR container"
 expect "^PASS  Database version" "20: and, without a sites/ volume, runs inside it with the database checks"
 refute "^FAIL" "20: with no failures"
-expect "openemr-doctor-docker.sh 0.3.5: container $C, image openemr/openemr:8.4.1, running" "20: it says which container and image it checks"
+V=$(sed -n "s/^    VERSION=//p" openemr-doctor-docker.sh)   # the release the script fetches from
+expect "openemr-doctor-docker.sh $V: container $C, image openemr/openemr:8.4.1, running" "20: it says which container and image it checks"
 expect "sites/ is inside the container: running the doctor in it" "20: and how it runs the doctor"
 
 # Compared with another release than the one installed, missing files are notes: a build from the
@@ -202,12 +203,12 @@ expect "^WARN  Release facts: the file list for OpenEMR 8.4.1 has only [0-9]* fi
 # folder of our own (file://), run from a directory with no openemr-doctor.php in it.
 here=$(pwd); rel=$(mktemp -d); empty=$(mktemp -d)
 cp openemr-doctor.php "$rel/" && (cd "$rel" && sha256sum openemr-doctor.php > SHA256SUMS)
-dd() { (cd "$empty" && COMPOSE_FILE=$here/test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P OPENEMR_REFERENCE_BASE=file://$rel bash "$here/openemr-doctor-docker.sh" "$@" 2>&1) || true; }
-out=$(dd)
-expect "doctor: downloaded from release v0.3.5, matches its SHA256SUMS" "25: a downloaded doctor is checked against SHA256SUMS"
+fetched_doctor() { (cd "$empty" && COMPOSE_FILE=$here/test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P OPENEMR_REFERENCE_BASE=file://$rel bash "$here/openemr-doctor-docker.sh" 2>&1) || true; }
+out=$(fetched_doctor)
+expect "doctor: downloaded from release v$V, matches its SHA256SUMS" "25: a downloaded doctor is checked against SHA256SUMS"
 expect "^PASS  Database version" "25: and then runs"
-echo '// changed' >> "$rel/openemr-doctor.php"; out=$(dd)
-expect "doesn't match SHA256SUMS of release v0.3.5" "26: a doctor that doesn't match is refused"
+echo '// changed' >> "$rel/openemr-doctor.php"; out=$(fetched_doctor)
+expect "doesn't match SHA256SUMS of release v$V" "26: a doctor that doesn't match is refused"
 refute "OpenEMR install doctor:" "26: and never runs"
 [ -z "$(ls -A "$empty")" ] && echo "ok   26: nothing left in the directory it ran from" || { echo "FAIL 26: files left in $empty"; fails=$((fails+1)); }
 out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openemr-doctor.php bash openemr-doctor-docker.sh --debug 2>&1 || true)

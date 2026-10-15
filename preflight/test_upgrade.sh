@@ -66,11 +66,11 @@ check "$(grep -c "openemr-preflight.php from file:///root/rel doesn't match that
 check "$(grep -c '^== 2' "$LOG/alone.log" || true)" 0 "downloads: and the upgrade goes no further"
 docker exec $C sh -c "cp /root/tools/openemr-preflight.php /root/rel/ && rm -rf /root/backups/*"
 alone -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=2
-check "$(grep -c 'openemr-preflight.php downloaded from release v0.3.5 matches its SHA256SUMS' "$LOG/alone.log")" 1 "downloads: one that matches is used"
+check "$(grep -c "openemr-preflight.php downloaded from release v$(sed -n 's/^SCRIPT_VERSION=//p' openemr-upgrade.sh) matches its SHA256SUMS" "$LOG/alone.log")" 1 "downloads: one that matches is used"
 docker exec $C sh -c 'rm -rf /root/backups/* /root/alone /root/rel /tmp/pf'
 
 # One run at a time: while another holds the lock, a second refuses to start.
-docker exec -d $C flock $(dirname $OE)/.openemr-upgrade.lock sleep 120
+docker exec -d $C flock "$(dirname "$OE")/.openemr-upgrade.lock" sleep 120
 sleep 2
 set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/locked.log" 2>&1; rc=$?; set -e
 check "$(grep -c 'another openemr-upgrade.sh is already running' "$LOG/locked.log")" 1 "lock: a second run refuses to start"
@@ -100,7 +100,39 @@ check "$vr|$pr|$tr|$lr" "$v0|$p0|$t0|200" "stop after the backup: the rollback p
 check "$(grep -c "check: default: openemr is ${v0%% db *} again" "$LOG/rollback7.log")" 1 "self-check: the rollback verifies the database version"
 docker exec $C sh -c "rm -rf /root/backups/* $OE.failed-*"
 
-set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply --debug > "$LOG/upgrade.log" 2>&1; rc=$?; set -e
+# A failure partway through the database upgrade, the case the rollback is for. Two identical
+# synthetic telemetry rows make the upgrade's unique key on track_events fail (7.0.3 to 7.0.4),
+# while the statements before and after it run. The rollback must then put the database back
+# exactly: a full dump of it must be byte-for-byte the one taken before.
+sig() { docker exec $D sh -c "mariadb-dump -uroot -proot --skip-dump-date --skip-comments openemr | md5sum | cut -d' ' -f1"; }
+docker exec $D sh -c "mariadb-dump -uroot -proot openemr > /tmp/clean.sql"
+clean=$(sig)
+q "CREATE TABLE IF NOT EXISTS track_events (id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT, event_type TEXT, event_label VARCHAR(255) DEFAULT NULL, event_url TEXT, event_target TEXT, first_event DATETIME NULL, last_event DATETIME NULL, label_count INT UNSIGNED NOT NULL DEFAULT 1, PRIMARY KEY (id)) ENGINE=InnoDB"
+for idx in $(q "SELECT DISTINCT index_name FROM information_schema.statistics WHERE table_schema = 'openemr' AND table_name = 'track_events' AND non_unique = 0 AND index_name <> 'PRIMARY'"); do q "ALTER TABLE track_events DROP INDEX \`$idx\`"; done
+q "INSERT INTO track_events (event_type, event_label, event_url, event_target) VALUES ('synthetic', 'duplicate', 'u', 't'), ('synthetic', 'duplicate', 'u', 't')"
+before=$(sig); tables_before=$(q "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'openemr'")
+set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/half.log" 2>&1; rc=$?; set -e
+grep -E "statement\(s\) failed|^STOP|^Stopped|To put everything back" "$LOG/half.log" | sed 's/^/    /'
+check "$([[ $rc -ne 0 ]] && echo stopped)" stopped "half-upgraded: the script stops"
+check "$(grep -c "the database upgrade didn't finish cleanly" "$LOG/half.log")" 1 "half-upgraded: it says the database upgrade didn't finish"
+check "$(docker exec $C sh -c "grep -c 'Duplicate entry' /root/backups/*/upgrade-default.log" | awk '{print ($1 > 0) ? "found" : $1}')" found "half-upgraded: the failed statement is the duplicate key, as planted"
+tables_mid=$(q "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'openemr'")
+check "$([[ $tables_mid -gt $tables_before ]] && echo changed)" changed "half-upgraded: control: the other statements ran ($tables_before tables before, $tables_mid now)"
+check "$([[ "$(sig)" != "$before" ]] && echo differs)" differs "half-upgraded: control: the database differs from before"
+set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --rollback --openemr=$OE > "$LOG/half-rollback.log" 2>&1; rc=$?; set -e
+check "$rc" 0 "half-upgraded: the rollback finishes"
+check "$(sig)" "$before" "half-upgraded: after the rollback a full dump of the database is byte-for-byte the one before"
+docker exec -i $D sh -c "mariadb -uroot -proot openemr < /tmp/clean.sql && rm -f /tmp/clean.sql"
+docker exec $C sh -c "rm -rf /root/backups/* $OE.failed-*"
+check "$(sig)" "$clean" "half-upgraded: the planted rows are gone again"
+
+# A web server started with a SysV "service" script keeps the descriptors it was given. The
+# stand-in below does too (its child keeps everything but stdin, stdout and stderr), so if the
+# upgrade's lock were passed on, the rollback after the upgrade would be refused.
+check "$(docker exec $C sh -c 'command -v systemctl || echo none')" none "service: no systemctl here, so the script uses the service command"
+docker exec $C sh -c 'printf "%s\n" "#!/bin/sh" "# Test stand-in for a SysV service script." "case \"\$2\" in" "  start) (sleep 900 </dev/null >/dev/null 2>&1 &) ;;" "  stop) pkill -f \"sleep 900\" || true ;;" "esac" > /usr/local/bin/service && chmod 755 /usr/local/bin/service'
+
+set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply --service=fakeweb --debug > "$LOG/upgrade.log" 2>&1; rc=$?; set -e
 grep -E "^== |sha256|statement\(s\) failed|^Done|^STOP|carried over|applied your|NOT carried|NOTE" "$LOG/upgrade.log" | sed 's/^/    /'
 docker exec $C sh -c "cat /root/backups/*/upgrade-*.log 2>/dev/null" > "$LOG/sql_upgrade.log" || true
 check "$rc" 0 "upgrade: the script finished"
@@ -120,6 +152,7 @@ check "$(ulog | grep -c '^+ openemr-upgrade.sh:' | awk '{print ($1 > 100) ? "tra
 check "$(ulog | grep -c '^  check: ')" 6 "upgrade: the log has its six self-checks (unpacked release, dump, sites.tar.gz, copied sites/, database version, switch)"
 check "$(docker exec $C grep -c 'Synth-Pw-4417' $OE/sites/default/sqlconf.php)" 1 "upgrade (--debug): control: the site's password is in its sqlconf.php"
 check "$(ulog | grep -c 'Synth-Pw-4417' || true)" 0 "upgrade (--debug): and never in the log"
+check "$(docker exec $C sh -c "pgrep -f 'sleep 900' >/dev/null && echo running || echo stopped")" running "upgrade (--service): the web server is started again at the end"
 
 # Work done after the upgrade, which a rollback must not throw away: a row in a table the upgrade
 # created (care_teams) and a note in one that was already there (pnotes). Synthetic.
@@ -128,6 +161,7 @@ q "INSERT INTO pnotes (date, body, pid, user, groupname, activity, authorized, t
 set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --rollback --openemr=$OE > "$LOG/rollback.log" 2>&1; rc=$?; set -e
 grep -E "dropping|restoring|^Rolled back|^STOP" "$LOG/rollback.log" | sed 's/^/    /' | head -20
 check "$rc" 0 "rollback: the script finished"
+check "$(grep -c 'already running' "$LOG/rollback.log" || true)" 0 "lock: the web server the upgrade started doesn't hold its lock, so the rollback runs"
 IFS='|' read -r v2 p2 t2 l2 <<<"$(state)"
 check "$v2" "$v0" "rollback: the database is back to $v0"
 check "$t2" "$t0" "rollback: the same tables as before"
