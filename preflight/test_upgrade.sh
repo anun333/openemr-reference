@@ -6,12 +6,14 @@
 #   preflight/test_upgrade.sh [7.0.3-dump.sql]
 set -euo pipefail
 cd "$(dirname "$0")"
+. ./test_lib.sh
+serial
 LOG="$(mktemp -d)"; P=upgrade-test; C=$P-openemr-1; D=$P-mysql-1; OE=/var/www/localhost/htdocs/openemr; TO=8.4.1
 docker compose -p $P -f test-upgrade-compose.yml up -d >/dev/null
 # KEEP=1 leaves the containers running to look around (delete with: docker compose -p upgrade-test -f test-upgrade-compose.yml down -v).
 [[ "${KEEP:-0}" == 1 ]] || trap 'docker compose -p $P -f test-upgrade-compose.yml down -v >/dev/null 2>&1' EXIT
 echo "waiting for OpenEMR 7.0.3 to install itself (about 6 minutes)..."
-until docker logs $C 2>&1 | grep -q "Setup Complete"; do sleep 6; done
+wait_ready $C $OE
 q() { docker exec $D mariadb -uroot -proot -N openemr -e "$1"; }
 if [[ -n "${1:-}" ]]; then
     docker exec -i $D mariadb -uroot -proot openemr < "$1"
@@ -52,9 +54,53 @@ report() { docker exec $C sh -c "cat /root/backups/*/customizations/report.json"
 check "$(report | python3 -c 'import json, sys; print(json.load(sys.stdin).get("changed", {}).get(sys.argv[1], {}).get("status", "missing"))' "$TWIG")" applies "local changes: the template edit is found, and applies to $TO"
 check "$(report | python3 -c 'import json, sys; print(json.load(sys.stdin).get("changed", {}).get(sys.argv[1], {}).get("status", "missing"))' "$REPORT")" conflicts "local changes: the edit to a line $TO rewrote is found, as a conflict"
 check "$(report | python3 -c 'import json, sys; print("found" if sys.argv[1] in json.load(sys.stdin).get("added", []) else "missing")' "$ADDED")" found "local changes: the added report is found"
+check "$(grep -c 'before the backup was finished: nothing on the server was changed' "$LOG/upgrade-stop.log")" 1 "local changes: the stop says nothing on the server changed"
 docker exec $C sh -c 'rm -rf /root/backups/*'
 
-set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/upgrade.log" 2>&1; rc=$?; set -e
+# The helpers, when they aren't beside the script, come from the script's own release and must match
+# its SHA256SUMS: a release folder of our own (file://), first with a changed pre-flight check.
+docker exec $C sh -c "mkdir -p /root/alone /root/rel && cp /root/tools/openemr-upgrade.sh /root/alone/ && cp /root/tools/openemr-preflight.php /root/tools/openemr-doctor.php /root/rel/ && cd /root/rel && echo '// changed' >> openemr-preflight.php && sha256sum openemr-doctor.php > SHA256SUMS && cp /root/tools/openemr-preflight.php /tmp/pf && sha256sum /tmp/pf | sed 's| /tmp/pf| openemr-preflight.php|' >> SHA256SUMS"
+alone() { set +e; docker exec -e OPENEMR_REFERENCE_BASE=file:///root/rel "$@" $C bash /root/alone/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/alone.log" 2>&1; rc=$?; set -e; }
+alone
+check "$(grep -c "openemr-preflight.php from file:///root/rel doesn't match that release's SHA256SUMS" "$LOG/alone.log")" 1 "downloads: a pre-flight check that doesn't match SHA256SUMS is refused"
+check "$(grep -c '^== 2' "$LOG/alone.log" || true)" 0 "downloads: and the upgrade goes no further"
+docker exec $C sh -c "cp /root/tools/openemr-preflight.php /root/rel/ && rm -rf /root/backups/*"
+alone -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=2
+check "$(grep -c 'openemr-preflight.php downloaded from release v0.3.5 matches its SHA256SUMS' "$LOG/alone.log")" 1 "downloads: one that matches is used"
+docker exec $C sh -c 'rm -rf /root/backups/* /root/alone /root/rel /tmp/pf'
+
+# One run at a time: while another holds the lock, a second refuses to start.
+docker exec -d $C flock $(dirname $OE)/.openemr-upgrade.lock sleep 120
+sleep 2
+set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/locked.log" 2>&1; rc=$?; set -e
+check "$(grep -c 'another openemr-upgrade.sh is already running' "$LOG/locked.log")" 1 "lock: a second run refuses to start"
+docker exec $C pkill -f 'sleep 120' || true
+docker exec $C sh -c 'rm -rf /root/backups/*'
+
+# A stop before the backup takes the unpacked folder away again and changes nothing.
+set +e; docker exec -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=5 $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/stop5.log" 2>&1; rc=$?; set -e
+check "$(grep -c 'Stopped during step 5. Stopping the web server and backing up (exit 1), before the backup was finished' "$LOG/stop5.log")" 1 "stop before the backup: says so"
+check "$(docker exec $C sh -c "test -e $OE.new-$TO && echo left || echo gone")" gone "stop before the backup: the unpacked folder is removed"
+IFS='|' read -r vs _ _ _ <<<"$(state)"
+check "$vs" "$v0" "stop before the backup: nothing changed (still $v0)"
+docker exec $C sh -c 'rm -rf /root/backups/*'
+
+# A stop after the backup says how far it got and how to get back, and the rollback it names works.
+set +e; docker exec -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=7 $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/stop7.log" 2>&1; rc=$?; set -e
+grep -E "check:|^Stopped|To put everything back|log of this run" "$LOG/stop7.log" | sed 's/^/    /'
+check "$(grep -c 'Stopped during step 7.* after the backup' "$LOG/stop7.log")" 1 "stop after the backup: says how far it got"
+check "$(grep -c -- "To put everything back as it was before the upgrade:  /root/tools/openemr-upgrade.sh --rollback --openemr=$OE" "$LOG/stop7.log")" 1 "stop after the backup: gives the rollback command"
+check "$(grep -c "check: default: the dump is complete ('Dump completed') and has all [0-9]* tables" "$LOG/stop7.log")" 1 "self-check: the dump is verified complete"
+check "$(grep -c 'check: sites.tar.gz reads back whole' "$LOG/stop7.log")" 1 "self-check: sites.tar.gz is read back"
+check "$(grep -c 'check: sites/ copied whole into the new folder' "$LOG/stop7.log")" 1 "self-check: the copied sites/ is counted"
+set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --rollback --openemr=$OE > "$LOG/rollback7.log" 2>&1; rc=$?; set -e
+check "$rc" 0 "stop after the backup: the rollback finishes"
+IFS='|' read -r vr pr tr lr <<<"$(state)"
+check "$vr|$pr|$tr|$lr" "$v0|$p0|$t0|200" "stop after the backup: the rollback puts back the same version, patients, tables and login page"
+check "$(grep -c "check: default: openemr is ${v0%% db *} again" "$LOG/rollback7.log")" 1 "self-check: the rollback verifies the database version"
+docker exec $C sh -c "rm -rf /root/backups/* $OE.failed-*"
+
+set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply --debug > "$LOG/upgrade.log" 2>&1; rc=$?; set -e
 grep -E "^== |sha256|statement\(s\) failed|^Done|^STOP|carried over|applied your|NOT carried|NOTE" "$LOG/upgrade.log" | sed 's/^/    /'
 docker exec $C sh -c "cat /root/backups/*/upgrade-*.log 2>/dev/null" > "$LOG/sql_upgrade.log" || true
 check "$rc" 0 "upgrade: the script finished"
@@ -69,6 +115,11 @@ check "$(docker exec $C grep -c 'synthetic local change' $OE/$TWIG)" 1 "upgrade 
 check "$(docker exec $C grep -c 'synthetic local change' $OE/$REPORT || true)" 0 "upgrade (apply): the conflicting edit is not; $TO's file is"
 check "$(docker exec $C sh -c "test -f $OE/$ADDED && echo there")" there "upgrade (apply): the added report is carried over"
 check "$(docker exec $C sh -c "ls /root/backups/*/customizations/patches/$REPORT.patch >/dev/null && echo kept")" kept "upgrade (apply): the conflicting change is kept as a patch"
+ulog() { docker exec $C sh -c "cat /root/backups/*/openemr-upgrade.log"; }
+check "$(ulog | grep -c '^+ openemr-upgrade.sh:' | awk '{print ($1 > 100) ? "traced" : $1}')" traced "upgrade (--debug): the log traces the commands"
+check "$(ulog | grep -c '^  check: ')" 6 "upgrade: the log has its six self-checks (unpacked release, dump, sites.tar.gz, copied sites/, database version, switch)"
+check "$(docker exec $C grep -c 'Synth-Pw-4417' $OE/sites/default/sqlconf.php)" 1 "upgrade (--debug): control: the site's password is in its sqlconf.php"
+check "$(ulog | grep -c 'Synth-Pw-4417' || true)" 0 "upgrade (--debug): and never in the log"
 
 # Work done after the upgrade, which a rollback must not throw away: a row in a table the upgrade
 # created (care_teams) and a note in one that was already there (pnotes). Synthetic.

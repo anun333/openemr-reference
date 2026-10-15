@@ -17,7 +17,7 @@ services:
       MYSQL_HOST: mysql
       MYSQL_ROOT_PASS: root
       MYSQL_USER: openemr
-      MYSQL_PASS: openemr
+      MYSQL_PASS: Synth-Pw-4417   # distinctive, so the test can show --debug never logs it
       OE_USER: admin
       OE_PASS: pass
     depends_on:

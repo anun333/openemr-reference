@@ -13,12 +13,14 @@
 # Needs Docker and the facts in ../site/preflight (python3 gen/build_preflight.py).
 set -euo pipefail
 cd "$(dirname "$0")"
+. ./test_lib.sh
+serial
 P=doctor-test
 docker compose -p $P -f test-doctor-compose.yml up -d >/dev/null
 trap 'docker compose -p $P -f test-doctor-compose.yml down -v >/dev/null 2>&1' EXIT
 C=$P-openemr-1; D=$P-mysql-1; OE=/var/www/localhost/htdocs/openemr; S=$OE/sites/default
 echo "waiting for OpenEMR 8.4.1 to install itself (several minutes)..."
-until docker logs $C 2>&1 | grep -q "Setup Complete"; do sleep 6; done
+wait_ready $C $OE
 docker cp openemr-doctor.php $C:/tmp/doctor.php
 docker exec $C mkdir -p /tmp/facts
 for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-files.json ../site/preflight/8.4.1-hashes.json; do docker cp "$f" $C:/tmp/facts/; done
@@ -152,5 +154,65 @@ out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openem
 expect "OpenEMR install doctor: /var/www/localhost/htdocs/openemr (site default), OpenEMR 8.4.1" "20: openemr-doctor-docker.sh finds the OpenEMR container"
 expect "^PASS  Database version" "20: and, without a sites/ volume, runs inside it with the database checks"
 refute "^FAIL" "20: with no failures"
+expect "openemr-doctor-docker.sh 0.3.5: container $C, image openemr/openemr:8.4.1, running" "20: it says which container and image it checks"
+expect "sites/ is inside the container: running the doctor in it" "20: and how it runs the doctor"
+
+# Compared with another release than the one installed, missing files are notes: a build from the
+# development branch (a -dev tag), and a release newer than the facts. Scenario 2 is the control:
+# the same missing templates fail on 8.4.1 as released.
+# The image's files are apache's and read-only (0400): keep that when saving and restoring.
+x "cp -p $OE/version.php /tmp/version.php.orig && sed -i \"s/^\\\$v_tag *=.*/\\\$v_tag   = '-dev';/\" $OE/version.php && chown apache:apache $OE/version.php"
+x "mv $OE/templates/interface/main/tabs /tmp/tabs"; out=$(run)
+expect "^NOTE  Release facts: 8.4.1-dev is an unreleased build; comparing it with 8.4.1" "21: a -dev build is named as unreleased"
+expect "^NOTE  Files: .* missing, in templates/interface" "21: and its missing files are a note"
+refute "^FAIL" "21: not a failure"
+x "cp -p /tmp/version.php.orig $OE/version.php && sed -i \"s/^\\\$v_patch *=.*/\\\$v_patch = '9';/\" $OE/version.php && chown apache:apache $OE/version.php"; out=$(run)
+expect "^NOTE  Release facts: 8.4.9 isn't a release with facts yet; using 8.4.1" "22: a release newer than the facts is named"
+expect "^NOTE  Files: .* missing, in templates/interface" "22: and its missing files are a note"
+refute "^FAIL" "22: not a failure"
+x "cp -p /tmp/version.php.orig $OE/version.php && mv /tmp/tabs $OE/templates/interface/main/tabs"; out=$(run)
+refute "^FAIL" "22b: version.php and the templates put back"
+
+# A version.php the web server can't read (ownership lost in a copy) is said plainly, not compared
+# with the facts as an empty version. Found by this test's own first run.
+x "chown root:root $OE/version.php && chmod 600 $OE/version.php"; out=$(run)
+expect "^FAIL  Version: .*can't read version.php (0600)" "22c: an unreadable version.php fails, saying who can't read it"
+expect "OpenEMR (version unknown)" "22c: and the version is unknown, not empty"
+refute "older than any release with facts" "22c: not compared with the facts"
+x "cp -p /tmp/version.php.orig $OE/version.php"; out=$(run)
+refute "^FAIL" "22c: put back"
+
+# --debug says where each fact came from and how much there was.
+out=$(run --debug)
+expect "^DEBUG .* facts 8.4.1-files.json: [0-9]* bytes from /tmp/facts" "23: --debug names each facts file it read"
+expect "^DEBUG .* Files: [0-9]* in the facts for OpenEMR 8.4.1, 0 missing" "23: and the counts behind the file check"
+expect "^DEBUG .* results: [0-9]* pass, .* 0 fail" "23: and a tally"
+expect "^PASS  Files: all" "23: the checks themselves are the same"
+
+# Facts that look truncated are reported, instead of passing a check against almost nothing.
+TMPDIR_SHORT=$(mktemp -d)
+python3 -c 'import json, sys; d = json.load(open(sys.argv[1])); first = next(iter(d["dirs"])); d["dirs"] = {first: d["dirs"][first][:5]}; json.dump(d, open(sys.argv[2], "w"))' ../site/preflight/8.4.1-files.json "$TMPDIR_SHORT/8.4.1-files.json"
+docker exec $C mkdir -p /tmp/facts-short
+for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-hashes.json "$TMPDIR_SHORT/8.4.1-files.json"; do docker cp "$f" $C:/tmp/facts-short/; done
+docker exec $C chmod -R a+rX /tmp/facts-short
+out=$(docker exec -u apache $C php /tmp/doctor.php --openemr=$OE --facts=/tmp/facts-short || true)
+expect "^WARN  Release facts: the file list for OpenEMR 8.4.1 has only [0-9]* files, which looks incomplete" "24: a file list cut short is reported"
+
+# openemr-doctor-docker.sh fetching the doctor itself: checked against SHA256SUMS, from a release
+# folder of our own (file://), run from a directory with no openemr-doctor.php in it.
+here=$(pwd); rel=$(mktemp -d); empty=$(mktemp -d)
+cp openemr-doctor.php "$rel/" && (cd "$rel" && sha256sum openemr-doctor.php > SHA256SUMS)
+dd() { (cd "$empty" && COMPOSE_FILE=$here/test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P OPENEMR_REFERENCE_BASE=file://$rel bash "$here/openemr-doctor-docker.sh" "$@" 2>&1) || true; }
+out=$(dd)
+expect "doctor: downloaded from release v0.3.5, matches its SHA256SUMS" "25: a downloaded doctor is checked against SHA256SUMS"
+expect "^PASS  Database version" "25: and then runs"
+echo '// changed' >> "$rel/openemr-doctor.php"; out=$(dd)
+expect "doesn't match SHA256SUMS of release v0.3.5" "26: a doctor that doesn't match is refused"
+refute "OpenEMR install doctor:" "26: and never runs"
+[ -z "$(ls -A "$empty")" ] && echo "ok   26: nothing left in the directory it ran from" || { echo "FAIL 26: files left in $empty"; fails=$((fails+1)); }
+out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openemr-doctor.php bash openemr-doctor-docker.sh --debug 2>&1 || true)
+expect "^+ openemr-doctor-docker.sh:" "27: --debug traces the script"
+expect "^DEBUG " "27: and runs the doctor with --debug"
+rm -rf "$rel" "$empty" "$TMPDIR_SHORT"
 
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Rehearse an OpenEMR upgrade on a copy of the site's database, in Docker, before doing it for real.
 #
-#   openemr-rehearse.sh --dump=site.sql --from=7.0.3 [--to=8.4.1] [--db=mariadb:11.8] [--convert-utf8mb4] [--keep]
+#   openemr-rehearse.sh --dump=site.sql --from=7.0.3 [--to=8.4.1] [--db=mariadb:11.8] [--convert-utf8mb4] [--keep] [--debug]
 #
 # The live site is never touched: give it a mysqldump of the site's database (the same backup
 # the upgrade needs anyway), on any machine with Docker. It
@@ -21,7 +21,7 @@
 # must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
 
-DUMP="" FROM="" TO="" DB="" KEEP=0 CONVERT=0
+DUMP="" FROM="" TO="" DB="" KEEP=0 CONVERT=0 DEBUG=0
 # The facts: this repository's site/preflight when run from a checkout, else the published copy.
 FACTS="$(cd "$(dirname "$0")/.." && pwd)/site/preflight"
 [[ -f "$FACTS/releases.json" ]] || FACTS=https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight
@@ -34,10 +34,13 @@ for arg in "$@"; do
         --facts=*) FACTS="${arg#*=}" ;;
         --keep) KEEP=1 ;;
         --convert-utf8mb4) CONVERT=1 ;;
+        --debug) DEBUG=1 ;;
         -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $arg (see --help)" >&2; exit 2 ;;
     esac
 done
+# --debug: trace every command (the copy's database passwords are the throwaway containers' own).
+if (( DEBUG )); then PS4='+ openemr-rehearse.sh:${LINENO}: '; set -x; fi
 [[ -r "$DUMP" ]] || { echo "--dump=FILE: a mysqldump of the site's database (not found: '$DUMP')" >&2; exit 2; }
 [[ "$FROM" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "--from=X.Y.Z: the release the site runs now (Administration > About)" >&2; exit 2; }
 command -v docker >/dev/null && docker compose version >/dev/null 2>&1 || { echo "needs Docker with compose" >&2; exit 2; }

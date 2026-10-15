@@ -2,8 +2,8 @@
 # Upgrade an OpenEMR installed from the release tarball (not the Docker image), with a way back.
 #
 #   openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--tarball=FILE] [--backup-dir=DIR]
-#                      [--service=apache2] [--customizations=apply|leave] [--force] [--yes]
-#   openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr
+#                      [--service=apache2] [--customizations=apply|leave] [--force] [--yes] [--debug]
+#   openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr [--debug]
 #
 # It does what the manual upgrade does, in order, and stops at the first thing that goes wrong:
 #   1. checks the server with openemr-preflight.php (stops on a FAIL unless --force);
@@ -21,11 +21,22 @@
 # Nothing is deleted. --rollback first saves each database as it is (everything entered since the
 # upgrade) and, apart, the tables the upgrade created; then restores the backup and swaps the folders back.
 #
+# It checks its own work: after each step it verifies the result (the unpacked release's version, each
+# dump complete and with every table, sites/ copied whole, each database at the target's version, the
+# folders switched) and prints a "check:" line, or stops. Everything it prints also goes to a log in the
+# backup folder. If it stops after the backup, it says how far it got and the exact --rollback command.
+# Only one run at a time per install. --debug also traces every command (passwords are left out).
+# The pre-flight check and the doctor come from beside this script, else from this script's own
+# release, checked against that release's SHA256SUMS.
+#
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
+SCRIPT_VERSION=0.3.5
+# Where the helpers come from when they aren't beside this script: this script's own release.
+REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 
-OE="" TO="" TARBALL="" BACKUP="" SERVICE="" CUSTOM="" FORCE=0 YES=0 ROLLBACK=0
+OE="" TO="" TARBALL="" BACKUP="" SERVICE="" CUSTOM="" FORCE=0 YES=0 ROLLBACK=0 DEBUG=0
 for arg in "$@"; do
     case "$arg" in
         --openemr=*) OE="${arg#*=}" ;;
@@ -37,13 +48,23 @@ for arg in "$@"; do
         --force) FORCE=1 ;;
         --yes) YES=1 ;;
         --rollback) ROLLBACK=1 ;;
-        -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --debug) DEBUG=1 ;;
+        -h|--help) sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "unknown option: $arg (see --help)" >&2; exit 2 ;;
     esac
 done
 die() { echo "STOP: $*" >&2; exit 1; }
 say() { printf '%s\n' "$*"; }
-step() { printf '\n== %s\n' "$*"; }
+STEP_NOW="the start"
+step() {
+    STEP_NOW="step $*"
+    # For the tests only: stop just before a step, as a failure there would.
+    if [[ -n "${OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP:-}" && "${1%%.*}" == "$OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP" ]]; then
+        die "stopped before step ${1%%.*} for a test (OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP)"
+    fi
+    printf '\n== %s\n' "$*"
+}
+audit() { say "  check: $*"; }
 OE="${OE%/}"
 [[ -n "$OE" && -f "$OE/version.php" && -d "$OE/sites" ]] || die "--openemr=DIR: an OpenEMR folder (with version.php and sites/), not '$OE'"
 [[ ! -f /.dockerenv && ! -f "$OE/openemr.sh" ]] || say "Note: this looks like a Docker container. For the official image, upgrading means changing the image tag; this script is for installs from the release tarball."
@@ -52,6 +73,61 @@ PARENT="$(dirname "$OE")"
 NAME="$(basename "$OE")"
 STATE="$PARENT/.$NAME-upgrade-state"
 WEBUSER="$(stat -c %U "$OE/sites")"
+LOGFILE="" NEW="" NEW_MADE=0 LOCK_DIR="" SERVICE_STOPPED=0
+
+# One run at a time on this install: two would back up, upgrade and swap the same folders.
+LOCK="$PARENT/.$NAME-upgrade.lock"
+if command -v flock >/dev/null; then
+    exec 9>"$LOCK"
+    flock -n 9 || die "another openemr-upgrade.sh is already running on $OE (it holds $LOCK)"
+else
+    mkdir "$LOCK.d" 2>/dev/null || die "another openemr-upgrade.sh is already running on $OE ($LOCK.d exists; remove it if no run is going)"
+    LOCK_DIR="$LOCK.d"
+fi
+
+# Whatever stops the run says how far it got and, once there is a backup, how to get back.
+on_exit() {
+    local rc=$?
+    set +x
+    [[ -z "$LOCK_DIR" ]] || rmdir "$LOCK_DIR" 2>/dev/null || true
+    (( rc != 0 )) || return 0
+    if (( ROLLBACK )); then
+        say ""
+        say "The rollback stopped during $STEP_NOW (exit $rc). Nothing was deleted: the backup is still in ${BACKUP_DIR:-?},"
+        say "and $STATE is kept. Fix what the message above says, then run the same command again:  $0 --rollback --openemr=$OE"
+    elif [[ ! -f "$STATE" ]]; then
+        if (( NEW_MADE )) && [[ -n "$NEW" && -d "$NEW" ]]; then rm -rf "$NEW"; fi
+        say ""
+        say "Stopped during $STEP_NOW (exit $rc), before the backup was finished: nothing on the server was changed."
+        if (( SERVICE_STOPPED )); then
+            if service_do start; then say "  Started $SERVICE again."; else say "  $SERVICE was stopped at step 5 and didn't start again: start it by hand."; fi
+        fi
+    else
+        local switched; switched="$(sed -n 's/^SWITCHED=//p' "$STATE")"
+        say ""
+        say "Stopped during $STEP_NOW (exit $rc), after the backup."
+        say "  The backup (each database and sites/) is in $BACKUP_DIR."
+        if [[ "$switched" == 1 ]]; then say "  $OE is already the new release; the old folder is $OLD_DIR."
+        else say "  $OE is still the old folder; the new one, not yet switched to, is $NEW."; fi
+        [[ -z "$SERVICE" ]] || say "  This run stopped $SERVICE at step 5; check whether it is running before letting users in."
+        say "  To put everything back as it was before the upgrade:  $0 --rollback --openemr=$OE"
+    fi
+    [[ -z "$LOGFILE" ]] || say "  The log of this run: $LOGFILE"
+}
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+start_log() {  # $1: the log file. From here on everything printed also goes there.
+    LOGFILE="$1"
+    exec > >(tee -a "$LOGFILE") 2>&1
+    say "openemr-upgrade.sh $SCRIPT_VERSION, $(date '+%Y-%m-%d %H:%M:%S %z'), on $(hostname), as $(id -un); log: $LOGFILE"
+    if (( DEBUG )); then
+        say "  debug: bash $BASH_VERSION; $(php -r 'echo "PHP ", PHP_VERSION;'); $("$(client)" --version 2>/dev/null | head -n 1)"
+        say "  debug: free space where the backup goes: $(df -h "$(dirname "$LOGFILE")" | tail -n 1)"
+        PS4='+ openemr-upgrade.sh:${LINENO}: '
+        set -x
+    fi
+}
 
 as_web() {
     if command -v runuser >/dev/null; then runuser -u "$WEBUSER" -- "$@"
@@ -71,9 +147,36 @@ service_do() {
     [[ -n "$SERVICE" ]] || return 0
     if command -v systemctl >/dev/null; then systemctl "$1" "$SERVICE"; else service "$SERVICE" "$1"; fi
 }
-mycnf() {  # a client option file, so the password isn't on a command line
-    local f; f="$(mktemp)"; chmod 600 "$f"
-    printf '[client]\nhost=%s\nport=%s\nuser=%s\npassword=%s\n' "$1" "$2" "$3" "$4" > "$f"; echo "$f"
+# A client option file from the site settings in the array c (host port login pass dbase), so the
+# password is never on a command line, nor in a --debug trace: tracing is off while it's written.
+mycnf() {
+    local f xtrace=0
+    if [[ $- == *x* ]]; then xtrace=1; set +x; fi
+    f="$(mktemp)"; chmod 600 "$f"
+    printf '[client]\nhost=%s\nport=%s\nuser=%s\npassword=%s\n' "${c[0]}" "${c[1]}" "${c[2]}" "${c[3]}" > "$f"
+    if (( xtrace )); then set -x; fi
+    echo "$f"
+}
+v_database_of() { php -r 'include $argv[1] . "/version.php"; echo $v_database;' "$1"; }
+# The version table of the database the option file $1 reaches, as "X.Y.Z v_database".
+db_version() { "$(client)" --defaults-extra-file="$1" -N -B -e "SELECT CONCAT(v_major, '.', v_minor, '.', v_patch, ' ', v_database) FROM version" "$2"; }
+base_tables() { "$(client)" --defaults-extra-file="$1" -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'" "$2"; }
+sums() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
+# A helper this script runs ($1): the copy beside this script, else downloaded from this script's own
+# release and checked against that release's SHA256SUMS. Sets TOOL to its path.
+fetch_tool() {
+    if [[ -f "$HERE/$1" ]]; then
+        TOOL="$HERE/$1"; say "  $1: the copy beside this script ($TOOL)"; return 0
+    fi
+    local dir want got
+    dir="$(mktemp -d)"; chmod 755 "$dir"
+    curl -fsSL "$REFERENCE_BASE/$1" -o "$dir/$1" || die "couldn't download $1 from $REFERENCE_BASE"
+    curl -fsSL "$REFERENCE_BASE/SHA256SUMS" -o "$dir/SHA256SUMS" || die "couldn't download SHA256SUMS from $REFERENCE_BASE"
+    want="$(awk -v f="$1" '$2 == f || $2 == "*" f {print $1}' "$dir/SHA256SUMS")"
+    got="$(sums "$dir/$1")"
+    [[ -n "$want" && "$want" == "$got" ]] || die "$1 from $REFERENCE_BASE doesn't match that release's SHA256SUMS (expected ${want:-no entry}, got $got); not running it"
+    chmod 644 "$dir/$1"; TOOL="$dir/$1"
+    audit "$1 downloaded from release v$SCRIPT_VERSION matches its SHA256SUMS"
 }
 
 # ---------------------------------------------------------------- rollback
@@ -81,6 +184,8 @@ if (( ROLLBACK )); then
     [[ -f "$STATE" ]] || die "no upgrade to undo: $STATE not found"
     # shellcheck disable=SC1090
     source "$STATE"
+    start_log "$BACKUP_DIR/openemr-rollback-$(date +%Y%m%d-%H%M%S).log"
+    STEP_NOW="the rollback's start"
     if (( SWITCHED )); then
         [[ -d "$OLD_DIR" ]] || die "the old folder $OLD_DIR is gone; restore it from $BACKUP_DIR first"
         CONF_DIR="$OLD_DIR"
@@ -91,8 +196,9 @@ if (( ROLLBACK )); then
     service_do stop
     RB="$(date +%Y%m%d-%H%M%S)"
     for site in $SITES; do
+        STEP_NOW="the rollback of site $site"
         mapfile -t c < <(sqlconf "$CONF_DIR/sites/$site/sqlconf.php")
-        cnf="$(mycnf "${c[0]}" "${c[1]}" "${c[2]}" "${c[3]}")"
+        cnf="$(mycnf)"
         # The tables the upgrade created: neither in the dump nor in the list taken just before the
         # upgrade. (A lookup, not "printf | grep -q": under pipefail, grep -q closing the pipe early
         # makes printf fail and a table that IS there look missing.)
@@ -121,14 +227,24 @@ if (( ROLLBACK )); then
             say "    dropping $t (created by the upgrade; saved above)"
             "$(client)" --defaults-extra-file="$cnf" "${c[4]}" -e "DROP TABLE \`$t\`"
         done
+        dumped="$(grep -c '^CREATE TABLE `' "$BACKUP_DIR/$site.sql" || true)"
+        live="$(base_tables "$cnf" "${c[4]}")"
+        (( dumped == live )) || die "$site: ${c[4]} has $live tables after the restore, the backup $dumped"
+        restored="$(db_version "$cnf" "${c[4]}")"
+        [[ "${restored%% *}" == "$FROM_VERSION" ]] || die "$site: ${c[4]} says it is ${restored%% *} after the restore, not $FROM_VERSION"
+        audit "$site: ${c[4]} is $FROM_VERSION again (database version ${restored##* }), with the backup's $dumped tables"
         rm -f "$cnf"
     done
+    STEP_NOW="the rollback's folder switch"
     if (( SWITCHED )); then
         mv "$OE" "$OE.failed-$TO_VERSION-$(date +%Y%m%d%H%M%S)"
         mv "$OLD_DIR" "$OE"
     elif [[ -d "$NEW_DIR" ]]; then
         mv "$NEW_DIR" "$OE.failed-$TO_VERSION-$(date +%Y%m%d%H%M%S)"   # never switched to; the old folder is still in place
     fi
+    back="$(version_of "$OE")"
+    [[ "$back" == "$FROM_VERSION" ]] || die "$OE is $back after switching back, not $FROM_VERSION"
+    audit "$OE is the $FROM_VERSION folder again"
     service_do start
     rm -f "$STATE"
     say ""; say "Rolled back: $OE is $FROM_VERSION again, and its databases are as they were at $STAMP."
@@ -153,6 +269,8 @@ BACKUP_DIR="${BACKUP:-$PARENT}/$NAME-backup-$FROM-to-$TO-$STAMP"
 NEW="$PARENT/$NAME.new-$TO"
 OLD_DIR="$PARENT/$NAME.old-$FROM"
 [[ ! -e "$NEW" && ! -e "$OLD_DIR" ]] || die "$NEW or $OLD_DIR already exists; move it out of the way first"
+mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
+start_log "$BACKUP_DIR/openemr-upgrade.log"
 
 say "Upgrading OpenEMR $FROM -> $TO in $OE (sites: $SITES; web server user: $WEBUSER)"
 say "Backup to: $BACKUP_DIR"
@@ -307,8 +425,7 @@ PHP
 }
 
 step "1. Pre-flight check"
-pf="$HERE/openemr-preflight.php"
-[[ -f "$pf" ]] || { pf="$(mktemp)"; curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php -o "$pf"; chmod 644 "$pf"; }
+fetch_tool openemr-preflight.php; pf="$TOOL"
 # As root: it only reads, and it must see the backup folder, which may be one the web server's user can't.
 set +e; php "$pf" --openemr="$OE" --target="$TO" --backup-dir="${BACKUP:-$PARENT}"; rc=$?; set -e
 (( rc == 0 )) || (( FORCE )) || die "the pre-flight check found something to fix first (above); fix it, or pass --force"
@@ -334,10 +451,13 @@ fi
 step "3. Unpacking $TO beside the current folder"
 mkdir "$NEW"
 # Until the backup is taken, nothing on the live site has changed: if anything stops the run before
-# then, the unpacked folder goes too.
-trap '[[ -f "$STATE" ]] || rm -rf "$NEW"' EXIT
+# then, the unpacked folder goes too (on_exit).
+NEW_MADE=1
 tar -xzf "$TARBALL" -C "$NEW" --strip-components=1
 say "  $NEW"
+got="$(version_of "$NEW")"
+[[ "$got" == "$TO" ]] || die "the unpacked release says it is $got, not $TO"
+audit "the unpacked folder is OpenEMR $got (database version $(v_database_of "$NEW"))"
 
 step "4. Local changes to OpenEMR's own files"
 CUSTOM_DIR="$BACKUP_DIR/customizations"
@@ -364,16 +484,32 @@ fi
 
 step "5. Stopping the web server and backing up"
 service_do stop
+[[ -z "$SERVICE" ]] || SERVICE_STOPPED=1
 mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
 for site in $SITES; do
     mapfile -t c < <(sqlconf "$OE/sites/$site/sqlconf.php")
-    cnf="$(mycnf "${c[0]}" "${c[1]}" "${c[2]}" "${c[3]}")"
-    "$(dumper)" --defaults-extra-file="$cnf" --single-transaction --skip-lock-tables --routines --triggers "${c[4]}" > "$BACKUP_DIR/$site.sql"
-    rm -f "$cnf"
+    cnf="$(mycnf)"
+    # --comments: the dump then ends with its "Dump completed" line (checked below), even when the
+    # server's my.cnf sets skip-comments for mysqldump; the command line wins over option files.
+    "$(dumper)" --defaults-extra-file="$cnf" --comments --single-transaction --skip-lock-tables --routines --triggers "${c[4]}" > "$BACKUP_DIR/$site.sql"
     say "  $site: database ${c[4]} -> $site.sql ($(du -h "$BACKUP_DIR/$site.sql" | cut -f1))"
+    # The way back is only as good as this file: check it is whole before changing anything.
+    [[ "$(tail -n 1 "$BACKUP_DIR/$site.sql")" == "-- Dump completed"* ]] || die "$site: $site.sql doesn't end with the dump's 'Dump completed' line, so it may be cut short (is the disk full?)"
+    dumped="$(grep -c '^CREATE TABLE `' "$BACKUP_DIR/$site.sql" || true)"
+    live="$(base_tables "$cnf" "${c[4]}")"
+    (( dumped == live )) || die "$site: $site.sql has $dumped tables, the database $live"
+    audit "$site: the dump is complete ('Dump completed') and has all $live tables"
+    rm -f "$cnf"
 done
 tar -czf "$BACKUP_DIR/sites.tar.gz" -C "$OE" sites
 say "  sites/ (documents, encryption keys, settings) -> sites.tar.gz ($(du -h "$BACKUP_DIR/sites.tar.gz" | cut -f1))"
+in_tar="$(tar -tzf "$BACKUP_DIR/sites.tar.gz" | grep -vc '/$' || true)"
+on_disk="$(find "$OE/sites" -not -type d | wc -l)"
+(( in_tar == on_disk )) || die "sites.tar.gz has $in_tar files, sites/ $on_disk (were users still working? use --service)"
+for site in $SITES; do
+    tar -tzf "$BACKUP_DIR/sites.tar.gz" "sites/$site/sqlconf.php" >/dev/null 2>&1 || die "sites.tar.gz has no sites/$site/sqlconf.php"
+done
+audit "sites.tar.gz reads back whole: $in_tar files, the same as sites/, with each site's sqlconf.php"
 cat > "$STATE" <<EOF
 FROM_VERSION=$FROM
 TO_VERSION=$TO
@@ -444,12 +580,15 @@ if [[ "$CUSTOM" == apply && -f "$CUSTOM_DIR/report.json" ]]; then
 fi
 chown -R "$(stat -c %u:%g "$OE")" "$NEW"
 chown -R "$WEBUSER" "$NEW/sites"
+copied="$(find "$NEW/sites" -not -type d | wc -l)"
+(( copied == on_disk )) || die "the new folder's sites/ has $copied files, the old one $on_disk"
+audit "sites/ copied whole into the new folder ($copied files)"
 
 step "7. Upgrading the databases with $TO's sql_upgrade.php --from=$FROM"
 failed=0
 for site in $SITES; do
     mapfile -t c < <(sqlconf "$OE/sites/$site/sqlconf.php")
-    cnf="$(mycnf "${c[0]}" "${c[1]}" "${c[2]}" "${c[3]}")"
+    cnf="$(mycnf)"
     "$(client)" --defaults-extra-file="$cnf" -N -B "${c[4]}" -e 'SHOW FULL TABLES WHERE Table_type = "BASE TABLE"' | cut -f1 > "$BACKUP_DIR/$site.tables"
     rm -f "$cnf"
 done
@@ -470,15 +609,24 @@ if (( failed )); then
     service_do start
     die "the database upgrade didn't finish cleanly. The old folder is untouched but the database is part-upgraded: run '$0 --rollback --openemr=$OE' to put everything back, then look at the log."
 fi
+want_db="$(v_database_of "$NEW")"
+for site in $SITES; do
+    mapfile -t c < <(sqlconf "$NEW/sites/$site/sqlconf.php")
+    cnf="$(mycnf)"
+    upgraded="$(db_version "$cnf" "${c[4]}")"
+    rm -f "$cnf"
+    [[ "$upgraded" == "$TO $want_db" ]] || die "$site: after sql_upgrade.php the database says $upgraded, not $TO $want_db"
+    audit "$site: ${c[4]} is now $TO, database version $want_db, as the new folder's version.php says"
+done
 
 step "8. Checking the new folder with the install doctor"
-dr="$HERE/openemr-doctor.php"
-[[ -f "$dr" ]] || { dr="$(mktemp)"; curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor.php -o "$dr"; chmod 644 "$dr"; }
+fetch_tool openemr-doctor.php; dr="$TOOL"
 # As the web server's user, since it checks what that user can read and write; from a folder it can read.
 drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; chmod 644 "$drdir/openemr-doctor.php"
 doctor_failed=0
 for site in $SITES; do
-    set +e; as_web php "$drdir/openemr-doctor.php" --openemr="$NEW" --site="$site"; rc=$?; set -e
+    debug_flag=(); (( ! DEBUG )) || debug_flag=(--debug)
+    set +e; as_web php "$drdir/openemr-doctor.php" --openemr="$NEW" --site="$site" ${debug_flag[@]+"${debug_flag[@]}"}; rc=$?; set -e
     (( rc == 0 )) || doctor_failed=1
 done
 if (( doctor_failed && ! FORCE )); then
@@ -494,6 +642,9 @@ else
     mv "$OE" "$OLD_DIR" && mv "$NEW" "$OE"
 fi
 sed -i 's/^SWITCHED=0$/SWITCHED=1/' "$STATE"
+switched_to="$(version_of "$OE")"
+[[ "$switched_to" == "$TO" ]] || die "$OE is $switched_to after the switch, not $TO"
+audit "$OE is the $TO folder; the $FROM folder is $OLD_DIR"
 service_do start
 say ""
 say "Done: $OE is OpenEMR $TO. The old folder is $OLD_DIR; the backup is $BACKUP_DIR."

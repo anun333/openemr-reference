@@ -6,7 +6,7 @@
  *
  * On the server, with the PHP your web server uses:
  *
- *     php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR_OR_URL]
+ *     php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR_OR_URL] [--debug]
  *
  * Or, to check the web server's own PHP (it can differ from the command line's), copy this
  * file into the OpenEMR folder and open http://localhost/openemr/openemr-doctor.php in a
@@ -18,7 +18,8 @@
  * nothing in the install or its database is changed. It never prints passwords or keys.
  *
  * Written for PHP 5.4 and later, so that it can explain a PHP that is too old instead of
- * failing to start on it. Exit code: 1 if any check fails, else 0.
+ * failing to start on it. Exit code: 1 if any check fails, else 0. --debug (or ?debug=1 in the
+ * browser) also prints where each fact came from and how much of it there was, and the timings.
  *
  * @license GPL-3.0-or-later
  */
@@ -51,16 +52,28 @@ if ($web) {
     $root = dirname(__FILE__);
     $site = isset($_GET['site']) ? preg_replace('/[^A-Za-z0-9._-]/', '', (string)$_GET['site']) : 'default';
     $factsBase = DOCTOR_FACTS_DEFAULT;
+    $debug = !empty($_GET['debug']);
 } else {
     ini_set('display_errors', 'stderr');
-    $opts = getopt('', array('openemr:', 'site:', 'facts:', 'help'));
+    $opts = getopt('', array('openemr:', 'site:', 'facts:', 'help', 'debug'));
     if (isset($opts['help']) || empty($opts['openemr'])) {
-        fwrite(STDERR, "usage: php openemr-doctor.php --openemr=/path/to/openemr [--site=default] [--facts=DIR_OR_URL]\n");
+        fwrite(STDERR, "usage: php openemr-doctor.php --openemr=/path/to/openemr [--site=default] [--facts=DIR_OR_URL] [--debug]\n");
         exit(2);
     }
     $root = rtrim((string)$opts['openemr'], '/\\');
     $site = isset($opts['site']) ? (string)$opts['site'] : 'default';
     $factsBase = isset($opts['facts']) ? rtrim((string)$opts['facts'], '/') : DOCTOR_FACTS_DEFAULT;
+    $debug = isset($opts['debug']);
+}
+define('DOCTOR_DEBUG', $debug);
+define('DOCTOR_START', microtime(true));
+
+/** With --debug: what the doctor decided and why, prefixed so it can't be mistaken for a check. */
+function debug($message)
+{
+    if (DOCTOR_DEBUG) {
+        echo 'DEBUG ' . sprintf('%6.2fs', microtime(true) - DOCTOR_START) . ' ' . $message . "\n";
+    }
 }
 
 $results = array();
@@ -80,11 +93,14 @@ function facts($base, $name)
         return null;
     }
     $context = stream_context_create(array('http' => array('timeout' => 15, 'user_agent' => 'openemr-doctor')));
+    $started = microtime(true);
     $raw = @file_get_contents($base . '/' . $name . '.json', false, $context);
     if ($raw === false) {
+        debug("facts $name.json: not read from $base");
         return null;
     }
     $data = json_decode($raw, true);
+    debug("facts $name.json: " . strlen($raw) . ' bytes from ' . $base . sprintf(' in %.2fs', microtime(true) - $started) . (is_array($data) ? '' : ', not valid JSON'));
     return is_array($data) ? $data : null;
 }
 
@@ -184,17 +200,32 @@ if (!is_file("$root/version.php")) {
     fwrite(STDERR, $msg . "\n");
     exit(2);
 }
-$code = readConfig("$root/version.php", array('v_major', 'v_minor', 'v_patch', 'v_realpatch', 'v_database'));
-$current = $code['v_major'] . '.' . $code['v_minor'] . '.' . $code['v_patch'];
+$code = is_readable("$root/version.php") ? readConfig("$root/version.php", array('v_major', 'v_minor', 'v_patch', 'v_realpatch', 'v_database', 'v_tag')) : array();
+// Everything below depends on the version: say so plainly when it can't be read, instead of
+// comparing an empty one with the facts.
+$versionKnown = isset($code['v_major'], $code['v_minor'], $code['v_patch']) && is_numeric($code['v_major']) && is_numeric($code['v_minor']) && is_numeric($code['v_patch']);
+$current = $versionKnown ? $code['v_major'] . '.' . $code['v_minor'] . '.' . $code['v_patch'] : '0.0.0';
 $patch = isset($code['v_realpatch']) ? (int)$code['v_realpatch'] : 0;
+// A release has an empty tag; a build from the development branch says -dev (or -rc1 ...).
+$tag = isset($code['v_tag']) ? trim((string)$code['v_tag']) : '';
 
-echo "OpenEMR install doctor: $root (site $site), OpenEMR $current" . ($patch ? " patch $patch" : '') . "\n";
+echo "OpenEMR install doctor: $root (site $site), OpenEMR " . ($versionKnown ? "$current$tag" . ($patch ? " patch $patch" : '') : '(version unknown)') . "\n";
 echo ($web ? 'Checked by the web server\'s PHP' : 'Checked by the command-line PHP') . ', ' . PHP_VERSION . ' (' . PHP_SAPI . ")\n\n";
 
-$releases = facts($factsBase, 'releases');
+if (!$versionKnown) {
+    $who = function_exists('posix_geteuid') && function_exists('posix_getpwuid') ? posix_getpwuid(posix_geteuid()) : null;
+    $who = is_array($who) ? $who['name'] : "this PHP's user";
+    report('FAIL', 'Version', is_file("$root/version.php")
+        ? (is_readable("$root/version.php") ? "version.php doesn't set the version (v_major, v_minor, v_patch)" : "$who can't read version.php (" . substr(sprintf('%o', fileperms("$root/version.php")), -4) . ')')
+        : 'version.php is missing',
+        'OpenEMR reads its version from it on every page. Make the web server\'s user able to read OpenEMR\'s files, or copy version.php again from the package. The checks that depend on the release are skipped.');
+}
+$releases = $versionKnown ? facts($factsBase, 'releases') : null;
 $base = null;
 $f = null;
-if ($releases === null) {
+if (!$versionKnown) {
+    debug('release facts not read: the version is unknown');
+} elseif ($releases === null) {
     $online = preg_match('#^https?://#', $factsBase);
     report('NOTE', 'Release facts', $online ? "couldn't download them from $factsBase" . (ini_get('allow_url_fopen') ? '' : ' (allow_url_fopen is off)') . (extension_loaded('openssl') ? '' : ' (openssl is missing)') : "not found at $factsBase",
         'The checks that depend on the release (PHP range, extensions, files) are skipped; the rest still run. For a server without internet, download site/preflight from https://github.com/anun333/openemr-reference and pass --facts=that folder.');
@@ -209,10 +240,19 @@ if ($releases === null) {
         report('NOTE', 'Release facts', "$current is older than any release with facts (" . $releases[0] . '); release checks skipped');
     } elseif ($f === null) {
         report('NOTE', 'Release facts', "can't read the facts for $base; release checks skipped");
+    } elseif ($tag !== '') {
+        report('NOTE', 'Release facts', "$current$tag is an unreleased build; comparing it with $base, the closest release with facts",
+            "Files and packages it no longer has since $base show as missing, so those are notes here, not failures.");
     } elseif ($base !== $current) {
-        report('NOTE', 'Release facts', "$current isn't a release with facts; using $base, the closest earlier one");
+        report('NOTE', 'Release facts', "$current isn't a release with facts yet; using $base, the closest earlier one",
+            "Files and packages $current removed show as missing, so those are notes here, not failures. The facts gain each new release within a day.");
     }
 }
+// Compared with another release than the one installed: what that release has and this one dropped
+// looks missing, so missing files, packages and assets can't be called failures.
+$approx = $f !== null && ($base !== $current || $tag !== '');
+debug('version ' . $current . ($tag !== '' ? " tag $tag" : ' (no tag)') . ($patch ? " patch $patch" : '') . ', database version ' . (isset($code['v_database']) ? $code['v_database'] : '?')
+    . '; facts from ' . $factsBase . '; compared with ' . ($base === null ? 'nothing' : $base) . ($approx ? ' (another release, so missing files are notes)' : ''));
 
 // A patched install has the patch tag's files: Docker images are built from it, and a patch
 // zip adds and overwrites but never deletes. Patches remove files (7.0.3 patch 4 dropped
@@ -229,6 +269,7 @@ if ($f !== null && $patch > 0 && $base === $current) {
         $assetList = $f['patches'][$patch]['assets'];
     } else {
         report('NOTE', 'Release facts', "none for patch $patch of $base; comparing files with $base as released, so files the patch removed may show as missing");
+        $approx = true;
     }
 }
 
@@ -364,9 +405,13 @@ if (!is_file("$root/vendor/autoload.php")) {
             }
         }
     }
+    debug('PHP libraries: ' . count($composerList) . " packages in the facts for $label, " . count($lib) . ' missing, ' . count($mods) . ' modules missing');
+    if (count($composerList) < 20) {
+        report('WARN', 'Release facts', "the Composer list for $label has only " . count($composerList) . ' packages, which looks incomplete', 'Missing packages may go unnoticed. Download the facts again, or pass --facts= a full copy of site/preflight.');
+    }
     if ($lib !== array()) {
-        report('FAIL', 'PHP libraries', count($lib) . ' of the ' . count($composerList) . " packages $label installs with Composer are missing from vendor/: " . listSome($lib),
-            'The upload or copy of vendor/ didn\'t finish. Copy vendor/ again from the release package.');
+        report($approx ? 'NOTE' : 'FAIL', 'PHP libraries', count($lib) . ' of the ' . count($composerList) . " packages $label installs with Composer are missing from vendor/: " . listSome($lib),
+            $approx ? "Expected if $current$tag no longer uses them. If OpenEMR misbehaves, copy vendor/ again from the same build." : 'The upload or copy of vendor/ didn\'t finish. Copy vendor/ again from the release package.');
     } else {
         report('PASS', 'PHP libraries', 'all ' . count($composerList) . " packages $label installs with Composer are present");
     }
@@ -383,9 +428,10 @@ if ($assetList !== null) {
             $gone[] = $a;
         }
     }
+    debug('Page assets: ' . count($assetList) . " in the facts for $label, " . count($gone) . ' missing');
     if ($gone !== array()) {
-        report('FAIL', 'Page assets', count($gone) . ' of the ' . count($assetList) . ' files every page loads are missing: ' . listSome($gone),
-            'They come from the npm build, not from git. Without them the login page looks broken and its button does nothing. Use the release package, or run npm ci && npm run build.');
+        report($approx ? 'NOTE' : 'FAIL', 'Page assets', count($gone) . ' of the ' . count($assetList) . ' files every page loads are missing: ' . listSome($gone),
+            ($approx ? "$label's list, so a build that renamed them looks the same. " : '') . 'They come from the npm build, not from git. Without them the login page looks broken and its button does nothing. Use the release package, or run npm ci && npm run build.');
     } else {
         report('PASS', 'Page assets', 'the ' . count($assetList) . ' built files every page loads are present');
     }
@@ -425,6 +471,10 @@ if ($manifest !== null) {
             }
         }
     }
+    debug("Files: $total in the facts for $label, " . count($required) . " missing, $optional optional missing, " . count($removedScripts) . ' setup scripts removed');
+    if ($total < 1000) {
+        report('WARN', 'Release facts', "the file list for $label has only $total files, which looks incomplete", 'Missing files may go unnoticed. Download the facts again, or pass --facts= a full copy of site/preflight.');
+    }
     if ($required !== array()) {
         $areas = array();
         foreach ($required as $p) {
@@ -437,8 +487,8 @@ if ($manifest !== null) {
         foreach (array_slice($areas, 0, 5, true) as $area => $n) {
             $byArea[] = "$area ($n)";
         }
-        report('FAIL', 'Files', count($required) . " files of the $label package are missing, in " . implode(', ', $byArea) . '. For example: ' . listSome($required, 3),
-            'Copy the package again (or unpack the patch into this folder, not a subfolder). A partial upload or copy is the usual cause.');
+        report($approx ? 'NOTE' : 'FAIL', 'Files', count($required) . " files of the $label package are missing, in " . implode(', ', $byArea) . '. For example: ' . listSome($required, 3),
+            $approx ? "Expected for files $current$tag removed or moved since $base. If OpenEMR misbehaves, copy the same build again." : 'Copy the package again (or unpack the patch into this folder, not a subfolder). A partial upload or copy is the usual cause.');
     } else {
         report('PASS', 'Files', "all $total files of the $label package that it runs from are present" . ($optional ? " ($optional optional ones, documentation or tooling, are not)" : ''));
     }
@@ -631,7 +681,9 @@ if ($ver === array()) {
 } else {
     $v = $ver[0];
     $dbPatch = isset($v['v_realpatch']) ? (int)$v['v_realpatch'] : 0;
-    if ((int)$v['v_database'] < (int)$code['v_database']) {
+    if (!isset($code['v_database'])) {
+        report('NOTE', 'Database version', "the database is at {$v['v_major']}.{$v['v_minor']}.{$v['v_patch']} (database version {$v['v_database']}); the code's version is unknown (see Version)");
+    } elseif ((int)$v['v_database'] < (int)$code['v_database']) {
         report('FAIL', 'Database version', "the code is $current (database version {$code['v_database']}) but the database is at {$v['v_major']}.{$v['v_minor']}.{$v['v_patch']} (database version {$v['v_database']})",
             'Open sql_upgrade.php in the browser and upgrade from the version the database is at' . (is_file("$root/sql_upgrade.php") ? '.' : ' (copy it from the package first; it was removed).'));
     } elseif ((int)$v['v_database'] > (int)$code['v_database']) {
@@ -808,6 +860,7 @@ function summary($results)
 {
     $fails = count(array_keys($results, 'FAIL', true));
     $warns = count(array_keys($results, 'WARN', true));
+    debug(count($results) . ' results: ' . count(array_keys($results, 'PASS', true)) . ' pass, ' . count(array_keys($results, 'NOTE', true)) . " note, $warns warn, $fails fail");
     echo "\n" . ($fails ? "Fix the $fails failed check(s) first." : 'No blocking problems found.') . ($warns ? " $warns warning(s) to read." : '') . "\n";
     $log = (string)ini_get('error_log');
     echo "A blank page or an error 500 always leaves a line in the PHP error log"

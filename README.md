@@ -109,8 +109,8 @@ Needs Docker with compose, and the target must be 8.2.0 or later (`sql_upgrade.p
 ## Upgrade
 
 ```
-sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE] [--customizations=apply|leave]
-sudo preflight/openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr
+sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE] [--customizations=apply|leave] [--debug]
+sudo preflight/openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr [--debug]
 ```
 
 For an OpenEMR installed from the release tarball (with the official Docker image, upgrading means changing the image tag). After the pre-flight check and a rehearsal, it does the manual upgrade in order and stops at the first thing that goes wrong:
@@ -125,13 +125,43 @@ For an OpenEMR installed from the release tarball (with the official Docker imag
 8. checks the new folder with the install doctor, and stops on a FAIL unless `--force`;
 9. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
 
+**It checks its own work.** After each step it verifies the result and prints a `check:` line, or stops:
+- the unpacked release is the version asked for;
+- each database dump ends with mysqldump's "Dump completed" line and has every table, so a dump cut short by a full disk is caught before anything changes;
+- `sites.tar.gz` reads back with as many files as `sites/`;
+- the copied `sites/` is whole;
+- each database is at the target's version after `sql_upgrade.php`;
+- the folder is the target after the switch.
+
+The rollback checks each restored database and the folder the same way.
+
+**If it stops**, it says how far it got. Before the backup that means nothing changed: it removes the unpacked folder and starts the web server again if it stopped it. After the backup it says where the backup is, whether the folders were switched, and the exact `--rollback` command to run.
+
+**Everything it prints also goes to a log** in the backup folder (`openemr-upgrade.log`, and `openemr-rollback-<time>.log`), so a request for help can include it. `--debug` adds every command it runs; the database password stays out of both.
+
+**Only one run at a time** per install: a second refuses to start while the first holds `.<folder>-upgrade.lock`.
+
+**The pre-flight check and the doctor** it runs are the copies beside it, else they're downloaded from this script's own release and checked against that release's `SHA256SUMS`. One that doesn't match isn't run.
+
+`preflight/test_upgrade.sh` (7.0.3 to 8.4.1, MariaDB 10.11), 45 checks, covers:
+- local changes found, applied, kept as patches;
+- the upgrade and the rollback, with work done in between kept;
+- a helper that doesn't match `SHA256SUMS` refused, and one that does used;
+- a second run refused while the first holds the lock;
+- a stop before the backup, which changes nothing;
+- a stop after it, which names the rollback, and that rollback;
+- each self-check;
+- a `--debug` log that traces every command, with the database password in no line of it.
+
 Nothing is deleted. A rollback brings back the databases as they were before the upgrade, so anything entered since would be lost; `--rollback` therefore first saves each database as it is (`<site>.before-rollback-<time>.sql`) and, in a file of their own, the tables the upgrade created (`<site>.created-tables-<time>.sql`). Then it restores the backup, drops those tables, and swaps the folders back. The upgraded folder, with any documents uploaded since, is kept as `<folder>.failed-<version>-<time>`. The target must be 8.2.0 or later. A change the target conflicts with needs merging by hand: its patch is in the backup's `customizations/patches/`. Not covered yet: multisite setups with more than one database server.
 
 ## Install doctor
 
 ```
-php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR]
+php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR] [--debug]
 ```
+
+`--debug` (or `?debug=1` in the browser) adds `DEBUG` lines: where each facts file came from and its size, the version it compared with and why, the counts behind each file check, timings, and a tally. On a build that isn't a release, such as the development branch (`8.5.0-dev`) or a release newer than the facts, it compares with the closest earlier release and says so. Files, packages and assets that release has and this build doesn't are then notes, not failures. A facts file that looks cut short (a file list under 1,000 entries, a Composer list under 20) is a warning, so a check against almost nothing can't pass quietly.
 
 For an install that doesn't work: a blank page, an error 500, setup stopping part-way, a login page without styling, documents or encrypted data that won't open after a move. Each check comes from failures reported on the forum, and from OpenEMR's own code for what it needs to start. It only reads, and never prints a password or a key.
 
@@ -140,6 +170,12 @@ For an install that doesn't work: a blank page, an error 500, setup stopping par
 ```
 curl -fsSL https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor-docker.sh | bash
 ```
+
+It says on stderr which container and image it checks and how it runs the doctor; the report is on stdout. The doctor is `openemr-doctor.php` in the current directory if there is one, else it downloads the doctor from its own release and runs it only if it matches that release's `SHA256SUMS`, leaving nothing behind.
+- When the project has more than one OpenEMR container it names them and checks the first; set `CONTAINER=name` to pick another, or to check an image of your own built on `openemr/openemr`.
+- `--debug` (`curl … | bash -s -- --debug`) traces the script and runs the doctor with `--debug`.
+
+To check the script itself before running it, download it with `SHA256SUMS` and run `sha256sum -c SHA256SUMS --ignore-missing`.
 
 The idea came from Asher Densmore-Lynn ([t/27118](https://community.open-emr.org/t/27118/8)).
 
@@ -152,7 +188,7 @@ The web server can run a different PHP from the command line's, with different s
 | php.ini | errors shown on pages, or below the limits OpenEMR's setup recommends (warn in the browser, note on the command line) | t/24048, t/25023 |
 | PHP libraries | `vendor/` missing (a git checkout), or a Composer package missing from it (fail) | t/23699 |
 | Page assets | a built file every page loads is missing: the npm build didn't run (fail) | t/26790 |
-| Files | a file the release package ships is missing from a folder OpenEMR runs from (fail); documentation and tooling are optional | t/25717, t/23699 |
+| Files | a file the release package ships is missing from a folder OpenEMR runs from (fail; a note on a build that isn't the release the facts describe); documentation and tooling are optional | t/25717, t/23699 |
 | Local changes | a file the release package ships was edited here, compared by git hash with the release or patch as published (note, naming the files); an edited PHP file that no longer parses with this PHP, with its line (fail; PHP 7.0 and later) | |
 | Site, setup | the site's `sqlconf.php` is missing (the real sites are listed), or setup hasn't finished | t/26989 |
 | Documents folder | the web server can't write it (browser), or it belongs to root (command line) | t/24855 |
@@ -169,8 +205,14 @@ It runs on PHP 5.4 and later, so it can explain a PHP that is too old instead of
 
 A patched install is compared with its patch's files (`site/preflight/<release>-p<N>-files.json`, from the `vX_Y_Z_N` tags): patches delete files, and 7.0.3 patch 4 dropped the old login templates. The setup scripts the Docker image deletes after setup (`setup.php`, `admin.php`, `sql_upgrade.php`…) are noted, not failed.
 
-Two end-to-end tests build throwaway installs from the official images, break one thing at a time and check the doctor names it:
-- `preflight/test_doctor.sh` (8.4.1, MariaDB 11.8), 53 checks: lost templates, a lost vendor package, missing built assets, optional documentation, an edited file and one that no longer parses, a missing theme, PHP errors shown, a module without files, an emptied keys folder, a key from another install, a document without its file and one moved from another root, a half-finished upgrade, a wrong password, a missing site, unfinished setup, the browser mode and its refusals (from outside, through a proxy), PHP 7.4, when `intl` is required before 7.0.0, and `openemr-doctor-docker.sh` on the same stack.
+Two end-to-end tests build throwaway installs from the official images, break one thing at a time and check the doctor names it. Like the other suites, they run one at a time, and wait until OpenEMR's login page answers and its files stop changing, not only for "Setup Complete":
+- `preflight/test_doctor.sh` (8.4.1, MariaDB 11.8): lost templates, a lost vendor package, missing built assets, optional documentation, an edited file and one that no longer parses, a missing theme, PHP errors shown, a module without files, an emptied keys folder, a key from another install, a document without its file and one moved from another root, a half-finished upgrade, a wrong password, a missing site, unfinished setup, the browser mode and its refusals (from outside, through a proxy), PHP 7.4, when `intl` is required before 7.0.0, and `openemr-doctor-docker.sh` on the same stack. It also covers:
+  - a development build (`-dev`) and a release newer than the facts, whose missing files are notes;
+  - a `version.php` the web server can't read;
+  - `--debug`, and a facts file cut short;
+  - `openemr-doctor-docker.sh` naming what it checks, downloading the doctor and checking it against `SHA256SUMS` (and refusing a changed one), and `--debug`.
+
+  78 checks in all.
 - `preflight/test_doctor_patch.sh` (7.0.3 patch 4, MariaDB 10.6), 10 checks: the patch's file list, the extension fallback, `user_debug`, a patch whose `sql_patch.php` didn't run, and a missing file list.
 
 On the official 8.4.1 image as installed, it reports one real gap: the image has no ClaimRev module, which Composer installs outside `vendor/` and the image's Dockerfile doesn't copy.

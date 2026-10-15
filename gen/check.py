@@ -91,6 +91,20 @@ def known_facts(tags: list[str]) -> None:
     check(has_setting("v8_4_1", "rest_fhir_api"), "8.4.1 has rest_fhir_api, whose key is an enum case (GlobalConnectorsEnum::REST_FHIR_API)")
 
 
+def tools() -> None:
+    """The scripts that fetch their helpers from their own release must agree on which release that is."""
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent / "preflight"
+    found = {}
+    for name, pattern in (("openemr-upgrade.sh", r"^SCRIPT_VERSION=(\S+)$"), ("openemr-doctor-docker.sh", r"^\s*VERSION=(\S+)$")):
+        m = re.search(pattern, (root / name).read_text(), re.M)
+        found[name] = m.group(1) if m else None
+    versions = set(found.values())
+    check(None not in versions and len(versions) == 1,
+          f"the scripts name one release to fetch their helpers from ({', '.join(f'{k} {v}' for k, v in found.items())})")
+
+
 def runtime(tag: str, app: str, db: str) -> None:
     php = r"""$ignoreAuth = true; $_GET['site'] = 'default'; $sessionAllowWrite = true;
 require '/var/www/localhost/htdocs/openemr/interface/globals.php';
@@ -124,6 +138,7 @@ def main() -> int:
     tags = sorted((d.name for d in DATA.iterdir() if (d / "release.json").exists()),
                   key=lambda t: tuple(int(x) for x in t[1:].split("_")))
     floors(tags)
+    tools()
     known_facts(tags)
     if "--runtime" in sys.argv:
         i = sys.argv.index("--runtime")

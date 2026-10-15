@@ -12,12 +12,14 @@
 # Everything runs in containers that are deleted at the end. Needs Docker and the facts in ../site/preflight.
 set -euo pipefail
 cd "$(dirname "$0")"
+. ./test_lib.sh
+serial
 P=preflight-test
 docker compose -p $P -f test-docker-compose.yml up -d >/dev/null
 trap 'docker compose -p $P -f test-docker-compose.yml down -v >/dev/null 2>&1' EXIT
 C=$P-openemr-1; D=$P-mysql-1
 echo "waiting for OpenEMR 7.0.3 to install itself (about 6 minutes)..."
-until docker logs $C 2>&1 | grep -q "Setup Complete"; do sleep 6; done
+wait_ready $C /var/www/localhost/htdocs/openemr
 docker cp openemr-preflight.php $C:/tmp/preflight.php
 docker exec $C mkdir -p /tmp/pf-facts
 for f in ../site/preflight/*.json; do docker cp "$f" $C:/tmp/pf-facts/; done
