@@ -196,7 +196,8 @@ The web server can run a different PHP from the command line's, with different s
 | Local changes | a file the release package ships was edited here, compared by git hash with the release or patch as published (note, naming the files); an edited PHP file that no longer parses with this PHP, with its line (fail; PHP 7.0 and later) | |
 | Site, setup | the site's `sqlconf.php` is missing (the real sites are listed), or setup hasn't finished | t/26989 |
 | Documents folder | the web server can't write it (browser), or it belongs to root (command line) | t/24855 |
-| Database | can't connect, with what the error number means (1045, 1049, 2002…) | t/23921, t/26432, t/25245 |
+| Database SSL | `documents/certificates/mysql-ca`, `mysql-cert` or `mysql-key` can't be read or isn't PEM (fail); a client certificate without its key, or the reverse (fail from 8.1, which refuses to connect; warn before, which ignores it); a client certificate without `mysql-ca`, which turns SSL on (warn) | t/27148 |
+| Database | can't connect, with what the error number means (1045, 1049, 2002…). It connects as OpenEMR does, over SSL when `mysql-ca` is there. A server that only accepts encrypted connections without `mysql-ca` is error 3159. Over SSL, PHP reports a refused server certificate only as error 2002, so the doctor reads the server's certificate and says why: `mysql-ca` didn't sign it, or the host in `sqlconf.php` isn't a name in it (for example Google Cloud SQL by internal IP) | t/23921, t/26432, t/25245, t/27148 |
 | Database version | the database is behind the code (`sql_upgrade.php` or `sql_patch.php` didn't run), or ahead of it (fail) | t/26790, t/26133, t/24492 |
 | Theme | the chosen theme's stylesheet is missing (fail) | t/26790 |
 | Error display | OpenEMR's own setting shows PHP errors on pages (`user_debug` to 8.0, `user_php_debug` from 8.2) (warn) | t/27005 |
@@ -214,9 +215,10 @@ Two end-to-end tests build throwaway installs from the official images, break on
   - a development build (`-dev`) and a release newer than the facts, whose missing files are notes;
   - a `version.php` the web server can't read;
   - `--debug`, and a facts file cut short;
-  - `openemr-doctor-docker.sh` naming what it checks, downloading the doctor and checking it against `SHA256SUMS` (and refusing a changed one), and `--debug`.
+  - `openemr-doctor-docker.sh` naming what it checks, downloading the doctor and checking it against `SHA256SUMS` (and refusing a changed one), and `--debug`;
+  - MySQL over SSL, against a second MariaDB that only accepts encrypted connections, with a test CA: no `mysql-ca` (error 3159), the right CA (connected over SSL), a connection by IP (the certificate names the host, not the IP), the wrong CA, a client certificate without its key, and a `mysql-ca` that isn't PEM.
 
-  78 checks in all.
+  86 checks in all.
 - `preflight/test_doctor_patch.sh` (7.0.3 patch 4, MariaDB 10.6), 10 checks: the patch's file list, the extension fallback, `user_debug`, a patch whose `sql_patch.php` didn't run, and a missing file list.
 
 On the official 8.4.1 image as installed, it reports one real gap: the image has no ClaimRev module, which Composer installs outside `vendor/` and the image's Dockerfile doesn't copy.

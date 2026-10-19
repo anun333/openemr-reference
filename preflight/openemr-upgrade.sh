@@ -32,7 +32,7 @@
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.3.6
+SCRIPT_VERSION=0.3.7
 # Where the helpers come from when they aren't beside this script: this script's own release.
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 

@@ -179,6 +179,99 @@ function codeUsesIntl($root)
     return false;
 }
 
+/**
+ * The database server's certificate, read the way a MySQL client starts SSL: its greeting,
+ * an SSL request, then the TLS handshake. Unverified, to see what it holds. Returns the
+ * certificate, or why it couldn't be read.
+ */
+function serverCertificate($host, $port)
+{
+    $context = stream_context_create(array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true, 'capture_peer_cert' => true)));
+    $socket = @stream_socket_client("tcp://$host:$port", $errno, $errstr, 10, STREAM_CLIENT_CONNECT, $context);
+    if (!$socket) {
+        return "nothing answered at $host:$port ($errstr)";
+    }
+    stream_set_timeout($socket, 10);
+    $header = (string)fread($socket, 4);
+    if (strlen($header) < 4) {
+        fclose($socket);
+        return 'the server sent no greeting';
+    }
+    $length = ord($header[0]) | (ord($header[1]) << 8) | (ord($header[2]) << 16);
+    $greeting = '';
+    while (strlen($greeting) < $length && !feof($socket)) {
+        $greeting .= (string)fread($socket, $length - strlen($greeting));
+    }
+    if ($greeting === '' || ord($greeting[0]) === 0xff) {
+        fclose($socket);
+        return 'the server refused the connection before SSL';
+    }
+    // SSLRequest: CLIENT_PROTOCOL_41 | CLIENT_SSL | CLIENT_SECURE_CONNECTION, max packet, utf8, zeros.
+    $payload = pack('V', 0x0200 | 0x0800 | 0x8000) . pack('V', 16777216) . chr(33) . str_repeat("\0", 23);
+    fwrite($socket, substr(pack('V', strlen($payload)), 0, 3) . chr(1) . $payload);
+    $method = defined('STREAM_CRYPTO_METHOD_ANY_CLIENT') ? STREAM_CRYPTO_METHOD_ANY_CLIENT : STREAM_CRYPTO_METHOD_TLS_CLIENT;
+    if (!@stream_socket_enable_crypto($socket, true, $method)) {
+        fclose($socket);
+        return 'the SSL handshake with the server failed';
+    }
+    $params = stream_context_get_params($socket);
+    fclose($socket);
+    return isset($params['options']['ssl']['peer_certificate']) ? $params['options']['ssl']['peer_certificate'] : 'the server sent no certificate';
+}
+
+/** Whether a certificate name (an exact name, a *.wildcard or an IP) covers the host. */
+function certificateNameMatches($name, $host)
+{
+    $name = strtolower($name);
+    $host = strtolower($host);
+    if ($name === $host) {
+        return true;
+    }
+    if (substr($name, 0, 2) === '*.' && strpos($host, '.') !== false) {
+        return substr($host, strpos($host, '.')) === substr($name, 1);
+    }
+    return false;
+}
+
+/** Why PHP refused the server's certificate: the CA, the name, or neither it can see. */
+function sslDiagnosis($host, $port, $ca)
+{
+    $generic = "Either documents/certificates/mysql-ca isn't the CA that signed the server's certificate, or the host '$host' in sqlconf.php isn't a name in that certificate (PHP checks both).";
+    if (!function_exists('openssl_x509_parse')) {
+        return $generic . ' (The openssl extension is missing, so the doctor can\'t tell which.)';
+    }
+    $cert = serverCertificate($host, $port);
+    if (is_string($cert)) {
+        return $generic . " (The doctor couldn't read the server's certificate: $cert.)";
+    }
+    $info = openssl_x509_parse($cert);
+    $names = array();
+    if (isset($info['subject']['CN'])) {
+        $names[] = (string)$info['subject']['CN'];
+    }
+    if (isset($info['extensions']['subjectAltName'])) {
+        foreach (explode(',', $info['extensions']['subjectAltName']) as $alt) {
+            $alt = trim($alt);
+            if (preg_match('/^(DNS|IP Address):(.+)$/', $alt, $m)) {
+                $names[] = trim($m[2]);
+            }
+        }
+    }
+    $names = array_values(array_unique($names));
+    $issuer = isset($info['issuer']['CN']) ? (string)$info['issuer']['CN'] : 'an unnamed issuer';
+    $caInfo = @openssl_x509_parse((string)@file_get_contents($ca));
+    $caName = is_array($caInfo) && isset($caInfo['subject']['CN']) ? (string)$caInfo['subject']['CN'] : 'mysql-ca';
+    if (openssl_x509_checkpurpose($cert, X509_PURPOSE_ANY, array($ca)) !== true) {
+        return "The server's certificate was issued by '$issuer', and documents/certificates/mysql-ca ('$caName') didn't sign it. Put the server's own CA certificate in mysql-ca (Google Cloud SQL: the instance's server CA, from its Connections page).";
+    }
+    foreach ($names as $name) {
+        if (certificateNameMatches($name, $host)) {
+            return "The server's certificate is signed by mysql-ca and names '$host', so the refusal is something else: check the certificate's dates, and mysql-cert and mysql-key.";
+        }
+    }
+    return "The server's certificate names " . (count($names) > 0 ? "'" . implode("', '", $names) . "'" : 'nothing') . ", not '$host' in sqlconf.php, and PHP checks the name. Connect by one of those names, or through the database's own connector (Google Cloud SQL from Cloud Run: its Cloud SQL connection or the Auth Proxy, which encrypt without these files).";
+}
+
 function listSome($items, $n = 5)
 {
     return implode(', ', array_slice($items, 0, $n)) . (count($items) > $n ? ' and ' . (count($items) - $n) . ' more' : '');
@@ -616,32 +709,101 @@ if (function_exists('mysqli_report')) {
 }
 $host = isset($db['host']) ? (string)$db['host'] : 'localhost';
 $port = isset($db['port']) ? (int)$db['port'] : 3306;
+
+// MySQL over SSL, as OpenEMR connects: the server's CA certificate at
+// documents/certificates/mysql-ca turns it on, and mysql-cert with mysql-key adds a client
+// certificate. PHP then checks the server's certificate against the CA and the host in
+// sqlconf.php, and either failure is reported only as error 2002 (forum: t/27148).
+$ca = "$docs/certificates/mysql-ca";
+$clientCert = "$docs/certificates/mysql-cert";
+$clientKey = "$docs/certificates/mysql-key";
+$ssl = is_file($ca);
+$hasCert = is_file($clientCert);
+$hasKey = is_file($clientKey);
+if ($ssl) {
+    $pem = array('mysql-ca' => array($ca, 'CERTIFICATE'));
+    if ($hasCert) {
+        $pem['mysql-cert'] = array($clientCert, 'CERTIFICATE');
+    }
+    if ($hasKey) {
+        $pem['mysql-key'] = array($clientKey, 'PRIVATE KEY');
+    }
+    foreach ($pem as $name => $file) {
+        $text = is_readable($file[0]) ? (string)@file_get_contents($file[0]) : null;
+        if ($text === null) {
+            report('FAIL', 'Database SSL', "documents/certificates/$name can't be read by " . ($web ? 'the web server' : 'this user'),
+                'OpenEMR reads it on every page. Give the web server read access to it.');
+        } elseif (strpos($text, '-----BEGIN') === false || strpos($text, $file[1] . '-----') === false) {
+            report('FAIL', 'Database SSL', "documents/certificates/$name isn't a PEM " . strtolower($file[1]),
+                'It must be the text form, starting with -----BEGIN ' . $file[1] . '-----, not a .der or .p12 file.');
+        }
+    }
+    if ($hasCert !== $hasKey) {
+        $one = $hasCert ? 'mysql-cert' : 'mysql-key';
+        $other = $hasCert ? 'mysql-key' : 'mysql-cert';
+        if (cmpVersion($current, '8.1.0') >= 0) {
+            report('FAIL', 'Database SSL', "documents/certificates has $one without $other",
+                "OpenEMR 8.1 and later refuse to connect (\"You need both or neither\"). Add $other, or remove $one to connect with the CA alone.");
+        } else {
+            report('WARN', 'Database SSL', "documents/certificates has $one without $other",
+                'This OpenEMR ignores a client certificate without its key and connects with the CA alone.');
+        }
+    }
+} elseif ($hasCert || $hasKey) {
+    report('WARN', 'Database SSL', 'documents/certificates has ' . ($hasCert ? 'mysql-cert' : 'mysql-key') . ' but no mysql-ca',
+        'OpenEMR uses SSL only when mysql-ca is there, so it connects without SSL and ignores the client certificate.');
+}
+
 $mysqli = mysqli_init();
 $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
+$flags = 0;
+if ($ssl) {
+    $withClient = $hasCert && $hasKey;
+    $mysqli->ssl_set($withClient ? $clientKey : null, $withClient ? $clientCert : null, $ca, null, null);
+    $flags = MYSQLI_CLIENT_SSL;
+}
 $ok = false;
 try {
-    $ok = @$mysqli->real_connect($host, isset($db['login']) ? $db['login'] : '', isset($db['pass']) ? $db['pass'] : '', isset($db['dbase']) ? $db['dbase'] : '', $port);
+    $ok = @$mysqli->real_connect($host, isset($db['login']) ? $db['login'] : '', isset($db['pass']) ? $db['pass'] : '', isset($db['dbase']) ? $db['dbase'] : '', $port, null, $flags);
 } catch (Exception $e) {
     $ok = false;
 }
 if (!$ok) {
     // Forum: the database stopped or never started (t/23921, t/26432); shared hosting
-    // names (t/25245).
+    // names (t/25245); SSL (t/27148).
     $errno = mysqli_connect_errno();
+    $message = (string)mysqli_connect_error();
+    if ($ssl && $errno === 2002 && stripos($message, 'SSL') !== false) {
+        report('FAIL', 'Database', "can't connect with sites/$site/sqlconf.php over SSL (error 2002, \"$message\")", sslDiagnosis($host, $port, $ca));
+        summary($results);
+    }
     $hints = array(
-        1045 => 'The user name or password in sites/' . $site . '/sqlconf.php is wrong, or that user may not connect from this server.',
+        1045 => 'The user name or password in sites/' . $site . '/sqlconf.php is wrong, or that user may not connect from this server'
+            . ($ssl ? ', or needs a client certificate (REQUIRE X509) that documents/certificates doesn\'t hold.' : ', or must connect with SSL (REQUIRE SSL), which OpenEMR uses only when documents/certificates/mysql-ca holds the server\'s CA certificate.'),
         1044 => 'The user in sqlconf.php has no access to database ' . (isset($db['dbase']) ? $db['dbase'] : '') . '.',
         1049 => 'Database ' . (isset($db['dbase']) ? $db['dbase'] : '') . ' doesn\'t exist on that server. On shared hosting the real name usually has your account name in front.',
         2002 => "Nothing answers at $host:$port. Is the database server running? (XAMPP: start MySQL in the control panel.) With 'localhost' PHP uses a socket file; try 127.0.0.1 instead.",
         2003 => "Nothing answers at $host:$port. Is the database server running, and on that port?",
         2005 => "The database host name '$host' doesn't resolve from this server.",
         2054 => 'The database asks for a login method this PHP doesn\'t support (MySQL 8 caching_sha2_password with an old PHP).',
+        3159 => 'The database only accepts encrypted connections, and OpenEMR uses SSL only when sites/' . $site . '/documents/certificates/mysql-ca holds the server\'s CA certificate. Put it there.',
     );
     report('FAIL', 'Database', "can't connect with sites/$site/sqlconf.php (error $errno)",
         isset($hints[$errno]) ? $hints[$errno] : 'Check host, port, user and database in sqlconf.php against the database server.');
     summary($results);
 }
-report('PASS', 'Database', "connected to $host:$port");
+if ($ssl) {
+    $cipher = $mysqli->query("SHOW STATUS LIKE 'Ssl_cipher'");
+    $row = $cipher ? $cipher->fetch_row() : null;
+    if (is_array($row) && isset($row[1]) && $row[1] !== '') {
+        report('PASS', 'Database', "connected to $host:$port over SSL ($row[1])");
+    } else {
+        report('WARN', 'Database', "connected to $host:$port, but not over SSL although documents/certificates/mysql-ca is there",
+            'The server may not support SSL. OpenEMR\'s traffic to it is not encrypted.');
+    }
+} else {
+    report('PASS', 'Database', "connected to $host:$port");
+}
 
 $q = function ($sql) use ($mysqli) {
     $res = $mysqli->query($sql);

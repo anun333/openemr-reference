@@ -8,7 +8,8 @@
 #   from another root; a half-finished upgrade; a wrong password, a missing site, setup not
 #   finished; an edited file, and one that no longer parses; then the browser mode (local
 #   only), PHP 7.4, too old for 8.4.1, when intl is required before 7.0.0, and
-#   openemr-doctor-docker.sh.
+#   openemr-doctor-docker.sh; then MySQL over SSL: a database that only accepts it, its CA,
+#   a connection by IP, the wrong CA, a client certificate without its key, a CA that isn't PEM.
 # Everything runs in containers that are deleted at the end. Synthetic data only.
 # Needs Docker and the facts in ../site/preflight (python3 gen/build_preflight.py).
 set -euo pipefail
@@ -215,5 +216,47 @@ out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openem
 expect "^+ openemr-doctor-docker.sh:" "27: --debug traces the script"
 expect "^DEBUG " "27: and runs the doctor with --debug"
 rm -rf "$rel" "$empty" "$TMPDIR_SHORT"
+
+# MySQL over SSL (t/27148): a second database that only accepts encrypted connections,
+# with a test CA, and sites pointing at it with each mistake. The certificates are made
+# here and deleted with the database.
+CERTS=$(mktemp -d); DS=$P-dbssl
+trap 'docker rm -f $DS >/dev/null 2>&1; rm -rf "$CERTS"; docker compose -p $P -f test-doctor-compose.yml down -v >/dev/null 2>&1' EXIT
+docker run --rm -u "$(id -u):$(id -g)" -v "$CERTS":/c -w /c --entrypoint sh alpine/openssl -c '
+openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=Test CA" -keyout ca-key.pem -out ca.pem &&
+openssl req -newkey rsa:2048 -nodes -subj "/CN=dbssl" -keyout server-key.pem -out server.csr &&
+printf "subjectAltName=DNS:dbssl\n" > ext.cnf &&
+openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 7 -extfile ext.cnf -out server-cert.pem &&
+openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=Other CA" -keyout other-key.pem -out other-ca.pem' 2>/dev/null
+# mktemp -d makes the folder 0700; MariaDB runs as its own user and must read the files.
+chmod 755 "$CERTS"; chmod 644 "$CERTS"/*.pem
+docker run -d --name $DS --network ${P}_default --network-alias dbssl -e MARIADB_ROOT_PASSWORD=root -v "$CERTS":/certs:ro mariadb:11.8 \
+    mariadbd --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server-cert.pem --ssl-key=/certs/server-key.pem --require-secure-transport=ON >/dev/null
+for _ in $(seq 1 40); do docker exec $DS mariadb -uroot -proot --ssl -e "SELECT 1" >/dev/null 2>&1 && break; sleep 3; done
+docker exec $DS mariadb -uroot -proot --ssl -e "SELECT 1" >/dev/null 2>&1 || { echo "FAIL the SSL database didn't start:"; docker logs $DS 2>&1 | tail -5; exit 1; }
+docker exec $DS mariadb -uroot -proot --ssl -e "CREATE USER 'oe'@'%' IDENTIFIED BY 'oe'; CREATE DATABASE oe; GRANT ALL ON oe.* TO 'oe'@'%'"
+DSIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DS)
+# A site on the SSL database: its host, then the certificate files to put in its documents/certificates.
+ssl_site() {
+    local name=$1 host=$2; shift 2
+    x "cp -a $S $OE/sites/$name && rm -f $OE/sites/$name/documents/certificates/mysql-* && sed -i -e \"s/^\\\$host.*/\\\$host = '$host';/\" -e \"s/^\\\$login.*/\\\$login = 'oe';/\" -e \"s/^\\\$pass.*/\\\$pass = 'oe';/\" -e \"s/^\\\$dbase.*/\\\$dbase = 'oe';/\" $OE/sites/$name/sqlconf.php"
+    while [ $# -gt 1 ]; do docker cp "$1" $C:$OE/sites/$name/documents/certificates/$2; shift 2; done
+    x "chown -R apache $OE/sites/$name/documents/certificates"
+}
+ssl_site sslneed dbssl; out=$(run --site=sslneed)
+expect "^FAIL  Database: can't connect with sites/sslneed/sqlconf.php (error 3159)" "28: a database that only accepts SSL, without mysql-ca, names error 3159"
+expect "only accepts encrypted connections" "28: and says mysql-ca turns SSL on"
+ssl_site sslok dbssl "$CERTS/ca.pem" mysql-ca; out=$(run --site=sslok)
+expect "^PASS  Database: connected to dbssl:3306 over SSL (" "29: with the server's CA it connects over SSL, as OpenEMR does"
+ssl_site sslip "$DSIP" "$CERTS/ca.pem" mysql-ca; out=$(run --site=sslip)
+expect "^FAIL  Database: can't connect with sites/sslip/sqlconf.php over SSL (error 2002" "30: by IP, the certificate's name check fails as error 2002"
+expect "names 'dbssl', not '$DSIP'" "30: and the doctor reads the certificate and names the mismatch (Cloud SQL by internal IP)"
+ssl_site sslotherca dbssl "$CERTS/other-ca.pem" mysql-ca; out=$(run --site=sslotherca)
+expect "issued by 'Test CA', and documents/certificates/mysql-ca ('Other CA') didn't sign it" "31: a CA that didn't sign the server's certificate is named"
+ssl_site sslhalf dbssl "$CERTS/ca.pem" mysql-ca "$CERTS/other-ca.pem" mysql-cert; out=$(run --site=sslhalf)
+expect "^FAIL  Database SSL: documents/certificates has mysql-cert without mysql-key" "32: a client certificate without its key fails (8.1 and later refuse it)"
+echo "not a certificate" > "$CERTS/junk.txt"; ssl_site ssljunk dbssl "$CERTS/junk.txt" mysql-ca; out=$(run --site=ssljunk)
+expect "^FAIL  Database SSL: documents/certificates/mysql-ca isn't a PEM certificate" "33: a mysql-ca that isn't PEM fails"
+x "rm -rf $OE/sites/sslneed $OE/sites/sslok $OE/sites/sslip $OE/sites/sslotherca $OE/sites/sslhalf $OE/sites/ssljunk"
 
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }
