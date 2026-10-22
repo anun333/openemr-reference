@@ -136,6 +136,12 @@ set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$T
 grep -E "^== |sha256|statement\(s\) failed|^Done|^STOP|carried over|applied your|NOT carried|NOTE" "$LOG/upgrade.log" | sed 's/^/    /'
 docker exec $C sh -c "cat /root/backups/*/upgrade-*.log 2>/dev/null" > "$LOG/sql_upgrade.log" || true
 check "$rc" 0 "upgrade: the script finished"
+# The 7.0.3 image's PHP (8.3.15, Alpine 3.20) gets no php2shell update: the doctor fails that check,
+# and the upgrade must report it and go ahead, since updating PHP is a separate job.
+php_state="$(docker exec $C php -r '$f = ["8.5" => "8.5.12", "8.4" => "8.4.27", "8.3" => "8.3.36", "8.2" => "8.2.35"]; $b = PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION; echo isset($f[$b]) && version_compare(PHP_VERSION, $f[$b], "<") ? "old" : "fixed";')"
+if [[ "$php_state" == old ]]; then
+    check "$(grep -c "NOTE: the doctor's only failure is PHP security" "$LOG/upgrade.log")" 1 "upgrade: a PHP without its own security update is reported, not a stop"
+fi
 IFS='|' read -r v1 p1 t1 l1 <<<"$(state)"
 echo "after the upgrade: OpenEMR $v1, $p1 patients, $t1 tables, login page HTTP $l1"
 check "${v1%% db *}" "$TO" "upgrade: the database is $TO"

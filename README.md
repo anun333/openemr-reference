@@ -124,7 +124,7 @@ For an OpenEMR installed from the release tarball (with the official Docker imag
 5. stops the web server (`--service`), or asks you to keep users out, and backs up each site's database (`mysqldump`) and the whole `sites/` folder, which holds documents and encryption keys;
 6. carries over `sites/`, the modules this install added (module folders and Composer packages not in its release's own lists) and, with `apply`, the changes from step 4;
 7. runs the target's own `sql_upgrade.php --from=<current>` for each site, as the web server's user, from inside the new folder. It stops on any failed statement;
-8. checks the new folder with the install doctor, and stops on a FAIL unless `--force`;
+8. checks the new folder with the install doctor, and stops on a FAIL unless `--force`. A PHP that needs its own security update (the doctor's PHP security check) is reported and doesn't stop the switch: updating PHP is a separate job, and holding back the upgrade would only hold back OpenEMR's own security fixes;
 9. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
 
 **It checks its own work.** After each step it verifies the result and prints a `check:` line, or stops:
@@ -145,7 +145,7 @@ The rollback checks each restored database and the folder the same way.
 
 **The pre-flight check and the doctor** it runs are the copies beside it, else they're downloaded from this script's own release and checked against that release's `SHA256SUMS`. One that doesn't match isn't run.
 
-`preflight/test_upgrade.sh` (7.0.3 to 8.4.1, MariaDB 10.11), 45 checks, covers:
+`preflight/test_upgrade.sh` (7.0.3 to 8.4.1, MariaDB 10.11), 57 checks, covers:
 - local changes found, applied, kept as patches;
 - the upgrade and the rollback, with work done in between kept;
 - a helper that doesn't match `SHA256SUMS` refused, and one that does used;

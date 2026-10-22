@@ -16,7 +16,8 @@
 #      database (mysqldump) and the whole sites/ folder: documents, keys;
 #   6. carries over sites/, the modules this install added and, with =apply, its changes;
 #   7. runs the target's own sql_upgrade.php --from=<current> for each site, as the web server's user;
-#   8. checks the new folder with openemr-doctor.php (stops on a FAIL unless --force);
+#   8. checks the new folder with openemr-doctor.php (stops on a FAIL unless --force; a PHP that
+#      needs its own security update is reported, not a stop: updating PHP is a separate job);
 #   9. swaps the folders (the old one is kept as <folder>.old-<version>) and starts the web server.
 # Nothing is deleted. --rollback first saves each database as it is (everything entered since the
 # upgrade) and, apart, the tables the upgrade created; then restores the backup and swaps the folders back.
@@ -32,7 +33,7 @@
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.3.8
+SCRIPT_VERSION=0.3.9
 # Where the helpers come from when they aren't beside this script: this script's own release.
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 
@@ -626,12 +627,23 @@ step "8. Checking the new folder with the install doctor"
 fetch_tool openemr-doctor.php; dr="$TOOL"
 # As the web server's user, since it checks what that user can read and write; from a folder it can read.
 drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; chmod 644 "$drdir/openemr-doctor.php"
-doctor_failed=0
+doctor_failed=0; php_insecure=0
 for site in $SITES; do
     debug_flag=(); (( ! DEBUG )) || debug_flag=(--debug)
-    set +e; as_web php "$drdir/openemr-doctor.php" --openemr="$NEW" --site="$site" ${debug_flag[@]+"${debug_flag[@]}"}; rc=$?; set -e
-    (( rc == 0 )) || doctor_failed=1
+    drout="$(mktemp)"
+    set +e; as_web php "$drdir/openemr-doctor.php" --openemr="$NEW" --site="$site" ${debug_flag[@]+"${debug_flag[@]}"} | tee "$drout"; rc=${PIPESTATUS[0]}; set -e
+    # A PHP without its own security update (the doctor's "PHP security" check) needs PHP updated,
+    # which this upgrade doesn't touch; stopping here would only hold back OpenEMR's own security
+    # fixes. Any other failure stops the switch.
+    if (( rc != 0 )); then
+        if grep '^FAIL ' "$drout" | grep -qv '^FAIL  PHP security'; then doctor_failed=1; else php_insecure=1; fi
+    fi
+    rm -f "$drout"
 done
+if (( php_insecure )); then
+    say "  NOTE: the doctor's only failure is PHP security: this server's PHP needs its own update (above)."
+    say "        That doesn't depend on this upgrade, which goes ahead; update PHP as soon as you can."
+fi
 if (( doctor_failed && ! FORCE )); then
     service_do start
     die "the install doctor found a problem in $NEW (above). Nothing is switched yet; fix it and run '$0 --rollback --openemr=$OE' or switch by hand. --force switches anyway."
