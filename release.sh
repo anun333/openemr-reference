@@ -111,7 +111,13 @@ for f in SHA256SUMS "${ASSETS[@]}"; do
 done
 (cd "$DL" && sha256sum -c --quiet SHA256SUMS) || die "a published file doesn't match SHA256SUMS"
 cmp -s "$DL/SHA256SUMS" "$OUT/SHA256SUMS" || die "the published SHA256SUMS isn't the one built here"
-latest="$(curl -fsS -o /dev/null -w '%{redirect_url}' "https://github.com/$REPO/releases/latest")"
-[[ "$latest" == */releases/tag/$TAG ]] || die "/releases/latest points at $latest, not $TAG"
+# GitHub caches the /releases/latest redirect: v0.3.10's still pointed at v0.3.9 for about half a
+# minute after publishing. Wait up to five minutes before calling it wrong.
+for _ in $(seq 20); do
+    latest="$(curl -fsS -o /dev/null -w '%{redirect_url}' "https://github.com/$REPO/releases/latest")"
+    [[ "$latest" == */releases/tag/$TAG ]] && break
+    sleep 15
+done
+[[ "$latest" == */releases/tag/$TAG ]] || die "/releases/latest still points at $latest, not $TAG, after five minutes"
 say "  every file downloads and matches SHA256SUMS; /releases/latest is $TAG"
 say "done: https://github.com/$REPO/releases/tag/$TAG"
