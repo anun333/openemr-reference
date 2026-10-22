@@ -25,6 +25,8 @@
  */
 
 error_reporting(E_ALL);
+// The openemr-reference release this doctor belongs to (gen/check.py: the same as the scripts').
+define('DOCTOR_VERSION', '0.3.10');
 // Facts: a folder beside this file (openemr-doctor-facts/), else the generator's own output,
 // else the published copy, which is updated from OpenEMR's release tags every day.
 $factsDefault = 'https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight';
@@ -113,6 +115,30 @@ function readConfig($path, $names)
     };
     $vars = $read($path);
     return array_intersect_key($vars, array_flip($names));
+}
+
+/**
+ * The newest openemr-reference release, from where GitHub's /releases/latest redirects, or null
+ * (offline, blocked, or anything unexpected). Headers come from the stream's metadata, which
+ * every PHP the doctor supports has; $http_response_header is deprecated from 8.5.
+ */
+function latestRelease()
+{
+    $context = stream_context_create(array('http' => array('method' => 'HEAD', 'follow_location' => 0, 'ignore_errors' => true,
+        'timeout' => 5, 'user_agent' => 'openemr-doctor')));
+    $fp = @fopen('https://github.com/anun333/openemr-reference/releases/latest', 'r', false, $context);
+    if ($fp === false) {
+        return null;
+    }
+    $meta = stream_get_meta_data($fp);
+    fclose($fp);
+    $headers = isset($meta['wrapper_data']) && is_array($meta['wrapper_data']) ? $meta['wrapper_data'] : array();
+    foreach ($headers as $h) {
+        if (preg_match('#^Location:\s*\S*/releases/tag/v([0-9]+(?:\.[0-9]+)*)\s*$#i', $h, $m)) {
+            return $m[1];
+        }
+    }
+    return null;
 }
 
 function versionKey($v)
@@ -304,6 +330,18 @@ $tag = isset($code['v_tag']) ? trim((string)$code['v_tag']) : '';
 
 echo "OpenEMR install doctor: $root (site $site), OpenEMR " . ($versionKnown ? "$current$tag" . ($patch ? " patch $patch" : '') : '(version unknown)') . "\n";
 echo ($web ? 'Checked by the web server\'s PHP' : 'Checked by the command-line PHP') . ', ' . PHP_VERSION . ' (' . PHP_SAPI . ")\n\n";
+debug('doctor ' . DOCTOR_VERSION);
+
+// The doctor is pinned to its release, so say when a newer one is out; never update itself.
+// Only when the facts come from the network: a server without internet makes no extra request.
+if (preg_match('#^https?://#', $factsBase) && getenv('OPENEMR_REFERENCE_NO_UPDATE_CHECK') === false) {
+    $latest = latestRelease();
+    debug('newest openemr-reference release: ' . ($latest === null ? 'not found' : $latest));
+    if ($latest !== null && cmpVersion($latest, DOCTOR_VERSION) > 0) {
+        report('NOTE', 'Doctor', "openemr-reference $latest is out; this doctor is " . DOCTOR_VERSION,
+            'Download the new one and run it again: https://github.com/anun333/openemr-reference/releases/latest');
+    }
+}
 
 if (!$versionKnown) {
     $who = function_exists('posix_geteuid') && function_exists('posix_getpwuid') ? posix_getpwuid(posix_geteuid()) : null;

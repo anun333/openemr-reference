@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: ShellCheck, warnings and errors
-        run: shellcheck --version | head -2 && shellcheck -S warning preflight/*.sh
+        run: shellcheck --version | head -2 && shellcheck -S warning preflight/*.sh release.sh
 
   php:
     runs-on: ubuntu-latest

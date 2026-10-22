@@ -97,7 +97,8 @@ def tools() -> None:
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent / "preflight"
     found = {}
-    for name, pattern in (("openemr-upgrade.sh", r"^SCRIPT_VERSION=(\S+)$"), ("openemr-doctor-docker.sh", r"^\s*VERSION=(\S+)$")):
+    for name, pattern in (("openemr-upgrade.sh", r"^SCRIPT_VERSION=(\S+)$"), ("openemr-doctor-docker.sh", r"^\s*VERSION=(\S+)$"),
+                          ("openemr-doctor.php", r"^define\('DOCTOR_VERSION', '([^']+)'\);$")):
         m = re.search(pattern, (root / name).read_text(), re.M)
         found[name] = m.group(1) if m else None
     versions = set(found.values())

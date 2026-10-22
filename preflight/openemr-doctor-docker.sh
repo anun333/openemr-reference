@@ -18,7 +18,7 @@
 set -euo pipefail
 
 main() {
-    VERSION=0.3.9
+    VERSION=0.3.10
     BASE=${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$VERSION}
     OE=/var/www/localhost/htdocs/openemr
     DEBUG=${DEBUG:-0}
@@ -32,6 +32,24 @@ main() {
     say() { echo "openemr-doctor-docker.sh $VERSION: $*" >&2; }
     # Compose v2 (docker compose), or v1 (docker-compose) on older hosts.
     compose() { if docker compose version >/dev/null 2>&1; then docker compose "$@"; else docker-compose "$@"; fi; }
+    # The newest openemr-reference release when it's newer than $1, else nothing: this script is
+    # pinned to its own release, so it says so and never updates itself. Silent when offline, and
+    # skipped when OPENEMR_REFERENCE_BASE points elsewhere.
+    newer_release() {
+        [[ -z "${OPENEMR_REFERENCE_BASE:-}" && -z "${OPENEMR_REFERENCE_NO_UPDATE_CHECK:-}" ]] || return 0
+        local url latest a b i
+        url="$(curl -fsS -m 5 -o /dev/null -w '%{redirect_url}' https://github.com/anun333/openemr-reference/releases/latest 2>/dev/null)" || return 0
+        latest="${url##*/releases/tag/v}"
+        [[ "$latest" =~ ^[0-9]+(\.[0-9]+)*$ ]] || return 0
+        IFS=. read -r -a a <<<"$latest"; IFS=. read -r -a b <<<"$1"
+        for ((i = 0; i < ${#a[@]} || i < ${#b[@]}; i++)); do
+            (( 10#${a[i]:-0} > 10#${b[i]:-0} )) && { echo "$latest"; return 0; }
+            (( 10#${a[i]:-0} < 10#${b[i]:-0} )) && return 0
+        done
+        return 0
+    }
+    LATEST=$(newer_release "$VERSION")
+    [ -z "$LATEST" ] || say "openemr-reference $LATEST is out; this script is $VERSION. The new one: https://github.com/anun333/openemr-reference/releases/latest"
 
     if [ -n "${CONTAINER:-}" ]; then
         CONTAINER=$(docker inspect --format '{{.Id}}' "$CONTAINER") || { say "no container $CONTAINER"; exit 1; }

@@ -33,7 +33,7 @@
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.3.9
+SCRIPT_VERSION=0.3.10
 # Where the helpers come from when they aren't beside this script: this script's own release.
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 
@@ -50,7 +50,7 @@ for arg in "$@"; do
         --yes) YES=1 ;;
         --rollback) ROLLBACK=1 ;;
         --debug) DEBUG=1 ;;
-        -h|--help) sed -n '2,34p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 0 ;;
         *) echo "unknown option: $arg (see --help)" >&2; exit 2 ;;
     esac
 done
@@ -118,10 +118,29 @@ on_exit() {
 trap on_exit EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+# The newest openemr-reference release when it's newer than $1, else nothing. This script and its
+# helpers are pinned to their own release (checked against its SHA256SUMS), so it says so and never
+# updates itself. Silent when offline, and skipped when OPENEMR_REFERENCE_BASE points elsewhere.
+newer_release() {
+    [[ -z "${OPENEMR_REFERENCE_BASE:-}" && -z "${OPENEMR_REFERENCE_NO_UPDATE_CHECK:-}" ]] || return 0
+    local url latest a b i
+    url="$(curl -fsS -m 5 -o /dev/null -w '%{redirect_url}' https://github.com/anun333/openemr-reference/releases/latest 2>/dev/null)" || return 0
+    latest="${url##*/releases/tag/v}"
+    [[ "$latest" =~ ^[0-9]+(\.[0-9]+)*$ ]] || return 0
+    IFS=. read -r -a a <<<"$latest"; IFS=. read -r -a b <<<"$1"
+    for ((i = 0; i < ${#a[@]} || i < ${#b[@]}; i++)); do
+        (( 10#${a[i]:-0} > 10#${b[i]:-0} )) && { echo "$latest"; return 0; }
+        (( 10#${a[i]:-0} < 10#${b[i]:-0} )) && return 0
+    done
+    return 0
+}
+
 start_log() {  # $1: the log file. From here on everything printed also goes there.
     LOGFILE="$1"
     exec > >(tee -a "$LOGFILE") 2>&1
     say "openemr-upgrade.sh $SCRIPT_VERSION, $(date '+%Y-%m-%d %H:%M:%S %z'), on $(hostname), as $(id -un); log: $LOGFILE"
+    local latest; latest="$(newer_release "$SCRIPT_VERSION")"
+    [[ -z "$latest" ]] || say "  NOTE: openemr-reference $latest is out; this script is $SCRIPT_VERSION. Consider stopping here and using the new one: https://github.com/anun333/openemr-reference/releases/latest"
     if (( DEBUG )); then
         say "  debug: bash $BASH_VERSION; $(php -r 'echo "PHP ", PHP_VERSION;'); $("$(client)" --version 2>/dev/null | head -n 1)"
         say "  debug: free space where the backup goes: $(df -h "$(dirname "$LOGFILE")" | tail -n 1)"
