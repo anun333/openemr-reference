@@ -387,6 +387,45 @@ if ($f !== null) {
 } else {
     report('NOTE', 'PHP', PHP_VERSION . ' (no release facts to compare with)');
 }
+
+// PHP's php2shell advisory (2026-10-21, https://www.php.net/archive/2026.php#2026-10-21-5;
+// OpenEMR's notice, t/27152): unauthenticated remote code execution, actively exploited,
+// fixed in these releases. Distributions patch PHP without changing its number (Ubuntu 24.04
+// keeps 8.3.6), so for their builds a low number is only a warning. They don't mark the build
+// in PHP itself (PHP_EXTRA_VERSION is empty on Ubuntu and Debian): it's found in the package
+// database instead. Alpine's php8x packages, which OpenEMR's Docker images use, and PHP built
+// from source (the official php images) carry PHP's own number.
+$phpFixed = array('8.5' => '8.5.12', '8.4' => '8.4.27', '8.3' => '8.3.36', '8.2' => '8.2.35');
+$cves = 'CVE-2026-109618, CVE-2026-109619';
+$apkName = 'php' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION;
+$apkDb = @is_readable('/lib/apk/db/installed') ? (string)@file_get_contents('/lib/apk/db/installed') : '';
+$fromApk = $apkDb !== '' && strpos($apkDb, "\nP:$apkName\n") !== false;
+$debName = 'php' . $phpShort . '-common';
+$dpkg = @is_readable('/var/lib/dpkg/status') ? (string)@file_get_contents('/var/lib/dpkg/status') : '';
+$debAt = $dpkg !== '' ? strpos("\n" . $dpkg, "\nPackage: $debName\n") : false;
+$debVersion = ($debAt !== false && preg_match('/\nVersion: (\S+)/', substr("\n" . $dpkg, $debAt + 1, 2000), $m)) ? $m[1] : '';
+$fromDistro = !$fromApk && ($debAt !== false || (@is_file('/etc/redhat-release') && strpos(PHP_BINARY, '/usr/bin/') === 0));
+$build = $debVersion !== '' ? " (package $debName $debVersion)" : ($fromDistro ? ' (a distribution build)' : '');
+if (isset($phpFixed[$phpShort])) {
+    $fixed = $phpFixed[$phpShort];
+    if (cmpVersion(PHP_VERSION, $fixed) >= 0) {
+        report('PASS', 'PHP security', PHP_VERSION . " has PHP's fix for php2shell ($cves; $fixed)");
+    } elseif ($fromApk) {
+        report('FAIL', 'PHP security', PHP_VERSION . " is older than $fixed, PHP's fix for php2shell ($cves: remote code execution without logging in, actively exploited)",
+            "This PHP is Alpine's $apkName package, as in OpenEMR's Docker images. Update it in place: apk update && apk upgrade \$(apk info -q | grep '^$apkName'), then restart the container; recreating it brings the old PHP back until the image is rebuilt. If apk finds nothing newer, this image's Alpine gets no fix: move to an image OpenEMR's notice lists as fixed (https://community.open-emr.org/t/27152).");
+    } elseif ($fromDistro) {
+        report('WARN', 'PHP security', PHP_VERSION . "$build is numbered below $fixed, PHP's fix for php2shell ($cves)",
+            "Distributions fix PHP without changing its version number. Check your distribution's security notice for $cves and that its update is installed.");
+    } else {
+        report('FAIL', 'PHP security', PHP_VERSION . " is older than $fixed, PHP's fix for php2shell ($cves: remote code execution without logging in, actively exploited)",
+            "Update PHP to $fixed or later (https://www.php.net/archive/2026.php#2026-10-21-5). Until then, keep OpenEMR off the public internet.");
+    }
+} elseif (cmpVersion($phpShort, '8.2') < 0) {
+    report('WARN', 'PHP security', "PHP $phpShort gets no security fixes from PHP; the php2shell fixes (2026-10-21) went to 8.2 to 8.5 only",
+        $fromDistro ? "Check that your distribution still supports this PHP and has a notice for $cves." : 'Move to a PHP that PHP still supports (8.2 or later).');
+} else {
+    report('NOTE', 'PHP security', PHP_VERSION . ' is newer than the branches in the php2shell advisory (8.2 to 8.5)');
+}
 if (!$web) {
     report('NOTE', 'Which PHP', 'this is the command-line PHP (' . PHP_BINARY . ', settings from ' . (php_ini_loaded_file() ?: 'no php.ini') . ')',
         'The web server can run a different PHP with different settings. To check that one, copy this file into the OpenEMR folder and open it as http://localhost/<openemr folder>/openemr-doctor.php on the server, then delete it.');

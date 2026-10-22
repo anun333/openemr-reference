@@ -22,6 +22,13 @@ trap 'docker compose -p $P -f test-doctor-compose.yml down -v >/dev/null 2>&1' E
 C=$P-openemr-1; D=$P-mysql-1; OE=/var/www/localhost/htdocs/openemr; S=$OE/sites/default
 echo "waiting for OpenEMR 8.4.1 to install itself (several minutes)..."
 wait_ready $C $OE
+# The published image ships the PHP that php2shell (2026-10-21) affects. A healthy install has
+# the advisory's in-place update (OpenEMR's t/27152), so apply it as a site would, and restart.
+if [ "$(docker exec $C php -r 'echo version_compare(PHP_VERSION, "8.5.12", "<") ? "old" : "fixed";')" = old ]; then
+    docker exec $C sh -c "apk update >/dev/null && apk upgrade \$(apk info -q | grep '^php85') >/dev/null"
+    docker restart $C >/dev/null
+    wait_ready $C $OE
+fi
 docker cp openemr-doctor.php $C:/tmp/doctor.php
 docker exec $C mkdir -p /tmp/facts
 for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-files.json ../site/preflight/8.4.1-hashes.json; do docker cp "$f" $C:/tmp/facts/; done
@@ -37,6 +44,7 @@ docker exec -u apache -e HTTP_HOST=localhost $C php -r '$ignoreAuth = true; $_GE
   require "/var/www/localhost/htdocs/openemr/interface/globals.php"; \OpenEMR\BC\ServiceContainer::getCrypto()->encryptStandard("doctor-test");' >/dev/null
 out=$(run); echo "$out"; echo
 expect "^PASS  PHP: 8" "1: PHP in range"
+expect "^PASS  PHP security: 8.5.1[2-9]" "1: PHP has the php2shell fix, updated in place"
 expect "^PASS  PHP extensions" "1: extensions loaded"
 expect "^PASS  PHP libraries: all" "1: every Composer library present"
 expect "^PASS  Page assets" "1: built assets present"

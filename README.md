@@ -188,6 +188,7 @@ The web server can run a different PHP from the command line's, with different s
 | Check | Fails or warns when | Forum reports |
 |---|---|---|
 | PHP | older than the release needs (fail), newer than CI tested it with (warn) | t/24361, t/24048, t/24282, t/26133 |
+| PHP security | older than PHP's fix for php2shell (2026-10-21: 8.5.12, 8.4.27, 8.3.36, 8.2.35): fail for Alpine's packages (OpenEMR's images, with the in-place `apk upgrade`) and for PHP built from source; warn for a Debian, Ubuntu or RHEL package, which gets fixes without a new number (it names the package version to check against the distribution's notice); warn for 8.1 and older, which PHP no longer fixes | t/27152 |
 | PHP extensions | one the release's `composer.json` requires isn't loaded; `intl` is named as the cause of a calendar showing "Unknown" (fail). Releases whose `composer.json` lists none get setup's own four, plus `intl` from 7.0.0 on, or before that only if the install's code uses it (5.0.2's image ships without it) | t/25453, t/25214, t/26800 |
 | php.ini | errors shown on pages, or below the limits OpenEMR's setup recommends (warn in the browser, note on the command line) | t/24048, t/25023 |
 | PHP libraries | `vendor/` missing (a git checkout), or a Composer package missing from it (fail) | t/23699 |
@@ -218,8 +219,11 @@ Two end-to-end tests build throwaway installs from the official images, break on
   - `openemr-doctor-docker.sh` naming what it checks, downloading the doctor and checking it against `SHA256SUMS` (and refusing a changed one), and `--debug`;
   - MySQL over SSL, against a second MariaDB that only accepts encrypted connections, with a test CA: no `mysql-ca` (error 3159), the right CA (connected over SSL), a connection by IP (the certificate names the host, not the IP), the wrong CA, a client certificate without its key, and a `mysql-ca` that isn't PEM.
 
-  86 checks in all.
-- `preflight/test_doctor_patch.sh` (7.0.3 patch 4, MariaDB 10.6), 10 checks: the patch's file list, the extension fallback, `user_debug`, a patch whose `sql_patch.php` didn't run, and a missing file list.
+  87 checks in all.
+- `preflight/test_doctor_patch.sh` (7.0.3 patch 4, MariaDB 10.6), 11 checks: the patch's file list, the extension fallback, `user_debug`, a patch whose `sql_patch.php` didn't run, a missing file list, and the image's PHP, which no Alpine update fixes for php2shell.
+- `preflight/test_php_security.sh`, 10 checks, no install needed: the PHP security check under OpenEMR's image before and after the in-place update, PHP built from source, Ubuntu's and Debian's own PHP, and PHP 8.1 and 5.6. Each expectation follows the PHP the container runs, so a rebuilt image moves a case from fail to pass instead of breaking the test.
+
+`test_doctor.sh` applies the php2shell update to its 8.4.1 install before checking it, as a site would; the published image ships the affected PHP until it is rebuilt.
 
 On the official 8.4.1 image as installed, it reports one real gap: the image has no ClaimRev module, which Composer installs outside `vendor/` and the image's Dockerfile doesn't copy.
 

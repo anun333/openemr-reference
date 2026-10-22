@@ -28,7 +28,10 @@ expect "OpenEMR 7.0.3 patch 4" "1: the patch level is read"
 expect "^PASS  Files: all .* files of the OpenEMR 7.0.3 patch 4 package" "1: compared with patch 4's files, not 7.0.3's"
 expect "^PASS  PHP extensions: 5 required (7.0.3's composer.json lists none" "1: extensions fall back to setup's list"
 expect "^PASS  Database version: .* patch 4" "1: database at patch 4"
-refute "^FAIL" "1: no failures"
+# The 7.0.3 image's PHP is too old for the php2shell fixes, and its Alpine gets no update: the
+# doctor must say so, and that is the install's only failure.
+expect "^\(FAIL\|WARN\)  PHP security: " "1: the image's PHP is reported as lacking the php2shell fix"
+if echo "$out" | grep "^FAIL" | grep -qv "^FAIL  PHP security"; then echo "FAIL 1: no other failures"; fails=$((fails+1)); else echo "ok   1: no other failures"; fi
 q "UPDATE globals SET gl_value='2' WHERE gl_name='user_debug'"; out=$(run)
 expect "^WARN  Error display: OpenEMR's user_debug setting is on.*User Debugging Options" "2: user_debug above 1 warns, with where to change it"
 q "UPDATE globals SET gl_value='0' WHERE gl_name='user_debug'"
