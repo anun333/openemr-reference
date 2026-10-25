@@ -13,6 +13,7 @@
 # The doctor comes from openemr-doctor.php in this directory if there is one, else from this
 # script's own release, checked against that release's SHA256SUMS.
 #   --debug (or DEBUG=1): trace every command, and run the doctor with --debug.
+#   --skip=NAME,... (or SKIP=...): leave the doctor's checks of those names out (php openemr-doctor.php --list-checks).
 #   CONTAINER=name-or-id: the OpenEMR container to check, when the project has more than one.
 #   curl ... | bash -s -- --debug
 set -euo pipefail
@@ -22,10 +23,12 @@ main() {
     BASE=${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$VERSION}
     OE=/var/www/localhost/htdocs/openemr
     DEBUG=${DEBUG:-0}
+    SKIP=${SKIP:-}
     for arg in "$@"; do
         case "$arg" in
             --debug) DEBUG=1 ;;
-            *) echo "openemr-doctor-docker.sh: unknown option $arg (only --debug)" >&2; exit 2 ;;
+            --skip=*) SKIP="${SKIP:+$SKIP,}${arg#*=}" ;;
+            *) echo "openemr-doctor-docker.sh: unknown option $arg (only --debug and --skip=NAME,...)" >&2; exit 2 ;;
         esac
     done
     if [ "$DEBUG" = 1 ]; then PS4='+ openemr-doctor-docker.sh:${LINENO}: '; set -x; fi
@@ -105,6 +108,7 @@ main() {
     fi
     ARGS=(--openemr="$OE")
     [ "$DEBUG" != 1 ] || ARGS+=(--debug)
+    [ -z "$SKIP" ] || ARGS+=(--skip="$SKIP")
 
     MOUNTS=" $(docker inspect --format '{{range .Mounts}}{{.Destination}} {{end}}' "$CONTAINER")"
     if [[ $MOUNTS == *" $OE/sites "* ]]; then

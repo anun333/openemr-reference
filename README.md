@@ -34,7 +34,7 @@ Wrong answers are bugs: please [open an issue](https://github.com/anun333/openem
 ## Upgrade pre-flight check
 
 ```
-php openemr-preflight.php --openemr=/var/www/html/openemr [--target=8.4.1] [--facts=DIR]
+php openemr-preflight.php --openemr=/var/www/html/openemr [--target=8.4.1] [--facts=DIR] [--skip=NAME,...]
 ```
 
 Run it with the PHP the web server uses. It only reads: nothing in the install or its database changes, and no password or setting value is printed. It checks:
@@ -53,6 +53,8 @@ Run it with the PHP the web server uses. It only reads: nothing in the install o
 | Local changes | files OpenEMR ships that were changed on this server, compared by git hash with the release or patch as published (warn) |
 | Site code on the new PHP | when the target needs a newer PHP: the files this site added and the modules the target doesn't ship use something PHP removes on the way (fail, naming file and line); uses it only deprecates, as one line (note). Needs `scan.php` beside the check; without it, it says the scan was skipped |
 | Memory | under 1 GB available, on Linux (warn) |
+
+Any of these can be left out by name, such as `--skip=room` on a large install: see [Leaving checks out](#leaving-checks-out).
 
 It then prints **the plan, in order, from what it found**: the backup (including the encryption keys), the PHP and extension changes and the database server upgrade the target needs, the upgrade itself beside the old folder, the check with the install doctor, and the way back. When the current release was never tested on the PHP the target needs, it says to change PHP and upgrade in one maintenance window, since the old version may not run on the new PHP. Then it lists the upgrade scripts `sql_upgrade.php` will run and the upgrade notes for each step. It runs on PHP 7.4 and later, since it runs on the current install's PHP. Exit code 1 if any check fails.
 
@@ -113,7 +115,7 @@ Needs Docker with compose, and the target must be 8.2.0 or later (`sql_upgrade.p
 ## Upgrade
 
 ```
-sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE] [--customizations=apply|leave] [--debug]
+sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE] [--customizations=apply|leave] [--skip=NAME,...] [--debug]
 sudo preflight/openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr [--debug]
 ```
 
@@ -164,7 +166,7 @@ Nothing is deleted. A rollback brings back the databases as they were before the
 ## Install doctor
 
 ```
-php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR] [--debug]
+php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR] [--skip=NAME,...] [--debug]
 ```
 
 `--debug` (or `?debug=1` in the browser) adds `DEBUG` lines: where each facts file came from and its size, the version it compared with and why, the counts behind each file check, timings, and a tally. On a build that isn't a release, such as the development branch (`8.5.0-dev`) or a release newer than the facts, it compares with the closest earlier release and says so. Files, packages and assets that release has and this build doesn't are then notes, not failures. A facts file that looks cut short (a file list under 1,000 entries, a Composer list under 20) is a warning, so a check against almost nothing can't pass quietly.
@@ -210,6 +212,8 @@ The web server can run a different PHP from the command line's, with different s
 | Documents | a stored document has no file where OpenEMR looks for it (warn) | t/26815 |
 | API keys | an API is on but its key pair is missing (warn) | t/24855 |
 
+Any of these can be left out by name, such as `--skip=documents`: see [Leaving checks out](#leaving-checks-out).
+
 It runs on PHP 5.4 and later, so it can explain a PHP that is too old instead of failing to parse (checked with PHPCompatibility, and run on PHP 5.6, 7.0, 7.4 and 8.3–8.5).
 
 A patched install is compared with its patch's files (`site/preflight/<release>-p<N>-files.json`, from the `vX_Y_Z_N` tags): patches delete files, and 7.0.3 patch 4 dropped the old login templates. The setup scripts the Docker image deletes after setup (`setup.php`, `admin.php`, `sql_upgrade.php`…) are noted, not failed.
@@ -253,6 +257,7 @@ On the official 8.4.1 image as installed, it reports one real gap: the image has
 
 - **Floors** that a broken extraction would trip (no tables, no settings, no CI setups).
 - **Known facts** from outside the pipeline: the Backup page and the Configuration Export/Import setting are in 8.2.0 and gone in 8.3.0 (openemr/openemr#13471), `patient_data.financial_review` is a datetime, the PHP floor never falls, an enum-keyed setting resolves, ClaimRev is a Composer module from 8.2.0, and the tabs template whose loss blanked logins (t/25717) is in the 8.4.1 package.
+- **The names `--skip` takes**: the README's table for the pre-flight check and for the doctor lists each tool's own names, in its order.
 - **php-upgrade-catalogue, pinned** (`gen/catalogue.json`): `preflight/scan.php` and `site/preflight/php-changes.json` are the pinned release's files byte for byte, the facts are the shape the scanner reads, and they still hold what every PHP since 7.4 must (PHP 8.0 removed `each` and `create_function`; 8.4 the imap and pspell extensions). A copy one byte off fails the build. `gen/fetch_catalogue.py` fetches them when the pin changes.
 - **Runtime** (`--runtime <openemr-container> <db-container>`), against a running OpenEMR of the latest release. Every extracted setting is in what OpenEMR loads, and every extracted table and column is in its database with the same type.
 
@@ -269,6 +274,59 @@ OPENEMR_REPO=~/dev/openemr python3 gen/run.py    # new releases only; --all for 
 ```
 
 `.github/workflows/update.yml` runs this daily and commits when OpenEMR tags a release.
+
+## Leaving checks out
+
+Every check can be left out by name, with `--skip=NAME,NAME` (or `--skip` given more than once). A check left out prints a `SKIP` line in place of its result, does none of its work (the slow ones, room and local changes and the scan, are the usual reasons), and the summary at the end names what wasn't checked, so a skipped check never reads as a pass. A name that isn't a check stops the tool before it does anything, with the list of names; `--list-checks` prints them too. What every check needs (the install's version, the release facts, the site and the database connection) can't be left out.
+
+**Pre-flight check** (`php openemr-preflight.php --openemr=... --skip=room,local-changes`):
+
+<!-- skip-names: openemr-preflight.php -->
+| Name | Leaves out |
+|---|---|
+| `xampp` | the XAMPP check |
+| `php` | the PHP version against the target's |
+| `php-extensions` | the extensions the target requires (and the plan's step to install them) |
+| `database-server` | the database server against those CI tested (and the plan's step to upgrade it) |
+| `previous-upgrade` | the database version against the code's |
+| `settings` | settings the target removes that this install changed |
+| `modules` | the module report (the list is still worked out, for `site-code`) |
+| `custom-menus` | menus in use that link to removed files |
+| `local-changes` | OpenEMR's own files changed here (it hashes every shipped file) |
+| `site-code` | the site's own code read for what the new PHP removes |
+| `room` | free space for the backup and the new release (it measures the code and documents) |
+| `room-in-database` | free space for the tables the upgrade alters |
+| `memory` | available memory |
+
+**Install doctor** (`--skip=...` on the command line, `?skip=...` in the browser, or `--skip=` / `SKIP=` with `openemr-doctor-docker.sh`):
+
+<!-- skip-names: openemr-doctor.php -->
+| Name | Leaves out |
+|---|---|
+| `php` | the PHP version against the release's |
+| `php-security` | the php2shell check |
+| `php-extensions` | the extensions the release requires |
+| `php-ini` | display_errors, the php.ini limits and the session folder |
+| `php-libraries` | the Composer packages in vendor/ (and the Composer modules) |
+| `page-assets` | the built files every page loads |
+| `files` | every file the release package ships (and the setup scripts note) |
+| `local-changes` | OpenEMR's own files edited here (it hashes every shipped file), and so the scan of them |
+| `local-changes-php` | only the scan of edited files for what this PHP removed |
+| `documents-folder` | who can write sites/<site>/documents |
+| `database-server` | the database server against those CI tested |
+| `database-version` | the database version against the code's |
+| `theme` | the chosen theme's stylesheet |
+| `error-display` | OpenEMR's own "show PHP errors" setting |
+| `modules` | modules switched on whose files are missing |
+| `encryption-keys` | the keys folder against the database's keys |
+| `documents` | each stored document's file (it checks for up to 20 seconds) |
+| `api-keys` | the API's key pair, when an API is on |
+
+**Upgrade script** (`openemr-upgrade.sh ... --skip=scan,room`): one name of its own, `scan`, which leaves step 4's reading of what goes in for what PHP removed out, so it can't stop there. Any other name goes on to the pre-flight check (step 1) or the doctor (step 8), whichever knows it. The steps themselves (backup, upgrade, switch) can't be skipped; `--force` goes on past a failed check, which is a different thing: the check still runs and its failure is shown.
+
+**Without scan.php.** The scanner is a file of its own, so the tools work without it: the pre-flight check and the doctor say the scan was skipped, and the upgrade script goes on if it can't fetch it. To leave it out on purpose, use `--skip=site-code` (pre-flight check), `--skip=local-changes-php` (doctor) or `--skip=scan` (upgrade script, which also passes the other two on if given).
+
+**The other optional parts.** `--facts=DIR` reads the facts from a folder instead of downloading them, for a server without internet. `OPENEMR_REFERENCE_NO_UPDATE_CHECK=1` stops the doctor, the upgrade script and the Docker wrapper asking GitHub whether a newer release of these tools is out. The upgrade script's `--customizations=apply|leave` chooses whether this install's own changes go into the new release.
 
 ## PHP changes in a site's own code
 
@@ -288,3 +346,14 @@ To read any folder yourself: `php scan.php --facts=php-changes.json --php=7.4:8.
 - Files removed under `interface/` and `portal/` include helper files as well as pages.
 - CI-tested databases are what CI ran, not a support statement.
 - The PHP changes are what the scanner can see without running code: a removed function, class, constant or setting, and syntax that no longer loads. A change in behaviour, such as how strings compare with numbers in PHP 8, needs the code run. A guard covers its whole file, so a use outside its `if` isn't counted.
+
+### Not covered yet, and what comes next
+
+These are the gaps that matter, most first. What isn't listed here is polish.
+
+1. **PHP behaviour that depends on data.** The commonest PHP 8 breakage in old code isn't a removed function the scan can find: `count()` on null, a wrong type passed to a built-in function (now an error that stops the page), strings compared with numbers. Only running the code shows these. **Next:** the rehearsal already builds an upgraded copy of the site on the target; it will load each of the site's pages there with every PHP error logged, and list what each page raised.
+2. **Servers other than Alpine.** The end-to-end suites run on OpenEMR's official Docker images, which are Alpine. The upgrade script is for tarball installs, and most of those run on Ubuntu or Debian with Apache, which the suites don't yet cover. **Next:** an Ubuntu tarball install with Apache in the upgrade suite.
+3. **Real installs.** The tools have run on official images and synthetic data only. A real install has customizations and history the tests don't model, so the first runs on real servers are likely to find cases the suites don't have. Report them as issues on this repository.
+4. **PHP 8.6.** It ships on 2026-11-19. php-upgrade-catalogue measures it then, and a release here pins the new facts. Until then a target on PHP 8.6 is reported as beyond the facts, not passed.
+5. **Removed class methods and changed function signatures.** The catalogue covers removed functions, classes, constants and settings, and syntax that no longer loads; a method removed from a class, or a parameter a function no longer takes, isn't read yet.
+6. **A site's own SQL and JavaScript.** Custom SQL can break on a newer MySQL or MariaDB, and custom JavaScript when OpenEMR moves to a newer jQuery or Bootstrap. These would be the same kind of check as the PHP scan, for the other layers, and are worth building only if real sites turn out to have much of either.

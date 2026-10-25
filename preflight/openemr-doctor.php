@@ -6,7 +6,7 @@
  *
  * On the server, with the PHP your web server uses:
  *
- *     php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR_OR_URL] [--debug]
+ *     php openemr-doctor.php --openemr=/var/www/html/openemr [--site=default] [--facts=DIR_OR_URL] [--skip=NAME,...] [--debug]
  *
  * Or, to check the web server's own PHP (it can differ from the command line's), copy this
  * file into the OpenEMR folder and open http://localhost/openemr/openemr-doctor.php in a
@@ -18,7 +18,9 @@
  * nothing in the install or its database is changed. It never prints passwords or keys.
  *
  * Written for PHP 5.4 and later, so that it can explain a PHP that is too old instead of
- * failing to start on it. Exit code: 1 if any check fails, else 0. --debug (or ?debug=1 in the
+ * failing to start on it. --skip (or ?skip= in the browser) leaves checks out by name (documents,
+ * local-changes-php and the rest: see $doctorChecks below and the README); each prints a SKIP line.
+ * Exit code: 1 if any check fails, else 0. --debug (or ?debug=1 in the
  * browser) also prints where each fact came from and how much of it there was, and the timings.
  *
  * @license GPL-3.0-or-later
@@ -55,14 +57,16 @@ if ($web) {
     $site = isset($_GET['site']) ? preg_replace('/[^A-Za-z0-9._-]/', '', (string)$_GET['site']) : 'default';
     $factsBase = DOCTOR_FACTS_DEFAULT;
     $debug = !empty($_GET['debug']);
+    $skipList = isset($_GET['skip']) ? array((string)$_GET['skip']) : array();
 } else {
     ini_set('display_errors', 'stderr');
-    $opts = getopt('', array('openemr:', 'site:', 'facts:', 'help', 'debug'));
-    if (isset($opts['help']) || empty($opts['openemr'])) {
-        fwrite(STDERR, "usage: php openemr-doctor.php --openemr=/path/to/openemr [--site=default] [--facts=DIR_OR_URL] [--debug]\n");
+    $opts = getopt('', array('openemr:', 'site:', 'facts:', 'skip:', 'list-checks', 'help', 'debug'));
+    if (isset($opts['help']) || (empty($opts['openemr']) && !isset($opts['list-checks']))) {
+        fwrite(STDERR, "usage: php openemr-doctor.php --openemr=/path/to/openemr [--site=default] [--facts=DIR_OR_URL] [--skip=NAME,...] [--debug] | --list-checks\n");
         exit(2);
     }
-    $root = rtrim((string)$opts['openemr'], '/\\');
+    $skipList = isset($opts['skip']) ? (array)$opts['skip'] : array();
+    $root = rtrim(isset($opts['openemr']) ? (string)$opts['openemr'] : '', '/\\');
     $site = isset($opts['site']) ? (string)$opts['site'] : 'default';
     $factsBase = isset($opts['facts']) ? rtrim((string)$opts['facts'], '/') : DOCTOR_FACTS_DEFAULT;
     $debug = isset($opts['debug']);
@@ -76,6 +80,52 @@ function debug($message)
     if (DOCTOR_DEBUG) {
         echo 'DEBUG ' . sprintf('%6.2fs', microtime(true) - DOCTOR_START) . ' ' . $message . "\n";
     }
+}
+
+// The checks --skip can leave out, by name. The install, the release facts, the site, setup and the
+// database connection aren't among them: every other check needs them.
+$doctorChecks = array(
+    'php' => 'PHP', 'php-security' => 'PHP security', 'php-extensions' => 'PHP extensions', 'php-ini' => 'php.ini',
+    'php-libraries' => 'PHP libraries', 'page-assets' => 'Page assets', 'files' => 'Files', 'local-changes' => 'Local changes',
+    'local-changes-php' => 'Local changes on this PHP', 'documents-folder' => 'Documents folder', 'database-server' => 'Database server',
+    'database-version' => 'Database version', 'theme' => 'Theme', 'error-display' => 'Error display', 'modules' => 'Modules',
+    'encryption-keys' => 'Encryption keys', 'documents' => 'Documents', 'api-keys' => 'API keys',
+);
+if (!$web && isset($opts['list-checks'])) {
+    // The names --skip takes, one per line, for openemr-upgrade.sh and for people.
+    echo implode("\n", array_keys($doctorChecks)), "\n";
+    exit(0);
+}
+$skip = array();
+foreach ($skipList as $list) {
+    foreach (explode(',', (string)$list) as $name) {
+        $name = trim($name);
+        if ($name === '') {
+            continue;
+        }
+        if (!isset($doctorChecks[$name])) {
+            $known = "no check named '" . preg_replace('/[^a-z0-9-]/', '', $name) . "' to skip; the names are " . implode(', ', array_keys($doctorChecks));
+            if ($web) {
+                echo "$known\n";
+                exit;
+            }
+            fwrite(STDERR, "--skip: $known\n");
+            exit(2);
+        }
+        $skip[$name] = true;
+    }
+}
+$skipped = array();
+/** Whether the check named $name is left out (--skip); says so when it is. */
+function skipped($name)
+{
+    global $skip, $skipped, $doctorChecks;
+    if (!isset($skip[$name])) {
+        return false;
+    }
+    echo 'SKIP  ' . $doctorChecks[$name] . ": left out (--skip=$name)\n";
+    $skipped[] = $name;
+    return true;
 }
 
 $results = array();
@@ -409,7 +459,9 @@ if ($f !== null && $patch > 0 && $base === $current) {
 // (t/24361, t/24365, t/24048); one newer than tested breaks too (t/24282, t/26030, t/26133).
 
 $phpShort = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
-if ($f !== null) {
+if (skipped('php')) {
+    // left out
+} elseif ($f !== null) {
     $need = $f['php'];
     $tested = isset($f['ci_php']) ? $f['ci_php'] : array();
     if (cmpVersion(PHP_VERSION, $need) < 0) {
@@ -444,7 +496,9 @@ $debAt = $dpkg !== '' ? strpos("\n" . $dpkg, "\nPackage: $debName\n") : false;
 $debVersion = ($debAt !== false && preg_match('/\nVersion: (\S+)/', substr("\n" . $dpkg, $debAt + 1, 2000), $m)) ? $m[1] : '';
 $fromDistro = !$fromApk && ($debAt !== false || (@is_file('/etc/redhat-release') && strpos(PHP_BINARY, '/usr/bin/') === 0));
 $build = $debVersion !== '' ? " (package $debName $debVersion)" : ($fromDistro ? ' (a distribution build)' : '');
-if (isset($phpFixed[$phpShort])) {
+if (skipped('php-security')) {
+    // left out
+} elseif (isset($phpFixed[$phpShort])) {
     $fixed = $phpFixed[$phpShort];
     if (cmpVersion(PHP_VERSION, $fixed) >= 0) {
         report('PASS', 'PHP security', PHP_VERSION . " has PHP's fix for php2shell ($cves; $fixed)");
@@ -502,7 +556,9 @@ foreach ($wanted as $ext) {
         $missing[] = $ext;
     }
 }
-if ($missing === array()) {
+if (skipped('php-extensions')) {
+    // left out
+} elseif ($missing === array()) {
     report('PASS', 'PHP extensions', count($wanted) . ' required' . $wantedFrom . ', all loaded');
 } else {
     $notes = array();
@@ -518,40 +574,42 @@ if ($missing === array()) {
 // php.ini. Forum: errors shown on the page break it (t/24048). The limits are the ones
 // OpenEMR's setup recommends (setup.php: max_input_vars 3000, max_execution_time 60,
 // post_max_size 30M, memory_limit 512M).
-$where = $web ? '' : ' (command-line settings; the web server has its own, so check from the browser)';
-$iniLevel = $web ? 'WARN' : 'NOTE';
-if (iniOn('display_errors') && (error_reporting() & E_DEPRECATED)) {
-    report($iniLevel, 'Error display', 'PHP prints warnings and deprecation notices into pages' . $where,
-        'A notice printed into a page can blank it or break the screens that load data in the background. Set display_errors = Off in php.ini (errors still go to the log).');
-}
-$limits = array();
-if ((int)ini_get('max_input_vars') < 3000) {
-    $limits[] = 'max_input_vars ' . ini_get('max_input_vars') . ' (3000)';
-}
-if ($web && (int)ini_get('max_execution_time') !== 0 && (int)ini_get('max_execution_time') < 60) {
-    $limits[] = 'max_execution_time ' . ini_get('max_execution_time') . ' (60)';
-}
-$post = bytes(ini_get('post_max_size'));
-$memory = bytes(ini_get('memory_limit'));
-if ($post >= 0 && $post < 30 * 1048576) {
-    $limits[] = 'post_max_size ' . ini_get('post_max_size') . ' (30M)';
-}
-if ($memory >= 0 && $memory < 512 * 1048576) {
-    $limits[] = 'memory_limit ' . ini_get('memory_limit') . ' (512M)';
-}
-if (!iniOn('file_uploads')) {
-    $limits[] = 'file_uploads Off (On)';
-}
-if ($limits === array()) {
-    report('PASS', 'php.ini', 'meets the limits OpenEMR\'s setup recommends' . $where);
-} else {
-    report($iniLevel, 'php.ini', 'below what OpenEMR\'s setup recommends: ' . implode(', ', $limits) . $where,
-        'Raise them in php.ini and restart the web server. On shared hosting where you can\'t, setup can stop part-way (t/25023).');
-}
-if ($web) {
-    $save = session_save_path() ?: sys_get_temp_dir();
-    if (!is_writable($save)) {
-        report('FAIL', 'Sessions', "PHP can't write its session folder ($save)", 'Logins fail without it. Make it writable by the web server, or set session.save_path in php.ini.');
+if (!skipped('php-ini')) {
+    $where = $web ? '' : ' (command-line settings; the web server has its own, so check from the browser)';
+    $iniLevel = $web ? 'WARN' : 'NOTE';
+    if (iniOn('display_errors') && (error_reporting() & E_DEPRECATED)) {
+        report($iniLevel, 'Error display', 'PHP prints warnings and deprecation notices into pages' . $where,
+            'A notice printed into a page can blank it or break the screens that load data in the background. Set display_errors = Off in php.ini (errors still go to the log).');
+    }
+    $limits = array();
+    if ((int)ini_get('max_input_vars') < 3000) {
+        $limits[] = 'max_input_vars ' . ini_get('max_input_vars') . ' (3000)';
+    }
+    if ($web && (int)ini_get('max_execution_time') !== 0 && (int)ini_get('max_execution_time') < 60) {
+        $limits[] = 'max_execution_time ' . ini_get('max_execution_time') . ' (60)';
+    }
+    $post = bytes(ini_get('post_max_size'));
+    $memory = bytes(ini_get('memory_limit'));
+    if ($post >= 0 && $post < 30 * 1048576) {
+        $limits[] = 'post_max_size ' . ini_get('post_max_size') . ' (30M)';
+    }
+    if ($memory >= 0 && $memory < 512 * 1048576) {
+        $limits[] = 'memory_limit ' . ini_get('memory_limit') . ' (512M)';
+    }
+    if (!iniOn('file_uploads')) {
+        $limits[] = 'file_uploads Off (On)';
+    }
+    if ($limits === array()) {
+        report('PASS', 'php.ini', 'meets the limits OpenEMR\'s setup recommends' . $where);
+    } else {
+        report($iniLevel, 'php.ini', 'below what OpenEMR\'s setup recommends: ' . implode(', ', $limits) . $where,
+            'Raise them in php.ini and restart the web server. On shared hosting where you can\'t, setup can stop part-way (t/25023).');
+    }
+    if ($web) {
+        $save = session_save_path() ?: sys_get_temp_dir();
+        if (!is_writable($save)) {
+            report('FAIL', 'Sessions', "PHP can't write its session folder ($save)", 'Logins fail without it. Make it writable by the web server, or set session.save_path in php.ini.');
+        }
     }
 }
 
@@ -560,7 +618,9 @@ if ($web) {
 // templates folder lost while patching; t/23699: an upload that didn't finish); a tree
 // without its built assets shows an unstyled login whose button does nothing (t/26790).
 
-if (!is_file("$root/vendor/autoload.php")) {
+if (skipped('php-libraries')) {
+    // left out
+} elseif (!is_file("$root/vendor/autoload.php")) {
     report('FAIL', 'PHP libraries', 'vendor/ is missing: this looks like source code from git, not a release package',
         'Download the release package (it includes vendor/ and the built assets), or run composer install --no-dev and npm ci && npm run build in this folder.');
 } elseif ($composerList !== null) {
@@ -591,7 +651,7 @@ if (!is_file("$root/vendor/autoload.php")) {
     }
 }
 
-if ($assetList !== null) {
+if (!skipped('page-assets') && $assetList !== null) {
     $gone = array();
     foreach ($assetList as $a) {
         if (!is_file("$root/$a")) {
@@ -617,7 +677,7 @@ $manifest = $fileFacts !== null ? facts($factsBase, $fileFacts) : null;
 if ($fileFacts !== null && $f !== null && $manifest === null) {
     report('NOTE', 'Files', "the file list for $label ($fileFacts.json) isn't in the facts; files not checked");
 }
-if ($manifest !== null) {
+if (!skipped('files') && $manifest !== null) {
     $required = array();
     $optional = 0;
     $total = 0;
@@ -677,8 +737,10 @@ if ($manifest !== null) {
 // patch changed would show as edited. sites/ is this install's own and isn't compared.
 $hashFacts = ($fileFacts !== null && $base === $current && ($patch === 0 || strpos($fileFacts, "-p$patch-") !== false))
     ? preg_replace('/-files$/', '-hashes', $fileFacts) : null;
-$hashes = $hashFacts !== null && $manifest !== null ? facts($factsBase, $hashFacts) : null;
-if ($hashFacts !== null && $manifest !== null && ($hashes === null || !isset($hashes['dirs']))) {
+// Left out (--skip=local-changes), the hashes aren't even downloaded.
+$localOff = $hashFacts !== null && $manifest !== null && skipped('local-changes');
+$hashes = !$localOff && $hashFacts !== null && $manifest !== null ? facts($factsBase, $hashFacts) : null;
+if (!$localOff && $hashFacts !== null && $manifest !== null && ($hashes === null || !isset($hashes['dirs']))) {
     report('NOTE', 'Local changes', "the file hashes for $label ($hashFacts.json) aren't in the facts; edited files not checked");
 }
 if ($hashes !== null && isset($hashes['dirs'])) {
@@ -728,8 +790,11 @@ if ($hashes !== null && isset($hashes['dirs'])) {
     }
     $scanTool = dirname(__FILE__) . '/scan.php';
     $scanPhp = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
-    $scanFacts = $scanEdited !== array() && is_file($scanTool) ? facts($factsBase, 'php-changes') : null;
-    if ($scanEdited !== array() && !is_file($scanTool)) {
+    $scanOff = $scanEdited !== array() && skipped('local-changes-php');
+    $scanFacts = !$scanOff && $scanEdited !== array() && is_file($scanTool) ? facts($factsBase, 'php-changes') : null;
+    if ($scanOff) {
+        // left out
+    } elseif ($scanEdited !== array() && !is_file($scanTool)) {
         report('NOTE', 'Local changes on this PHP', 'scan skipped: put scan.php beside this file (it comes with this file\'s release) to check the ' . count($scanEdited) . ' edited PHP files for what PHP has removed');
     } elseif ($scanEdited !== array() && $scanFacts === null) {
         report('NOTE', 'Local changes on this PHP', 'the facts have no php-changes.json, so the ' . count($scanEdited) . ' edited PHP files weren\'t checked for what PHP has removed');
@@ -802,7 +867,9 @@ if (!isset($db['config']) || (int)$db['config'] !== 1) {
 
 // Permissions. Forum: unreadable keys and certificates (t/24855).
 $docs = "$root/sites/$site/documents";
-if (!is_dir($docs)) {
+if (skipped('documents-folder')) {
+    // left out
+} elseif (!is_dir($docs)) {
     report('FAIL', 'Documents folder', "sites/$site/documents is missing", 'It holds uploaded documents, the encryption keys and certificates. Copy it from the package (new install) or the old server (move).');
 } elseif ($web) {
     $ro = array();
@@ -951,7 +1018,7 @@ $server = (string)$rows[0]['v'];
 $flavor = stripos($server, 'mariadb') !== false ? 'mariadb' : 'mysql';
 $label = $flavor === 'mariadb' ? 'MariaDB' : 'MySQL';
 $short = preg_match('/^(\d+)\.(\d+)/', $server, $m) ? "$m[1].$m[2]" : $server;
-if ($f !== null) {
+if (!skipped('database-server') && $f !== null) {
     $tested = array();
     foreach ($f['ci_databases'] as $pair) {
         if ($pair[0] === $flavor) {
@@ -970,8 +1037,10 @@ if ($f !== null) {
 
 // Code and database versions. Forum: a patch's files copied without sql_patch.php, or an
 // upgrade's without sql_upgrade.php (t/26790, t/26133, t/24492).
-$ver = $q('SELECT * FROM version LIMIT 1');
-if ($ver === array()) {
+$ver = skipped('database-version') ? null : $q('SELECT * FROM version LIMIT 1');
+if ($ver === null) {
+    // left out
+} elseif ($ver === array()) {
     report('FAIL', 'Database version', 'the version table is empty or missing', 'Setup didn\'t finish, or this database isn\'t OpenEMR\'s.');
 } else {
     $v = $ver[0];
@@ -995,7 +1064,7 @@ foreach ($q("SELECT gl_name, gl_value FROM globals WHERE gl_index = 0 AND gl_nam
     $globals[$g['gl_name']] = (string)$g['gl_value'];
 }
 // The theme stylesheet the login page and every screen load (public/themes, built by npm).
-if (isset($globals['css_header']) && $globals['css_header'] !== '') {
+if (!skipped('theme') && isset($globals['css_header']) && $globals['css_header'] !== '') {
     $css = basename($globals['css_header']);
     if (!is_file("$root/public/themes/$css")) {
         report('FAIL', 'Theme', "the chosen theme public/themes/$css is missing" . (glob("$root/public/themes/*.css") ? '' : ', and public/themes has no stylesheets at all'),
@@ -1009,7 +1078,7 @@ if (isset($globals['css_header']) && $globals['css_header'] !== '') {
 $phpDebugKey = ($f !== null && isset($f['settings']['user_php_debug'])) ? 'user_php_debug' : 'user_debug';
 $phpDebugOn = $phpDebugKey === 'user_php_debug' ? (int)(isset($globals['user_php_debug']) ? $globals['user_php_debug'] : 0) > 0
     : (int)(isset($globals['user_debug']) ? $globals['user_debug'] : 0) > 1;
-if ($phpDebugOn) {
+if ($phpDebugOn && !skipped('error-display')) {
     $loc = ($f !== null && isset($f['settings'][$phpDebugKey])) ? ' (Administration > Config > ' . $f['settings'][$phpDebugKey]['section'] . ' > ' . $f['settings'][$phpDebugKey]['label'] . ')' : '';
     report('WARN', 'Error display', "OpenEMR's $phpDebugKey setting is on, so PHP errors are shown on pages$loc", 'A message printed into a page can blank it. Turn it off once you have read the error.');
 }
@@ -1017,7 +1086,7 @@ if ($phpDebugOn) {
 // Modules. An active module whose files are missing can stop OpenEMR starting; from 7.0.4
 // OpenEMR switches such a module off (src/Core/ModulesApplication.php). Forum: t/25702.
 $lost = array();
-foreach ($q('SELECT mod_directory, type FROM modules WHERE mod_active = 1') as $mod) {
+foreach (skipped('modules') ? array() : $q('SELECT mod_directory, type FROM modules WHERE mod_active = 1') as $mod) {
     $dir = (int)$mod['type'] === 1 ? "$root/interface/modules/zend_modules/module/" . $mod['mod_directory']
         : "$root/interface/modules/custom_modules/" . $mod['mod_directory'] . '/openemr.bootstrap.php';
     if (!file_exists($dir)) {
@@ -1035,106 +1104,110 @@ if ($lost !== array()) {
 // silently replaced by a new one, after which existing encrypted data can't be read
 // (src/Common/Crypto/CryptoGen.php collectDriveKey). Forum: "Decryption failed HMAC"
 // (t/25795), keys after an upgrade or move (t/27005).
-$versions = array('one', 'two', 'three', 'four', 'five', 'six', 'seven');
-$dbKeys = array();
-foreach ($q('SELECT name, value FROM `keys`') as $k) {
-    if (preg_match('/^(' . implode('|', $versions) . ')[ab]$/', $k['name'])) {
-        $dbKeys[$k['name']] = base64_decode((string)$k['value']);
-    }
-}
-$methods = "$docs/logs_and_misc/methods";
-$driveKeys = array();
-foreach (glob("$methods/*") ?: array() as $file) {
-    if (preg_match('/^(' . implode('|', $versions) . ')[ab]$/', basename($file))) {
-        $driveKeys[basename($file)] = $file;
-    }
-}
-if ($dbKeys === array() && $driveKeys === array()) {
-    report('PASS', 'Encryption keys', 'none yet; OpenEMR creates them the first time it encrypts something');
-} elseif ($driveKeys === array()) {
-    report('FAIL', 'Encryption keys', 'the database has encryption keys (' . implode(', ', array_keys($dbKeys)) . ") but sites/$site/documents/logs_and_misc/methods has none",
-        'If this install was copied or moved, copy that folder from the old server before anyone uses it: OpenEMR will otherwise make new keys, and everything already encrypted becomes unreadable.');
-} elseif ($dbKeys === array()) {
-    report('FAIL', 'Encryption keys', 'the keys folder has keys (' . implode(', ', array_keys($driveKeys)) . ') but the database has none',
-        'The database comes from a different install than the documents folder, or its keys table wasn\'t restored. Restore the matching pair.');
-} else {
-    $bad = array();
-    $unpaired = array();
-    $unreadable = array();
-    foreach ($driveKeys as $name => $file) {
-        if (!is_readable($file)) {
-            $unreadable[] = $name;
-            continue;
-        }
-        $content = (string)file_get_contents($file);
-        $prefix = substr($content, 0, 3);
-        if (!preg_match('/^\d{3}$/', $prefix) || (int)$prefix <= 4) {
-            continue; // versions 1-4 store the key on its own, with nothing to match
-        }
-        $hmacKey = (int)$prefix <= count($versions) ? $versions[(int)$prefix - 1] . 'b' : '';
-        if ($hmacKey === '' || !isset($dbKeys[$hmacKey])) {
-            $unpaired[] = $name;
-            continue;
-        }
-        $raw = base64_decode(substr($content, 3), true);
-        $ok = $raw !== false && strlen($raw) > 64 && hash_hmac('sha384', substr($raw, 48), $dbKeys[$hmacKey], true) === substr($raw, 0, 48);
-        if (!$ok) {
-            $bad[] = $name;
+if (!skipped('encryption-keys')) {
+    $versions = array('one', 'two', 'three', 'four', 'five', 'six', 'seven');
+    $dbKeys = array();
+    foreach ($q('SELECT name, value FROM `keys`') as $k) {
+        if (preg_match('/^(' . implode('|', $versions) . ')[ab]$/', $k['name'])) {
+            $dbKeys[$k['name']] = base64_decode((string)$k['value']);
         }
     }
-    if ($unreadable !== array()) {
-        report($web ? 'FAIL' : 'NOTE', 'Encryption keys', ($web ? 'the web server' : 'this user') . ' can\'t read ' . implode(', ', $unreadable) . ' in the keys folder',
-            $web ? 'Give the web server\'s user ownership of sites/' . $site . '/documents.' : 'Run the doctor as root or as the web server\'s user to check them.');
-    } elseif ($bad !== array() || $unpaired !== array()) {
-        report('FAIL', 'Encryption keys', 'the keys folder and the database don\'t belong together: ' . implode(', ', array_merge($bad, $unpaired)) . ' can\'t be unlocked with the database\'s keys',
-            'The database and sites/' . $site . '/documents come from different installs or different backups. Restore a matching pair; encrypted data can\'t be read until then.');
+    $methods = "$docs/logs_and_misc/methods";
+    $driveKeys = array();
+    foreach (glob("$methods/*") ?: array() as $file) {
+        if (preg_match('/^(' . implode('|', $versions) . ')[ab]$/', basename($file))) {
+            $driveKeys[basename($file)] = $file;
+        }
+    }
+    if ($dbKeys === array() && $driveKeys === array()) {
+        report('PASS', 'Encryption keys', 'none yet; OpenEMR creates them the first time it encrypts something');
+    } elseif ($driveKeys === array()) {
+        report('FAIL', 'Encryption keys', 'the database has encryption keys (' . implode(', ', array_keys($dbKeys)) . ") but sites/$site/documents/logs_and_misc/methods has none",
+            'If this install was copied or moved, copy that folder from the old server before anyone uses it: OpenEMR will otherwise make new keys, and everything already encrypted becomes unreadable.');
+    } elseif ($dbKeys === array()) {
+        report('FAIL', 'Encryption keys', 'the keys folder has keys (' . implode(', ', array_keys($driveKeys)) . ') but the database has none',
+            'The database comes from a different install than the documents folder, or its keys table wasn\'t restored. Restore the matching pair.');
     } else {
-        report('PASS', 'Encryption keys', count($driveKeys) . ' in the keys folder, and they match the database\'s keys');
+        $bad = array();
+        $unpaired = array();
+        $unreadable = array();
+        foreach ($driveKeys as $name => $file) {
+            if (!is_readable($file)) {
+                $unreadable[] = $name;
+                continue;
+            }
+            $content = (string)file_get_contents($file);
+            $prefix = substr($content, 0, 3);
+            if (!preg_match('/^\d{3}$/', $prefix) || (int)$prefix <= 4) {
+                continue; // versions 1-4 store the key on its own, with nothing to match
+            }
+            $hmacKey = (int)$prefix <= count($versions) ? $versions[(int)$prefix - 1] . 'b' : '';
+            if ($hmacKey === '' || !isset($dbKeys[$hmacKey])) {
+                $unpaired[] = $name;
+                continue;
+            }
+            $raw = base64_decode(substr($content, 3), true);
+            $ok = $raw !== false && strlen($raw) > 64 && hash_hmac('sha384', substr($raw, 48), $dbKeys[$hmacKey], true) === substr($raw, 0, 48);
+            if (!$ok) {
+                $bad[] = $name;
+            }
+        }
+        if ($unreadable !== array()) {
+            report($web ? 'FAIL' : 'NOTE', 'Encryption keys', ($web ? 'the web server' : 'this user') . ' can\'t read ' . implode(', ', $unreadable) . ' in the keys folder',
+                $web ? 'Give the web server\'s user ownership of sites/' . $site . '/documents.' : 'Run the doctor as root or as the web server\'s user to check them.');
+        } elseif ($bad !== array() || $unpaired !== array()) {
+            report('FAIL', 'Encryption keys', 'the keys folder and the database don\'t belong together: ' . implode(', ', array_merge($bad, $unpaired)) . ' can\'t be unlocked with the database\'s keys',
+                'The database and sites/' . $site . '/documents come from different installs or different backups. Restore a matching pair; encrypted data can\'t be read until then.');
+        } else {
+            report('PASS', 'Encryption keys', count($driveKeys) . ' in the keys folder, and they match the database\'s keys');
+        }
     }
 }
 
 // Documents whose files aren't where OpenEMR looks: under this site's documents folder,
 // by the last path_depth parts of the stored URL (library/classes/Document.class.php
 // get_filesystem_filepath). Forum: documents listed but not opening after a move (t/26815).
-$onDisk = "FROM documents WHERE storagemethod = 0 AND type = 'file_url' AND deleted = 0";
-$count = $q("SELECT COUNT(*) AS n $onDisk");
-$total = (int)$count[0]['n'];
-$couch = $q('SELECT COUNT(*) AS n FROM documents WHERE storagemethod = 1 AND deleted = 0');
-$absent = array();
-$checked = 0;
-$deadline = microtime(true) + 20;
-$res = $mysqli->query("SELECT id, url, path_depth $onDisk ORDER BY id", MYSQLI_USE_RESULT);
-while ($res && ($d = $res->fetch_assoc())) {
-    $parts = explode('/', preg_replace('|^(.*)://|', '', (string)$d['url']));
-    $file = array_pop($parts);
-    $sub = array_slice($parts, -max(1, (int)$d['path_depth']));
-    if (!file_exists($docs . '/' . implode('/', $sub) . '/' . $file)) {
-        $absent[] = $d['id'];
+if (!skipped('documents')) {
+    $onDisk = "FROM documents WHERE storagemethod = 0 AND type = 'file_url' AND deleted = 0";
+    $count = $q("SELECT COUNT(*) AS n $onDisk");
+    $total = (int)$count[0]['n'];
+    $couch = $q('SELECT COUNT(*) AS n FROM documents WHERE storagemethod = 1 AND deleted = 0');
+    $absent = array();
+    $checked = 0;
+    $deadline = microtime(true) + 20;
+    $res = $mysqli->query("SELECT id, url, path_depth $onDisk ORDER BY id", MYSQLI_USE_RESULT);
+    while ($res && ($d = $res->fetch_assoc())) {
+        $parts = explode('/', preg_replace('|^(.*)://|', '', (string)$d['url']));
+        $file = array_pop($parts);
+        $sub = array_slice($parts, -max(1, (int)$d['path_depth']));
+        if (!file_exists($docs . '/' . implode('/', $sub) . '/' . $file)) {
+            $absent[] = $d['id'];
+        }
+        $checked++;
+        if (microtime(true) > $deadline) {
+            break;
+        }
     }
-    $checked++;
-    if (microtime(true) > $deadline) {
-        break;
+    if ($res) {
+        $res->free();
     }
-}
-if ($res) {
-    $res->free();
-}
-if ($total === 0) {
-    report('PASS', 'Documents', 'no documents stored on disk yet');
-} elseif ($absent !== array()) {
-    report('WARN', 'Documents', count($absent) . " of $checked documents checked have no file in sites/$site/documents (document ids " . listSome($absent, 5) . ')',
-        'After a move, copy sites/' . $site . '/documents from the old server. The list shows them, but they open blank.');
-} else {
-    report('PASS', 'Documents', "all $checked documents checked have their file" . ($checked < $total ? " (stopped after 20 seconds; $total in all)" : ''));
-}
-if ((int)$couch[0]['n'] > 0) {
-    report('NOTE', 'Documents', $couch[0]['n'] . ' documents are stored in CouchDB; not checked');
+    if ($total === 0) {
+        report('PASS', 'Documents', 'no documents stored on disk yet');
+    } elseif ($absent !== array()) {
+        report('WARN', 'Documents', count($absent) . " of $checked documents checked have no file in sites/$site/documents (document ids " . listSome($absent, 5) . ')',
+            'After a move, copy sites/' . $site . '/documents from the old server. The list shows them, but they open blank.');
+    } else {
+        report('PASS', 'Documents', "all $checked documents checked have their file" . ($checked < $total ? " (stopped after 20 seconds; $total in all)" : ''));
+    }
+    if ((int)$couch[0]['n'] > 0) {
+        report('NOTE', 'Documents', $couch[0]['n'] . ' documents are stored in CouchDB; not checked');
+    }
 }
 
 // API certificates, only when an API is on. Forum: "Unable to read key from file" (t/24855).
 $apiOn = (isset($globals['rest_api']) && $globals['rest_api'] === '1') || (isset($globals['rest_fhir_api']) && $globals['rest_fhir_api'] === '1')
     || (isset($globals['rest_portal_api']) && $globals['rest_portal_api'] === '1');
-if ($apiOn) {
+if ($apiOn && !skipped('api-keys')) {
     $certs = array();
     foreach (array('oaprivate.key', 'oapublic.key') as $k) {
         if (!is_file("$docs/certificates/$k") || ($web && !is_readable("$docs/certificates/$k"))) {
@@ -1156,7 +1229,9 @@ function summary($results)
     $fails = count(array_keys($results, 'FAIL', true));
     $warns = count(array_keys($results, 'WARN', true));
     debug(count($results) . ' results: ' . count(array_keys($results, 'PASS', true)) . ' pass, ' . count(array_keys($results, 'NOTE', true)) . " note, $warns warn, $fails fail");
-    echo "\n" . ($fails ? "Fix the $fails failed check(s) first." : 'No blocking problems found.') . ($warns ? " $warns warning(s) to read." : '') . "\n";
+    global $skipped;
+    echo "\n" . ($fails ? "Fix the $fails failed check(s) first." : 'No blocking problems found.') . ($warns ? " $warns warning(s) to read." : '')
+        . ($skipped ? ' ' . count($skipped) . ' check(s) left out with --skip, so not checked: ' . implode(', ', $skipped) . '.' : '') . "\n";
     $log = (string)ini_get('error_log');
     echo "A blank page or an error 500 always leaves a line in the PHP error log"
         . ($log !== '' ? " (this PHP writes to $log)" : ' (often the web server\'s error log: /var/log/apache2/error.log, /var/log/httpd/error_log, C:\\xampp\\apache\\logs\\error.log)')

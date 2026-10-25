@@ -131,6 +131,21 @@ def catalogue() -> None:
           f"scan.php is the scanner, version {pin['version']}, with upgradeScanRun()")
 
 
+def skip_names() -> None:
+    """The README's table of the names --skip takes, for each PHP tool, is the tool's own list, in the
+    same order: a renamed or added check can't leave the README behind."""
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    readme = (root / "README.md").read_text()
+    for tool, pattern in (("openemr-preflight.php", r"const CHECKS = \[(.*?)\];"), ("openemr-doctor.php", r"\$doctorChecks = array\((.*?)\);")):
+        m = re.search(pattern, (root / "preflight" / tool).read_text(), re.S)
+        names = re.findall(r"'([a-z0-9-]+)' =>", m.group(1)) if m else []
+        table = readme.split(f"<!-- skip-names: {tool} -->", 1)[1].split("\n\n", 1)[0] if f"<!-- skip-names: {tool} -->" in readme else ""
+        listed = re.findall(r"^\| `([a-z0-9-]+)` \|", table, re.M)
+        check(names != [] and names == listed, f"the README lists {tool}'s {len(names)} --skip names, in its order ({len(listed)} listed)")
+
+
 def runtime(tag: str, app: str, db: str) -> None:
     php = r"""$ignoreAuth = true; $_GET['site'] = 'default'; $sessionAllowWrite = true;
 require '/var/www/localhost/htdocs/openemr/interface/globals.php';
@@ -166,6 +181,7 @@ def main() -> int:
     floors(tags)
     tools()
     catalogue()
+    skip_names()
     known_facts(tags)
     if "--runtime" in sys.argv:
         i = sys.argv.index("--runtime")

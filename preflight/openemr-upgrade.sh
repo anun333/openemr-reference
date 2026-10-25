@@ -2,8 +2,13 @@
 # Upgrade an OpenEMR installed from the release tarball (not the Docker image), with a way back.
 #
 #   openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--tarball=FILE] [--backup-dir=DIR]
-#                      [--service=apache2] [--customizations=apply|leave] [--force] [--yes] [--debug]
+#                      [--service=apache2] [--customizations=apply|leave] [--skip=NAME,...] [--force] [--yes] [--debug]
 #   openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr [--debug]
+#
+# --skip leaves checks out by name: scan (step 4's reading of what goes in for what PHP removed), and
+# any of the pre-flight check's or the doctor's (php openemr-preflight.php --list-checks, php
+# openemr-doctor.php --list-checks), which it passes on to them. A name none of them knows stops it
+# before anything changes. The steps themselves (backup, upgrade, switch) can't be skipped.
 #
 # It does what the manual upgrade does, in order, and stops at the first thing that goes wrong:
 #   1. checks the server with openemr-preflight.php (stops on a FAIL unless --force);
@@ -40,7 +45,7 @@ SCRIPT_VERSION=0.4.0
 # Where the helpers come from when they aren't beside this script: this script's own release.
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 
-OE="" TO="" TARBALL="" BACKUP="" SERVICE="" CUSTOM="" FORCE=0 YES=0 ROLLBACK=0 DEBUG=0
+OE="" TO="" TARBALL="" BACKUP="" SERVICE="" CUSTOM="" SKIP="" FORCE=0 YES=0 ROLLBACK=0 DEBUG=0
 for arg in "$@"; do
     case "$arg" in
         --openemr=*) OE="${arg#*=}" ;;
@@ -49,6 +54,7 @@ for arg in "$@"; do
         --backup-dir=*) BACKUP="${arg#*=}" ;;
         --service=*) SERVICE="${arg#*=}" ;;
         --customizations=*) CUSTOM="${arg#*=}" ;;
+        --skip=*) SKIP="${SKIP:+$SKIP,}${arg#*=}" ;;
         --force) FORCE=1 ;;
         --yes) YES=1 ;;
         --rollback) ROLLBACK=1 ;;
@@ -311,7 +317,7 @@ customizations_php() { cat <<'PHP'
 // Which of OpenEMR's own files this install changed or added, and what each change would do on the
 // target, unpacked beside it. Reads only; writes into the backup folder's customizations/.
 [, $oe, $facts, $from, $patch, $new, $out] = $argv;
-$scanTool = $argv[7] ?? '';   // scan.php, or '' to skip reading what goes in for what PHP removed
+$scanTool = $argv[7] ?? '';   // scan.php; '' when there is none, SKIP when --skip=scan left it out
 $patch = (int)$patch;
 $fromTag = 'v' . str_replace('.', '_', $from) . ($patch > 0 ? "_$patch" : '');
 $get = function (string $name) use ($facts) {
@@ -450,7 +456,7 @@ foreach (['interface/modules/custom_modules', 'interface/modules/zend_modules/mo
 // the PHP running this, which the new release runs on (the pre-flight check saw it is new enough).
 // scan.php is php-upgrade-catalogue's, pinned beside this script; it reads files, never runs them.
 $scan = null;
-$phpChanges = $scanTool !== '' ? $get('php-changes.json') : null;
+$phpChanges = $scanTool !== '' && $scanTool !== 'SKIP' ? $get('php-changes.json') : null;
 if ($phpChanges !== null) {
     require_once $scanTool;
     $touched = function (string $diff): array {
@@ -528,7 +534,8 @@ foreach ($modules as $rel) {
     printf("    module   %s (added to this install; step 6 carries it over)\n", $rel);
 }
 if ($scan === null) {
-    printf("  %s\n", $scanTool === '' ? "scan.php isn't here, so what goes in wasn't read for what PHP removed" : "the facts have no php-changes.json, so what goes in wasn't read for what PHP removed");
+    printf("  %s\n", $scanTool === 'SKIP' ? 'SKIP  what goes in, read for what PHP removed: left out (--skip=scan)'
+        : ($scanTool === '' ? "scan.php isn't here, so what goes in wasn't read for what PHP removed" : "the facts have no php-changes.json, so what goes in wasn't read for what PHP removed"));
 } else {
     $names = ['changes' => 'your changes', 'added' => 'added files', 'modules' => 'modules'];
     printf("  On PHP %s, what goes in from here (%d PHP files: the lines your changes write, added files and modules whole) was read for what PHP removed:\n", $scan['php'], $scan['files']);
@@ -559,12 +566,44 @@ PHP
 }
 
 step "1. Pre-flight check"
-# scan.php reads code for what PHP removed; the pre-flight check (here), step 4 and the doctor use it.
-fetch_tool scan.php; scan="$TOOL"
 fetch_tool openemr-preflight.php; pf="$TOOL"
-[[ -f "$(dirname "$pf")/scan.php" ]] || { cp "$scan" "$(dirname "$pf")/scan.php"; chmod 644 "$(dirname "$pf")/scan.php"; }
+fetch_tool openemr-doctor.php; dr="$TOOL"   # for step 8; fetched now, so --skip is checked before anything changes
+# --skip, split between this script (scan), the pre-flight check and the doctor, each of which names its own checks.
+SKIP_SELF="" SKIP_PF="" SKIP_DR=""
+pf_checks="$(php "$pf" --list-checks)"; dr_checks="$(php "$dr" --list-checks)"
+IFS=',' read -r -a skip_names <<<"$SKIP"
+for n in ${skip_names[@]+"${skip_names[@]}"}; do
+    n="${n//[[:space:]]/}"; [[ -n "$n" ]] || continue
+    known=0
+    [[ "$n" != scan ]] || { SKIP_SELF=scan; known=1; }
+    if grep -qxF -- "$n" <<<"$pf_checks"; then SKIP_PF="${SKIP_PF:+$SKIP_PF,}$n"; known=1; fi
+    if grep -qxF -- "$n" <<<"$dr_checks"; then SKIP_DR="${SKIP_DR:+$SKIP_DR,}$n"; known=1; fi
+    (( known )) || die "--skip: no check named '$n'. This script's own: scan; the pre-flight check's: $(tr '\n' ' ' <<<"$pf_checks"); the doctor's: $(tr '\n' ' ' <<<"$dr_checks")"
+done
+[[ -z "$SKIP" ]] || say "  --skip: ${SKIP_SELF:+step 4 reads nothing for what PHP removed; }${SKIP_PF:+pre-flight check: $SKIP_PF; }${SKIP_DR:+doctor: $SKIP_DR}"
+# scan.php reads code for what PHP removed, for the pre-flight check (here), step 4 and the doctor. It is
+# optional: without it each of them says it read nothing, and the upgrade goes on.
+# This release's scan.php, checked against its SHA256SUMS; prints its path, or fails.
+fetch_scan() {
+    local dir want
+    dir="$(mktemp -d)"; chmod 755 "$dir"
+    curl -fsSL "$REFERENCE_BASE/scan.php" -o "$dir/scan.php" 2>/dev/null || return 1
+    curl -fsSL "$REFERENCE_BASE/SHA256SUMS" -o "$dir/SHA256SUMS" 2>/dev/null || return 1
+    want="$(awk '$2 == "scan.php" || $2 == "*scan.php" {print $1}' "$dir/SHA256SUMS")"
+    [[ -n "$want" && "$want" == "$(sums "$dir/scan.php")" ]] || return 1
+    chmod 644 "$dir/scan.php"; echo "$dir/scan.php"
+}
+scan=""
+if [[ -f "$HERE/scan.php" ]]; then
+    scan="$HERE/scan.php"; say "  scan.php: the copy beside this script ($scan)"
+elif scan="$(fetch_scan)"; then
+    audit "scan.php downloaded from release v$SCRIPT_VERSION matches its SHA256SUMS"
+else
+    scan=""; say "  scan.php: couldn't fetch it from $REFERENCE_BASE (or it didn't match SHA256SUMS); going on without reading code for what PHP removed"
+fi
+[[ -z "$scan" || -f "$(dirname "$pf")/scan.php" ]] || { cp "$scan" "$(dirname "$pf")/scan.php"; chmod 644 "$(dirname "$pf")/scan.php"; }
 # As root: it only reads, and it must see the backup folder, which may be one the web server's user can't.
-set +e; php "$pf" --openemr="$OE" --target="$TO" --backup-dir="${BACKUP:-$PARENT}"; rc=$?; set -e
+set +e; php "$pf" --openemr="$OE" --target="$TO" --backup-dir="${BACKUP:-$PARENT}" ${SKIP_PF:+"--skip=$SKIP_PF"}; rc=$?; set -e
 (( rc == 0 )) || (( FORCE )) || die "the pre-flight check found something to fix first (above); fix it, or pass --force"
 
 
@@ -600,7 +639,7 @@ step "4. Local changes to OpenEMR's own files"
 CUSTOM_DIR="$BACKUP_DIR/customizations"
 mkdir -p "$CUSTOM_DIR"; chmod 700 "$BACKUP_DIR" "$CUSTOM_DIR"
 helper="$(mktemp)"; customizations_php > "$helper"
-php "$helper" "$OE" "$facts" "$FROM" "$patch" "$NEW" "$CUSTOM_DIR" "$scan"
+php "$helper" "$OE" "$facts" "$FROM" "$patch" "$NEW" "$CUSTOM_DIR" "$( [[ -n "$SKIP_SELF" ]] && echo SKIP || echo "$scan")"
 rm -f "$helper"
 found="$(php -r '$r = json_decode((string)@file_get_contents($argv[1]), true); echo count($r["changed"] ?? []) + count($r["added"] ?? []);' "$CUSTOM_DIR/report.json")"
 # What goes in and won't load or stops with an error on this PHP: with apply, the changes, the added
@@ -765,14 +804,14 @@ for site in $SITES; do
 done
 
 step "8. Checking the new folder with the install doctor"
-fetch_tool openemr-doctor.php; dr="$TOOL"
 # As the web server's user, since it checks what that user can read and write; from a folder it can read.
-drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; cp "$scan" "$drdir/scan.php"; chmod 644 "$drdir/openemr-doctor.php" "$drdir/scan.php"
+drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; chmod 644 "$drdir/openemr-doctor.php"
+[[ -z "$scan" ]] || { cp "$scan" "$drdir/scan.php"; chmod 644 "$drdir/scan.php"; }
 doctor_failed=0; php_insecure=0
 for site in $SITES; do
     debug_flag=(); (( ! DEBUG )) || debug_flag=(--debug)
     drout="$(mktemp)"
-    set +e; as_web php "$drdir/openemr-doctor.php" --openemr="$NEW" --site="$site" ${debug_flag[@]+"${debug_flag[@]}"} | tee "$drout"; rc=${PIPESTATUS[0]}; set -e
+    set +e; as_web php "$drdir/openemr-doctor.php" --openemr="$NEW" --site="$site" ${SKIP_DR:+"--skip=$SKIP_DR"} ${debug_flag[@]+"${debug_flag[@]}"} | tee "$drout"; rc=${PIPESTATUS[0]}; set -e
     # A PHP without its own security update (the doctor's "PHP security" check) needs PHP updated,
     # which this upgrade doesn't touch; stopping here would only hold back OpenEMR's own security
     # fixes. Any other failure stops the switch.

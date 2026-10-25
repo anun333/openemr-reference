@@ -96,6 +96,15 @@ x "mv /tmp/scan.php /tmp/scan.php.away"; out=$(run)
 expect "^NOTE  Local changes on this PHP: scan skipped: put scan.php beside this file" "5c: without scan.php beside it, the doctor says the scan was skipped"
 x "mv /tmp/scan.php.away /tmp/scan.php && cp -p /tmp/about_page.php $OE/interface/main/about_page.php"
 out=$(run); refute "Local changes on this PHP" "5c: with nothing edited, nothing is scanned"
+# Checks left out by name: each says so and doesn't run, the summary counts them; an unknown name is refused.
+out=$(run --skip=documents,encryption-keys)
+expect "^SKIP  Documents: left out (--skip=documents)" "5d: --skip=documents says it was left out"
+refute "^\(PASS\|WARN\|FAIL\)  Encryption keys:" "5d: and encryption-keys doesn't run"
+expect "2 check(s) left out with --skip, so not checked: encryption-keys, documents" "5d: the summary names what was left out"
+expect "^PASS  Database version" "5d: the other checks still run"
+out=$(docker exec -u apache $C php /tmp/doctor.php --openemr=$OE --facts=/tmp/facts --skip=document 2>&1; echo "exit $?")
+expect "^--skip: no check named 'document' to skip; the names are php, " "5d: a name that isn't a check is refused, with the names"
+expect "^exit 2$" "5d: and nothing runs"
 
 q "UPDATE globals SET gl_value='style_gone.css' WHERE gl_name='css_header'"; out=$(run)
 expect "^FAIL  Theme: the chosen theme public/themes/style_gone.css is missing" "6: a missing theme fails"

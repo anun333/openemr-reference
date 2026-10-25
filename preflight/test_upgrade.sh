@@ -69,6 +69,17 @@ check "$(grep -c '^== 5' "$LOG/scan-stop.log" || true)" 0 "PHP changes: and goes
 docker exec $C sh -c 'rm -rf /root/backups/*'
 set +e; docker exec -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=5 $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply --force > "$LOG/scan-force.log" 2>&1; rc=$?; set -e
 check "$(grep -c -- '--force: going on, though code that goes in' "$LOG/scan-force.log")" 1 "PHP changes: with --force it goes on, and says so"
+docker exec $C sh -c 'rm -rf /root/backups/*'
+# --skip: scan is this script's own (step 4 then reads nothing, so the each() above doesn't stop it);
+# room goes on to the pre-flight check; a name none of them knows stops it before anything changes.
+set +e; docker exec -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=5 $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply --skip=scan,room > "$LOG/skip.log" 2>&1; set -e
+check "$(grep -c '^SKIP  Room: left out (--skip=room)' "$LOG/skip.log")" 1 "skip: room goes on to the pre-flight check"
+check "$(grep -c 'SKIP  what goes in, read for what PHP removed: left out (--skip=scan)' "$LOG/skip.log")" 1 "skip: scan leaves step 4's reading out"
+check "$(grep -c 'stopped before step 5 for a test' "$LOG/skip.log")" 1 "skip: so step 4 doesn't stop on the each() it would have read"
+docker exec $C sh -c 'rm -rf /root/backups/*'
+set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply --skip=bogus > "$LOG/skip-bad.log" 2>&1; rc=$?; set -e
+check "$(grep -c "^STOP: --skip: no check named 'bogus'" "$LOG/skip-bad.log")" 1 "skip: a name none of the tools knows is refused"
+check "$(grep -c '^== 2' "$LOG/skip-bad.log" || true)" 0 "skip: before it gets the release"
 docker exec $C sh -c "rm -rf /root/backups/* $OE/$EACH"
 
 # The helpers, when they aren't beside the script, come from the script's own release and must match

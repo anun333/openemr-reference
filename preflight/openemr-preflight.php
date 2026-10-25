@@ -5,13 +5,16 @@
  *
  * Run it on the server, before upgrading, with the PHP your web server uses:
  *
- *     php openemr-preflight.php --openemr=/var/www/html/openemr [--target=8.4.1] [--site=default] [--facts=DIR_OR_URL]
+ *     php openemr-preflight.php --openemr=/var/www/html/openemr [--target=8.4.1] [--site=default] [--facts=DIR_OR_URL] [--skip=NAME,...]
  *
  * It compares the install with what the target release needs and changes, from
  * facts generated from OpenEMR's source (downloaded from https://github.com/anun333/openemr-reference,
  * or read from --facts=DIR on a server without internet), and
  * lists what to fix first. It only reads: nothing in the install or its database is
  * changed. It never prints passwords or setting values.
+ *
+ * --skip leaves checks out by name (room, local-changes, site-code and the rest: see CHECKS below and
+ * the README); each one left out prints a SKIP line, and the summary says how many.
  *
  * Written for PHP 7.4 and later, since it runs on the current install's PHP.
  * Exit code: 1 if any check fails, else 0.
@@ -22,10 +25,47 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 'stderr');
 
-$opts = getopt('', ['openemr:', 'target:', 'site:', 'facts:', 'backup-dir:', 'help']);
-if (isset($opts['help']) || empty($opts['openemr'])) {
-    fwrite(STDERR, "usage: php openemr-preflight.php --openemr=/path/to/openemr [--target=X.Y.Z] [--site=default] [--facts=DIR_OR_URL] [--backup-dir=DIR]\n");
+$opts = getopt('', ['openemr:', 'target:', 'site:', 'facts:', 'backup-dir:', 'skip:', 'list-checks', 'help']);
+if (isset($opts['list-checks'])) {
+    // The names --skip takes, one per line, for openemr-upgrade.sh and for people.
+    $listing = true;
+} elseif (isset($opts['help']) || empty($opts['openemr'])) {
+    fwrite(STDERR, "usage: php openemr-preflight.php --openemr=/path/to/openemr [--target=X.Y.Z] [--site=default] [--facts=DIR_OR_URL] [--backup-dir=DIR] [--skip=NAME,...] | --list-checks\n");
     exit(2);
+}
+// The checks --skip can leave out, by name. The version and the database connection aren't among
+// them: every other check needs them.
+const CHECKS = [
+    'xampp' => 'XAMPP', 'php' => 'PHP', 'php-extensions' => 'PHP extensions', 'database-server' => 'Database server',
+    'previous-upgrade' => 'Previous upgrade', 'settings' => 'Settings', 'modules' => 'Modules', 'custom-menus' => 'Custom menus',
+    'local-changes' => 'Local changes', 'site-code' => 'Site code on the new PHP', 'room' => 'Room',
+    'room-in-database' => 'Room in the database', 'memory' => 'Memory',
+];
+if (!empty($listing)) {
+    echo implode("\n", array_keys(CHECKS)), "\n";
+    exit(0);
+}
+$skip = [];
+foreach ((array)($opts['skip'] ?? []) as $list) {
+    foreach (array_filter(array_map('trim', explode(',', (string)$list)), 'strlen') as $name) {
+        if (!isset(CHECKS[$name])) {
+            fwrite(STDERR, "--skip: no check named '$name'; the names are " . implode(', ', array_keys(CHECKS)) . "\n");
+            exit(2);
+        }
+        $skip[$name] = true;
+    }
+}
+$skipped = [];
+/** Whether the check named $name is left out (--skip); says so when it is. */
+function skipped(string $name): bool
+{
+    global $skip, $skipped;
+    if (!isset($skip[$name])) {
+        return false;
+    }
+    echo 'SKIP  ' . CHECKS[$name] . ": left out (--skip=$name)\n";
+    $skipped[] = $name;
+    return true;
 }
 $root = rtrim((string)$opts['openemr'], '/');
 $site = isset($opts['site']) ? (string)$opts['site'] : 'default';
@@ -143,7 +183,7 @@ foreach ($releases as $r) {
 // OpenEMR 8.3.0 and later need. The project's answer is its XAMPP to Docker migration guide.
 $xamppPath = '#[/\\\\]xampp[/\\\\]#i';
 $onXampp = preg_match($xamppPath, $root) || preg_match($xamppPath, realpath($root) ?: '') || preg_match($xamppPath, PHP_BINARY);
-if ($onXampp && version_compare($to['php'], '8.3', '>=')) {
+if (!skipped('xampp') && $onXampp && version_compare($to['php'], '8.3', '>=')) {
     report('FAIL', 'XAMPP', "this install runs on XAMPP, whose newest release (8.2.12, November 2023) has PHP 8.2 and MariaDB 10.4; OpenEMR $target needs PHP {$to['php']} or later",
         'Replacing PHP inside XAMPP is not enough (the database and extensions are too old too). The project supports moving to Docker: https://www.open-emr.org/wiki/index.php/XAMPP_to_Docker_Migration (migrate at your current version first, then upgrade).');
 }
@@ -151,19 +191,23 @@ if ($onXampp && version_compare($to['php'], '8.3', '>=')) {
 // ------------------------------------------------------------ PHP
 
 $phpNeed = $to['php'];
-if (version_compare(PHP_VERSION, $phpNeed, '>=')) {
+if (skipped('php')) {
+    // left out
+} elseif (version_compare(PHP_VERSION, $phpNeed, '>=')) {
     report('PASS', 'PHP', PHP_VERSION . " (OpenEMR $target needs $phpNeed or later)");
 } else {
     report('FAIL', 'PHP', PHP_VERSION . " is too old: OpenEMR $target needs $phpNeed or later",
         'Upgrade PHP first. Check the web server runs the same PHP as the command line (php -v, and phpinfo() in the browser).');
 }
 $missing = [];
-foreach ($to['extensions'] as $ext) {
+foreach (skipped('php-extensions') ? [] : $to['extensions'] as $ext) {
     if (!extension_loaded($ext)) {
         $missing[] = $ext;
     }
 }
-if ($missing === []) {
+if (isset($skip['php-extensions'])) {
+    // left out
+} elseif ($missing === []) {
     report('PASS', 'PHP extensions', count($to['extensions']) . " required by $target, all loaded");
 } else {
     report('FAIL', 'PHP extensions', 'missing: ' . implode(', ', $missing) . " (OpenEMR $target's composer.json requires them)",
@@ -193,7 +237,9 @@ if (!$connected) {
     }
     usort($tested, 'cmpVersion');
     $name = $flavor === 'mariadb' ? 'MariaDB' : 'MySQL';
-    if (in_array($short, $tested, true)) {
+    if (skipped('database-server')) {
+        $tested = [];   // and so no step for it in the plan
+    } elseif (in_array($short, $tested, true)) {
         report('PASS', 'Database server', "$name $short is among those CI tested OpenEMR $target with");
     } elseif ($tested !== [] && cmpVersion($short, $tested[0]) < 0) {
         report('WARN', 'Database server', "$name $short is older than any $name CI tested OpenEMR $target with (" . implode(', ', $tested) . ')',
@@ -204,7 +250,9 @@ if (!$connected) {
 
     $ver = $mysqli->query('SELECT v_major, v_minor, v_patch, v_database FROM version LIMIT 1');
     $dbv = $ver ? $ver->fetch_assoc() : null;
-    if (!$dbv) {
+    if (skipped('previous-upgrade')) {
+        // left out
+    } elseif (!$dbv) {
         report('FAIL', 'Database version', "can't read the version table");
     } elseif ((int)$dbv['v_database'] < (int)$code['v_database']) {
         report('FAIL', 'Previous upgrade', "the code is $current (database version {$code['v_database']}) but the database is still at {$dbv['v_major']}.{$dbv['v_minor']}.{$dbv['v_patch']} (database version {$dbv['v_database']})",
@@ -218,7 +266,9 @@ if (!$connected) {
 
     // Settings the target removes that this install has changed from the default
     $removed = array_diff_key($from['settings'], $to['settings']);
-    if ($removed !== []) {
+    if (skipped('settings')) {
+        // left out
+    } elseif ($removed !== []) {
         $names = array_keys($removed);
         $in = implode(',', array_fill(0, count($names), '?'));
         $stmt = $mysqli->prepare("SELECT gl_name, gl_value FROM globals WHERE gl_index = 0 AND gl_name IN ($in)");
@@ -267,55 +317,60 @@ foreach ($installed as $dir) {
         $thirdParty[] = $dir;
     }
 }
-if ($composerNow !== []) {
+// The list is worked out either way: the site-code check reads the modules it finds.
+if (skipped('modules')) {
+    // left out
+} elseif ($composerNow !== []) {
     report('WARN', 'Modules', implode(', ', $composerNow) . " is installed by Composer in $target, no longer bundled",
         'A release package includes it. If you install from git, run composer install after upgrading.');
 }
-if ($thirdParty !== []) {
+if (!isset($skip['modules']) && $thirdParty !== []) {
     report('WARN', 'Modules', 'not part of OpenEMR ' . $target . ': ' . implode(', ', $thirdParty),
         "Copy each into the new tree (or reinstall it) and check with its developer that it supports $target.");
 }
-if ($composerNow === [] && $thirdParty === []) {
+if (!isset($skip['modules']) && $composerNow === [] && $thirdParty === []) {
     report('PASS', 'Modules', count($installed) . " installed modules, all part of OpenEMR $target");
 }
 
-$gone = array_values(array_diff($from['pages'], $to['pages']));
-// Menu files only matter when a user is assigned them (users.main_menu_role / patient_menu_role).
-$assigned = [];
-if ($connected) {
-    $res = $mysqli->query("SELECT main_menu_role AS m, 'main' AS kind, COUNT(*) AS n FROM users GROUP BY main_menu_role
-                           UNION ALL SELECT patient_menu_role, 'patient', COUNT(*) FROM users GROUP BY patient_menu_role");
-    while ($res && ($u = $res->fetch_assoc())) {
-        $assigned[$u['kind'] . '/' . $u['m']] = (int)$u['n'];
+if (!skipped('custom-menus')) {
+    $gone = array_values(array_diff($from['pages'], $to['pages']));
+    // Menu files only matter when a user is assigned them (users.main_menu_role / patient_menu_role).
+    $assigned = [];
+    if ($connected) {
+        $res = $mysqli->query("SELECT main_menu_role AS m, 'main' AS kind, COUNT(*) AS n FROM users GROUP BY main_menu_role
+                               UNION ALL SELECT patient_menu_role, 'patient', COUNT(*) FROM users GROUP BY patient_menu_role");
+        while ($res && ($u = $res->fetch_assoc())) {
+            $assigned[$u['kind'] . '/' . $u['m']] = (int)$u['n'];
+        }
     }
-}
-$menuFiles = [];
-foreach (glob("$root/sites/$site/documents/custom_menus/*.json") ?: [] as $f) {
-    $menuFiles[$f] = 'main/' . basename($f);
-}
-foreach (glob("$root/sites/$site/documents/custom_menus/patient_menus/*.json") ?: [] as $f) {
-    $menuFiles[$f] = 'patient/' . basename($f);
-}
-$broken = [];
-$unused = 0;
-foreach ($menuFiles as $file => $role) {
-    $text = (string)file_get_contents($file);
-    $hits = array_values(array_filter($gone, function ($page) use ($text) { return strpos($text, $page) !== false; }));
-    if ($hits === []) {
-        continue;
+    $menuFiles = [];
+    foreach (glob("$root/sites/$site/documents/custom_menus/*.json") ?: [] as $f) {
+        $menuFiles[$f] = 'main/' . basename($f);
     }
-    if (($assigned[$role] ?? 0) > 0) {
-        $broken[] = basename($file) . ' (assigned to ' . $assigned[$role] . ($assigned[$role] === 1 ? ' user' : ' users') . ') → ' . implode(', ', $hits);
+    foreach (glob("$root/sites/$site/documents/custom_menus/patient_menus/*.json") ?: [] as $f) {
+        $menuFiles[$f] = 'patient/' . basename($f);
+    }
+    $broken = [];
+    $unused = 0;
+    foreach ($menuFiles as $file => $role) {
+        $text = (string)file_get_contents($file);
+        $hits = array_values(array_filter($gone, function ($page) use ($text) { return strpos($text, $page) !== false; }));
+        if ($hits === []) {
+            continue;
+        }
+        if (($assigned[$role] ?? 0) > 0) {
+            $broken[] = basename($file) . ' (assigned to ' . $assigned[$role] . ($assigned[$role] === 1 ? ' user' : ' users') . ') → ' . implode(', ', $hits);
+        } else {
+            $unused++;
+        }
+    }
+    if ($broken !== []) {
+        report('WARN', 'Custom menus', 'menus in use point to files removed by ' . $target . ': ' . implode('; ', $broken),
+            'The upgrade copies sites/ over, so these menus keep the old entries. Edit them after upgrading.');
     } else {
-        $unused++;
+        report('PASS', 'Custom menus', count($menuFiles) . ' menu files; none in use points to a removed file'
+            . ($unused ? " ($unused more " . ($unused === 1 ? 'does' : 'do') . ', but no user is assigned it)' : ''));
     }
-}
-if ($broken !== []) {
-    report('WARN', 'Custom menus', 'menus in use point to files removed by ' . $target . ': ' . implode('; ', $broken),
-        'The upgrade copies sites/ over, so these menus keep the old entries. Edit them after upgrading.');
-} else {
-    report('PASS', 'Custom menus', count($menuFiles) . ' menu files; none in use points to a removed file'
-        . ($unused ? " ($unused more " . ($unused === 1 ? 'does' : 'do') . ', but no user is assigned it)' : ''));
 }
 
 // ------------------------------------------------------------ local changes to OpenEMR's own files
@@ -323,7 +378,7 @@ if ($broken !== []) {
 // release's copy replaces it. Compared by git blob hash with the release (or patch) as published
 // (<release>[-p<N>]-hashes.json): on the official 8.4.1 image, every shipped file matches.
 
-if ($base === $current) {
+if (!skipped('local-changes') && $base === $current) {
     $label = $current . ($patch > 0 ? " patch $patch" : '');
     $hashes = facts($factsBase, $current . ($patch > 0 ? "-p$patch" : '') . '-hashes');
     if ($hashes === null || !isset($hashes['dirs'])) {
@@ -366,8 +421,11 @@ $scanFix = '';
 $scanNow = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
 $scanNew = implode('.', array_slice(versionKey($to['php']), 0, 2));
 $scanTool = __DIR__ . '/scan.php';
-$scanFacts = cmpVersion($scanNow, $scanNew) < 0 && is_file($scanTool) ? facts($factsBase, 'php-changes') : null;
-if (cmpVersion($scanNow, $scanNew) >= 0) {
+$scanOff = skipped('site-code');
+$scanFacts = !$scanOff && cmpVersion($scanNow, $scanNew) < 0 && is_file($scanTool) ? facts($factsBase, 'php-changes') : null;
+if ($scanOff) {
+    // left out
+} elseif (cmpVersion($scanNow, $scanNew) >= 0) {
     echo "NOTE  Site code on the new PHP: $target runs on this PHP ($scanNow), so the code this site added meets no PHP change\n";
 } elseif (!is_file($scanTool)) {
     echo "NOTE  Site code on the new PHP: scan skipped: put scan.php beside this file (it comes with this file's release) to check the code this site added for what PHP $scanNew removes\n";
@@ -476,8 +534,9 @@ $measure = function (string $dir, ?string $skip, float $seconds): array {
     }
     return [$size, false];
 };
-[$codeSize, $codeCapped] = $measure($root, '#/sites/[^/]+/documents$#', 20);
-[$docsSize, $docsCapped] = $measure("$root/sites/$site/documents", null, 30);
+$roomOff = skipped('room');
+[$codeSize, $codeCapped] = $roomOff ? [0, false] : $measure($root, '#/sites/[^/]+/documents$#', 20);
+[$docsSize, $docsCapped] = $roomOff ? [0, false] : $measure("$root/sites/$site/documents", null, 30);
 $atLeast = function (bool $capped) { return $capped ? 'at least ' : ''; };
 
 $scripts = [];
@@ -499,7 +558,8 @@ $dbData = 0;
 $dbTotal = 0;
 $largest = ['', 0];
 $datadir = null;
-if ($connected) {
+$dbRoomOff = skipped('room-in-database');
+if ($connected && !($roomOff && $dbRoomOff)) {
     $res = $mysqli->query('SELECT table_name AS t, COALESCE(data_length, 0) AS d, COALESCE(index_length, 0) AS i FROM information_schema.tables WHERE table_schema = DATABASE()');
     while ($res && ($r = $res->fetch_assoc())) {
         $dbData += (int)$r['d'];
@@ -527,7 +587,7 @@ $key = $sameDisk ? $backupDir : $installDisk;
 $needs[$key] = $needs[$key] ?? ['what' => [], 'bytes' => 0];
 $needs[$key]['what'][] = "new release $target " . (is_int($release) ? $gb($release) : 'about ' . $atLeast($codeCapped) . $gb($codeSize) . ' (the current code\'s size)');
 $needs[$key]['bytes'] += $releaseBytes;
-foreach ($needs as $dir => $need) {
+foreach ($roomOff ? [] : $needs as $dir => $need) {
     $want = (int)($need['bytes'] * 1.2);
     $free = @disk_free_space($dir);
     $detail = 'need about ' . $gb($want) . ' with a 20% margin (' . implode('; ', $need['what']) . ')';
@@ -542,7 +602,9 @@ foreach ($needs as $dir => $need) {
 }
 
 // The database server's own disk, for the tables the upgrade alters.
-if (!$connected) {
+if ($dbRoomOff) {
+    // left out
+} elseif (!$connected) {
     report('WARN', 'Room in the database', "can't connect, so the tables the upgrade alters can't be measured");
 } elseif ($altered === []) {
     report('PASS', 'Room in the database', "the upgrade scripts from $base to $target alter no existing table");
@@ -562,7 +624,7 @@ if (!$connected) {
 }
 
 // Memory, on Linux.
-$meminfo = @file_get_contents('/proc/meminfo');
+$meminfo = skipped('memory') ? false : @file_get_contents('/proc/meminfo');
 if (is_string($meminfo) && preg_match('/^MemAvailable:\s+(\d+) kB/m', $meminfo, $mm)) {
     $available = (int)$mm[1] * 1024;
     if ($available < 1073741824) {
@@ -590,7 +652,7 @@ if ($needPhp || $missing !== []) {
         . ($missing !== [] ? ', with the extensions ' . implode(', ', $missing) : '') . '.'
         . ($needPhp && !$oldRunsOnNew ? " OpenEMR $base was tested on PHP " . implode(', ', $oldTested) . " only, so it may not run on PHP $newPhp: do this and the next step in one maintenance window, with OpenEMR closed between them." : '');
 }
-if ($connected && $tested !== [] && !in_array($short, $tested, true) && cmpVersion($short, $tested[0]) < 0) {
+if ($connected && !empty($tested) && !in_array($short, $tested, true) && cmpVersion($short, $tested[0]) < 0) {
     $plan[] = "Upgrade the database server from $name $short to one CI tested $target with (" . implode(', ', $tested) . ').';
 }
 if ($scanFix !== '') {
@@ -611,5 +673,6 @@ foreach ($steps as $s) {
 }
 $fails = count(array_keys($results, 'FAIL', true));
 $warns = count(array_keys($results, 'WARN', true));
-echo "\n" . ($fails ? "Fix the $fails failed check(s) before upgrading." : 'No blocking problems found.') . ($warns ? " $warns warning(s) to read." : '') . "\n";
+echo "\n" . ($fails ? "Fix the $fails failed check(s) before upgrading." : 'No blocking problems found.') . ($warns ? " $warns warning(s) to read." : '')
+    . ($skipped ? ' ' . count($skipped) . ' check(s) left out with --skip, so not checked: ' . implode(', ', $skipped) . '.' : '') . "\n";
 exit($fails ? 1 : 0);

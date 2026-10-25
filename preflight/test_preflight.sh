@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end test of openemr-preflight.php against a throwaway OpenEMR 7.0.3 (official image,
-# MariaDB 10.6), targeting the newest release with facts. Nine scenarios, each adding one problem:
+# MariaDB 10.6), targeting the newest release with facts. Ten scenarios:
 #   1 as installed: expects a FAIL for missing PHP extensions, WARNs for the database and ClaimRev
 #   2 a user assigned the stock Custom.json menu, which links to removed files: Custom menus WARN
 #   3 a removed setting changed from its default: Settings WARN
@@ -11,6 +11,7 @@
 #   8 a local change to one of OpenEMR's own files (and one to sites/, which doesn't count): Local changes WARN
 #   9 (facts altered: the target needs PHP 8.5) a file and a module this site added calling what PHP 8.4
 #     removed: Site code FAIL, with a deprecation as a note, a guarded call left out; then no scan.php
+#  10 checks left out with --skip: SKIP lines, not run, counted in the summary; an unknown name refused
 # Everything runs in containers that are deleted at the end. Needs Docker and the facts in ../site/preflight.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -89,4 +90,16 @@ docker exec $C sh -c 'mv /tmp/scan.php /tmp/scan.php.away'
 out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts3 || true)
 expect "^NOTE  Site code on the new PHP: scan skipped: put scan.php beside this file" "9: without scan.php beside it, the check says the scan was skipped"
 docker exec $C sh -c 'mv /tmp/scan.php.away /tmp/scan.php; OE=/var/www/localhost/htdocs/openemr; rm -rf $OE/custom/pf_scan_test.php $OE/interface/modules/custom_modules/oe-module-pf-scan'
+# Checks left out by name: each says so, doesn't run, and the summary counts it; a name that isn't one stops it.
+out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --skip=room,local-changes --skip=site-code || true)
+expect "^SKIP  Room: left out (--skip=room)" "10: --skip=room says it was left out"
+refute "^\(PASS\|WARN\|FAIL\)  Room:" "10: and the room check doesn't run"
+expect "^SKIP  Local changes: left out (--skip=local-changes)" "10: so does local-changes, from a second --skip"
+expect "3 check(s) left out with --skip, so not checked: local-changes, site-code, room" "10: the summary names what was left out"
+expect "^\(PASS\|WARN\|FAIL\)  Previous upgrade" "10: the other checks still run (this one fails here: case 4 left the database behind)"
+out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --skip=rooms 2>&1; echo "exit $?")
+expect "^--skip: no check named 'rooms'; the names are xampp, php, " "10: a name that isn't a check is refused, with the names"
+expect "^exit 2$" "10: and nothing runs"
+out=$(docker exec $C php /tmp/preflight.php --list-checks)
+expect "^room-in-database$" "10: --list-checks prints the names"
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }
