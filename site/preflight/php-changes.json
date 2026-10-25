@@ -1,0 +1,608 @@
+{
+ "schema": "php-upgrade-catalogue php-changes 1",
+ "version": "0.1.0",
+ "covers": {
+  "from": "7.4",
+  "to": "8.5"
+ },
+ "builds": {
+  "7.4": {
+   "php": "7.4.33",
+   "extensions": 73
+  },
+  "8.0": {
+   "php": "8.0.30",
+   "extensions": 68
+  },
+  "8.1": {
+   "php": "8.1.34",
+   "extensions": 66
+  },
+  "8.2": {
+   "php": "8.2.35",
+   "extensions": 67
+  },
+  "8.3": {
+   "php": "8.3.36",
+   "extensions": 67
+  },
+  "8.4": {
+   "php": "8.4.27",
+   "extensions": 65
+  },
+  "8.5": {
+   "php": "8.5.12",
+   "extensions": 67
+  }
+ },
+ "php-src": {
+  "7.4": "004cb827501",
+  "8.0": "670052c427e",
+  "8.1": "6f82565f126",
+  "8.2": "a640b5288bc",
+  "8.3": "f35ed4fb5cf",
+  "8.4": "a1eb2f8fa15",
+  "8.5": "0fd5614ccab"
+ },
+ "kinds": {
+  "removed": {
+   "functions": "fatal",
+   "classes": "fatal",
+   "constants": "fatal",
+   "ini": "silent"
+  },
+  "deprecated": "deprecated"
+ },
+ "versions": {
+  "8.0": {
+   "removed": {
+    "functions": {
+     "convert_cyr_string": "standard",
+     "create_function": "core",
+     "each": "core",
+     "ezmlm_hash": "standard",
+     "fgetss": "standard",
+     "get_magic_quotes_gpc": "standard",
+     "get_magic_quotes_runtime": "standard",
+     "gmp_random": "gmp",
+     "gzgetss": "zlib",
+     "hebrevc": "standard",
+     "image2wbmp": "gd",
+     "imap_header": "imap",
+     "is_real": "standard",
+     "jpeg2wbmp": "gd",
+     "ldap_control_paged_result": "ldap",
+     "ldap_control_paged_result_response": "ldap",
+     "ldap_sort": "ldap",
+     "mbereg": "mbstring",
+     "mbereg_match": "mbstring",
+     "mbereg_replace": "mbstring",
+     "mbereg_search": "mbstring",
+     "mbereg_search_getpos": "mbstring",
+     "mbereg_search_getregs": "mbstring",
+     "mbereg_search_init": "mbstring",
+     "mbereg_search_pos": "mbstring",
+     "mbereg_search_regs": "mbstring",
+     "mbereg_search_setpos": "mbstring",
+     "mberegi": "mbstring",
+     "mberegi_replace": "mbstring",
+     "mbregex_encoding": "mbstring",
+     "mbsplit": "mbstring",
+     "money_format": "standard",
+     "png2wbmp": "gd",
+     "read_exif_data": "exif",
+     "restore_include_path": "standard",
+     "xmlrpc_decode": "xmlrpc",
+     "xmlrpc_decode_request": "xmlrpc",
+     "xmlrpc_encode": "xmlrpc",
+     "xmlrpc_encode_request": "xmlrpc",
+     "xmlrpc_get_type": "xmlrpc",
+     "xmlrpc_is_fault": "xmlrpc",
+     "xmlrpc_parse_method_descriptions": "xmlrpc",
+     "xmlrpc_server_add_introspection_data": "xmlrpc",
+     "xmlrpc_server_call_method": "xmlrpc",
+     "xmlrpc_server_create": "xmlrpc",
+     "xmlrpc_server_destroy": "xmlrpc",
+     "xmlrpc_server_register_introspection_callback": "xmlrpc",
+     "xmlrpc_server_register_method": "xmlrpc",
+     "xmlrpc_set_type": "xmlrpc"
+    },
+    "classes": {
+     "domconfiguration": "dom",
+     "domdomerror": "dom",
+     "domerrorhandler": "dom",
+     "domimplementationlist": "dom",
+     "domimplementationsource": "dom",
+     "domlocator": "dom",
+     "domnamelist": "dom",
+     "domstringextend": "dom",
+     "domstringlist": "dom",
+     "domtypeinfo": "dom",
+     "domuserdatahandler": "dom"
+    },
+    "constants": {
+     "ASSERT_QUIET_EVAL": "standard",
+     "FILTER_FLAG_HOST_REQUIRED": "filter",
+     "FILTER_FLAG_SCHEME_REQUIRED": "filter",
+     "FILTER_SANITIZE_MAGIC_QUOTES": "filter",
+     "INPUT_REQUEST": "filter",
+     "INPUT_SESSION": "filter",
+     "INTL_IDNA_VARIANT_2003": "intl",
+     "MB_OVERLOAD_MAIL": "mbstring",
+     "MB_OVERLOAD_REGEX": "mbstring",
+     "MB_OVERLOAD_STRING": "mbstring"
+    },
+    "ini": {
+     "assert.quiet_eval": "standard",
+     "mbstring.func_overload": "mbstring",
+     "track_errors": "core"
+    }
+   },
+   "extensions_removed": [
+    "xmlrpc"
+   ],
+   "deprecated": {
+    "functions": {
+     "enchant_broker_free": "enchant",
+     "enchant_broker_free_dict": "enchant",
+     "enchant_broker_get_dict_path": "enchant",
+     "enchant_broker_set_dict_path": "enchant",
+     "enchant_dict_add_to_personal": "enchant",
+     "enchant_dict_is_in_session": "enchant",
+     "libxml_disable_entity_loader": "libxml",
+     "openssl_free_key": "openssl",
+     "openssl_pkey_free": "openssl",
+     "openssl_x509_free": "openssl",
+     "pg_clientencoding": "pgsql",
+     "pg_cmdtuples": "pgsql",
+     "pg_errormessage": "pgsql",
+     "pg_fieldisnull": "pgsql",
+     "pg_fieldname": "pgsql",
+     "pg_fieldnum": "pgsql",
+     "pg_fieldprtlen": "pgsql",
+     "pg_fieldsize": "pgsql",
+     "pg_fieldtype": "pgsql",
+     "pg_freeresult": "pgsql",
+     "pg_getlastoid": "pgsql",
+     "pg_loclose": "pgsql",
+     "pg_locreate": "pgsql",
+     "pg_loexport": "pgsql",
+     "pg_loimport": "pgsql",
+     "pg_loopen": "pgsql",
+     "pg_loread": "pgsql",
+     "pg_loreadall": "pgsql",
+     "pg_lounlink": "pgsql",
+     "pg_lowrite": "pgsql",
+     "pg_numfields": "pgsql",
+     "pg_numrows": "pgsql",
+     "pg_result": "pgsql",
+     "pg_setclientencoding": "pgsql",
+     "shmop_close": "shmop",
+     "zip_close": "zip",
+     "zip_entry_close": "zip",
+     "zip_entry_compressedsize": "zip",
+     "zip_entry_compressionmethod": "zip",
+     "zip_entry_filesize": "zip",
+     "zip_entry_name": "zip",
+     "zip_entry_open": "zip",
+     "zip_entry_read": "zip",
+     "zip_open": "zip",
+     "zip_read": "zip"
+    }
+   },
+   "syntax": [
+    {
+     "id": "curly-offset",
+     "kind": "wontload",
+     "summary": "Offsets written with braces, $s{0}, no longer parse: write $s[0].",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.0",
+      "commit": "670052c427e",
+      "line": 199
+     }
+    },
+    {
+     "id": "real-cast",
+     "kind": "wontload",
+     "summary": "The (real) cast no longer parses: write (float).",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.0",
+      "commit": "670052c427e",
+      "line": 32
+     }
+    },
+    {
+     "id": "unset-cast",
+     "kind": "wontload",
+     "summary": "The (unset) cast is refused when the file compiles: assign null instead.",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.0",
+      "commit": "670052c427e",
+      "line": 33
+     }
+    },
+    {
+     "id": "autoload-function",
+     "kind": "wontload",
+     "summary": "A function named __autoload() is refused when the file compiles: register the autoloader with spl_autoload_register().",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.0",
+      "commit": "670052c427e",
+      "line": 41
+     }
+    },
+    {
+     "id": "match-name",
+     "kind": "wontload",
+     "summary": "match is a keyword: a function named match, or a call to one, no longer parses.",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.0",
+      "commit": "670052c427e",
+      "line": 24
+     }
+    },
+    {
+     "id": "nested-ternary",
+     "kind": "wontload",
+     "summary": "A ternary nested in another without parentheses is refused when the file compiles: add the parentheses.",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.0",
+      "commit": "670052c427e",
+      "line": 217
+     }
+    },
+    {
+     "id": "php4-constructor",
+     "kind": "silent",
+     "summary": "A method named like its class is no longer its constructor: new stops calling it, with no error. Rename it __construct().",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.0",
+      "commit": "670052c427e",
+      "line": 27
+     }
+    }
+   ]
+  },
+  "8.1": {
+   "removed": {
+    "functions": {},
+    "classes": {},
+    "constants": {},
+    "ini": {
+     "log_errors_max_len": "core",
+     "mysqlnd.fetch_data_copy": "mysqlnd"
+    }
+   },
+   "extensions_removed": [],
+   "deprecated": {
+    "functions": {
+     "date_sunrise": "date",
+     "date_sunset": "date",
+     "gmstrftime": "date",
+     "odbc_result_all": "odbc",
+     "strftime": "date",
+     "strptime": "standard"
+    }
+   },
+   "syntax": []
+  },
+  "8.2": {
+   "removed": {
+    "functions": {},
+    "classes": {},
+    "constants": {},
+    "ini": {
+     "mysqli.reconnect": "mysqli"
+    }
+   },
+   "extensions_removed": [],
+   "deprecated": {
+    "functions": {
+     "utf8_decode": "standard",
+     "utf8_encode": "standard"
+    }
+   },
+   "syntax": [
+    {
+     "id": "dollar-brace-interpolation",
+     "kind": "deprecated",
+     "summary": "Writing \"${var}\" in a string is deprecated: write \"{$var}\".",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.2",
+      "commit": "a640b5288bc",
+      "line": 183
+     }
+    }
+   ]
+  },
+  "8.3": {
+   "removed": {
+    "functions": {},
+    "classes": {},
+    "constants": {},
+    "ini": {
+     "opcache.consistency_checks": "zend opcache"
+    }
+   },
+   "extensions_removed": [],
+   "deprecated": {
+    "functions": {
+     "assert_options": "standard"
+    }
+   },
+   "syntax": []
+  },
+  "8.4": {
+   "removed": {
+    "functions": {
+     "imap_8bit": "imap",
+     "imap_alerts": "imap",
+     "imap_append": "imap",
+     "imap_base64": "imap",
+     "imap_binary": "imap",
+     "imap_body": "imap",
+     "imap_bodystruct": "imap",
+     "imap_check": "imap",
+     "imap_clearflag_full": "imap",
+     "imap_close": "imap",
+     "imap_create": "imap",
+     "imap_createmailbox": "imap",
+     "imap_delete": "imap",
+     "imap_deletemailbox": "imap",
+     "imap_errors": "imap",
+     "imap_expunge": "imap",
+     "imap_fetch_overview": "imap",
+     "imap_fetchbody": "imap",
+     "imap_fetchheader": "imap",
+     "imap_fetchmime": "imap",
+     "imap_fetchstructure": "imap",
+     "imap_fetchtext": "imap",
+     "imap_gc": "imap",
+     "imap_get_quota": "imap",
+     "imap_get_quotaroot": "imap",
+     "imap_getacl": "imap",
+     "imap_getmailboxes": "imap",
+     "imap_getsubscribed": "imap",
+     "imap_headerinfo": "imap",
+     "imap_headers": "imap",
+     "imap_is_open": "imap",
+     "imap_last_error": "imap",
+     "imap_list": "imap",
+     "imap_listmailbox": "imap",
+     "imap_listscan": "imap",
+     "imap_listsubscribed": "imap",
+     "imap_lsub": "imap",
+     "imap_mail": "imap",
+     "imap_mail_compose": "imap",
+     "imap_mail_copy": "imap",
+     "imap_mail_move": "imap",
+     "imap_mailboxmsginfo": "imap",
+     "imap_mime_header_decode": "imap",
+     "imap_msgno": "imap",
+     "imap_mutf7_to_utf8": "imap",
+     "imap_num_msg": "imap",
+     "imap_num_recent": "imap",
+     "imap_open": "imap",
+     "imap_ping": "imap",
+     "imap_qprint": "imap",
+     "imap_rename": "imap",
+     "imap_renamemailbox": "imap",
+     "imap_reopen": "imap",
+     "imap_rfc822_parse_adrlist": "imap",
+     "imap_rfc822_parse_headers": "imap",
+     "imap_rfc822_write_address": "imap",
+     "imap_savebody": "imap",
+     "imap_scan": "imap",
+     "imap_scanmailbox": "imap",
+     "imap_search": "imap",
+     "imap_set_quota": "imap",
+     "imap_setacl": "imap",
+     "imap_setflag_full": "imap",
+     "imap_sort": "imap",
+     "imap_status": "imap",
+     "imap_subscribe": "imap",
+     "imap_thread": "imap",
+     "imap_timeout": "imap",
+     "imap_uid": "imap",
+     "imap_undelete": "imap",
+     "imap_unsubscribe": "imap",
+     "imap_utf7_decode": "imap",
+     "imap_utf7_encode": "imap",
+     "imap_utf8": "imap",
+     "imap_utf8_to_mutf7": "imap",
+     "pspell_add_to_personal": "pspell",
+     "pspell_add_to_session": "pspell",
+     "pspell_check": "pspell",
+     "pspell_clear_session": "pspell",
+     "pspell_config_create": "pspell",
+     "pspell_config_data_dir": "pspell",
+     "pspell_config_dict_dir": "pspell",
+     "pspell_config_ignore": "pspell",
+     "pspell_config_mode": "pspell",
+     "pspell_config_personal": "pspell",
+     "pspell_config_repl": "pspell",
+     "pspell_config_runtogether": "pspell",
+     "pspell_config_save_repl": "pspell",
+     "pspell_new": "pspell",
+     "pspell_new_config": "pspell",
+     "pspell_new_personal": "pspell",
+     "pspell_save_wordlist": "pspell",
+     "pspell_store_replacement": "pspell",
+     "pspell_suggest": "pspell"
+    },
+    "classes": {
+     "imap\\connection": "imap",
+     "pspell\\config": "pspell",
+     "pspell\\dictionary": "pspell"
+    },
+    "constants": {
+     "CL_EXPUNGE": "imap",
+     "CP_MOVE": "imap",
+     "CP_UID": "imap",
+     "ENC7BIT": "imap",
+     "ENC8BIT": "imap",
+     "ENCBASE64": "imap",
+     "ENCBINARY": "imap",
+     "ENCOTHER": "imap",
+     "ENCQUOTEDPRINTABLE": "imap",
+     "FT_INTERNAL": "imap",
+     "FT_NOT": "imap",
+     "FT_PEEK": "imap",
+     "FT_PREFETCHTEXT": "imap",
+     "FT_UID": "imap",
+     "IMAP_CLOSETIMEOUT": "imap",
+     "IMAP_GC_ELT": "imap",
+     "IMAP_GC_ENV": "imap",
+     "IMAP_GC_TEXTS": "imap",
+     "IMAP_OPENTIMEOUT": "imap",
+     "IMAP_READTIMEOUT": "imap",
+     "IMAP_WRITETIMEOUT": "imap",
+     "LATT_HASCHILDREN": "imap",
+     "LATT_HASNOCHILDREN": "imap",
+     "LATT_MARKED": "imap",
+     "LATT_NOINFERIORS": "imap",
+     "LATT_NOSELECT": "imap",
+     "LATT_REFERRAL": "imap",
+     "LATT_UNMARKED": "imap",
+     "MYSQLI_CURSOR_TYPE_FOR_UPDATE": "mysqli",
+     "MYSQLI_CURSOR_TYPE_SCROLLABLE": "mysqli",
+     "MYSQLI_SET_CHARSET_DIR": "mysqli",
+     "MYSQLI_STMT_ATTR_PREFETCH_ROWS": "mysqli",
+     "MYSQLI_TYPE_INTERVAL": "mysqli",
+     "NIL": "imap",
+     "OP_ANONYMOUS": "imap",
+     "OP_DEBUG": "imap",
+     "OP_EXPUNGE": "imap",
+     "OP_HALFOPEN": "imap",
+     "OP_PROTOTYPE": "imap",
+     "OP_READONLY": "imap",
+     "OP_SECURE": "imap",
+     "OP_SHORTCACHE": "imap",
+     "OP_SILENT": "imap",
+     "PSPELL_BAD_SPELLERS": "pspell",
+     "PSPELL_FAST": "pspell",
+     "PSPELL_NORMAL": "pspell",
+     "PSPELL_RUN_TOGETHER": "pspell",
+     "SA_ALL": "imap",
+     "SA_MESSAGES": "imap",
+     "SA_RECENT": "imap",
+     "SA_UIDNEXT": "imap",
+     "SA_UIDVALIDITY": "imap",
+     "SA_UNSEEN": "imap",
+     "SE_FREE": "imap",
+     "SE_NOPREFETCH": "imap",
+     "SE_UID": "imap",
+     "SORTARRIVAL": "imap",
+     "SORTCC": "imap",
+     "SORTDATE": "imap",
+     "SORTFROM": "imap",
+     "SORTSIZE": "imap",
+     "SORTSUBJECT": "imap",
+     "SORTTO": "imap",
+     "SO_FREE": "imap",
+     "SO_NOSERVER": "imap",
+     "ST_SET": "imap",
+     "ST_SILENT": "imap",
+     "ST_UID": "imap",
+     "TYPEAPPLICATION": "imap",
+     "TYPEAUDIO": "imap",
+     "TYPEIMAGE": "imap",
+     "TYPEMESSAGE": "imap",
+     "TYPEMODEL": "imap",
+     "TYPEMULTIPART": "imap",
+     "TYPEOTHER": "imap",
+     "TYPETEXT": "imap",
+     "TYPEVIDEO": "imap"
+    },
+    "ini": {
+     "imap.enable_insecure_rsh": "imap",
+     "odbc.default_db": "odbc",
+     "odbc.default_pw": "odbc",
+     "odbc.default_user": "odbc"
+    }
+   },
+   "extensions_removed": [
+    "imap",
+    "pspell"
+   ],
+   "deprecated": {
+    "functions": {
+     "intlcal_set": "intl",
+     "intlgregcal_create_instance": "intl",
+     "lcg_value": "random",
+     "mysqli_kill": "mysqli",
+     "mysqli_ping": "mysqli",
+     "mysqli_refresh": "mysqli",
+     "xml_set_object": "xml"
+    }
+   },
+   "syntax": [
+    {
+     "id": "implicit-nullable",
+     "kind": "deprecated",
+     "summary": "A typed parameter that defaults to null without being declared ?Type is deprecated: write ?Type.",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.4",
+      "commit": "a1eb2f8fa15",
+      "line": 484
+     }
+    }
+   ]
+  },
+  "8.5": {
+   "removed": {
+    "functions": {},
+    "classes": {},
+    "constants": {},
+    "ini": {
+     "disable_classes": "core"
+    }
+   },
+   "extensions_removed": [],
+   "deprecated": {
+    "functions": {
+     "curl_close": "curl",
+     "curl_share_close": "curl",
+     "finfo_close": "fileinfo",
+     "imagedestroy": "gd",
+     "mysqli_execute": "mysqli",
+     "socket_set_timeout": "standard",
+     "xml_parser_free": "xml"
+    }
+   },
+   "syntax": [
+    {
+     "id": "noncanonical-cast",
+     "kind": "deprecated",
+     "summary": "The casts (boolean), (integer), (double) and (binary) are deprecated: write (bool), (int), (float), (string).",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.5",
+      "commit": "0fd5614ccab",
+      "line": 368
+     }
+    },
+    {
+     "id": "backtick",
+     "kind": "deprecated",
+     "summary": "The backtick operator is deprecated: call shell_exec().",
+     "source": {
+      "file": "UPGRADING",
+      "branch": "PHP-8.5",
+      "commit": "0fd5614ccab",
+      "line": 377
+     }
+    }
+   ]
+  }
+ }
+}

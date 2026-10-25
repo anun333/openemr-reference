@@ -1,0 +1,9 @@
+{
+ "about": "php-upgrade-catalogue, pinned: what PHP removes and changes by version, and the scanner that reads a site's code for it (https://github.com/anun333/php-upgrade-catalogue). gen/fetch_catalogue.py fetches these exact files; gen/check.py fails if a copy here differs. Change the pin by hand, with the new release's SHA256SUMS.",
+ "version": "0.1.0",
+ "base": "https://github.com/anun333/php-upgrade-catalogue/releases/download/v0.1.0",
+ "files": {
+  "scan.php": {"sha256": "8baaec0bf1ce7b00a511e44b28c67c1d0ecb892e2a49a1b3f3c523d9972b8e4c", "to": "preflight/scan.php"},
+  "php-changes.json": {"sha256": "e7a4f93345cada1e7616b8c7181525db2523423ce0c658e8d72375d3a2258e03", "to": "site/preflight/php-changes.json"}
+ }
+}

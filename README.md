@@ -22,11 +22,12 @@ The two PHP tools and the upgrade script run on the server; the rehearsal runs o
 - [openemr-preflight.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php)
 - [openemr-rehearse.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-rehearse.sh) and [openemr-utf8mb4.sql](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-utf8mb4.sql)
 - [openemr-upgrade.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-upgrade.sh), for installs from the release tarball
+- [scan.php](https://github.com/anun333/openemr-reference/releases/latest/download/scan.php), put beside the doctor and the pre-flight check: it reads a site's own code for what PHP removed (see [PHP changes in a site's own code](#php-changes-in-a-sites-own-code))
 - [SHA256SUMS](https://github.com/anun333/openemr-reference/releases/latest/download/SHA256SUMS), to check them (`sha256sum -c SHA256SUMS --ignore-missing`)
 
 **What they do and don't do.** The doctor and the pre-flight check only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`, and one request to `github.com` asking which release of these tools is newest, so a tool can say when a newer one is out. It never updates itself; `OPENEMR_REFERENCE_NO_UPDATE_CHECK=1` turns the question off, and the doctor doesn't ask when its facts come from a local folder. Nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. The rehearsal never touches the live site: it works on a copy of a database dump, in containers it deletes afterwards, and downloads only the official OpenEMR and MariaDB images and the same facts. `openemr-utf8mb4.sql` only prints statements; nothing changes until you run them. `openemr-upgrade.sh` does change the server, in the order described below, after backing up, and keeps a way back. Each is a single readable file: read it before you run it.
 
-Every push runs ShellCheck on the scripts, parses the PHP tools with each PHP they support (5.5 to 8.5 for the doctor, 7.4 on for the pre-flight check), and runs `gen/check.py` (`.github/workflows/lint.yml`). The end-to-end suites below need Docker and several minutes each, so they run before each release: `release.sh` runs the same fast checks and then every suite, one at a time, and tags and publishes nothing unless all of them pass. It then downloads what it published and checks it against `SHA256SUMS`. (It exists because v0.3.8 went out with the doctor's suites run but not the upgrade suite, which also runs the doctor.)
+Every push runs ShellCheck on the scripts, parses the PHP tools with each PHP they support (5.5 to 8.5 for the doctor and `scan.php`, 7.4 on for the pre-flight check), and runs `gen/check.py` (`.github/workflows/lint.yml`). The end-to-end suites below need Docker and several minutes each, so they run before each release: `release.sh` runs the same fast checks and then every suite, one at a time, and tags and publishes nothing unless all of them pass. It then downloads what it published and checks it against `SHA256SUMS`. (It exists because v0.3.8 went out with the doctor's suites run but not the upgrade suite, which also runs the doctor.)
 
 Wrong answers are bugs: please [open an issue](https://github.com/anun333/openemr-reference/issues) with the output (it contains no patient data).
 
@@ -50,6 +51,7 @@ Run it with the PHP the web server uses. It only reads: nothing in the install o
 | Room | for each disk involved, less free than the backup (database and documents) and the new release need, plus 20% (fail); the backup disk is chosen with `--backup-dir` |
 | Room in the database | the database's data folder has less free space than the largest table the upgrade scripts alter, plus 20%, which a rebuild of it can take (fail); where the folder isn't visible, it says how much to check for |
 | Local changes | files OpenEMR ships that were changed on this server, compared by git hash with the release or patch as published (warn) |
+| Site code on the new PHP | when the target needs a newer PHP: the files this site added and the modules the target doesn't ship use something PHP removes on the way (fail, naming file and line); uses it only deprecates, as one line (note). Needs `scan.php` beside the check; without it, it says the scan was skipped |
 | Memory | under 1 GB available, on Linux (warn) |
 
 It then prints **the plan, in order, from what it found**: the backup (including the encryption keys), the PHP and extension changes and the database server upgrade the target needs, the upgrade itself beside the old folder, the check with the install doctor, and the way back. When the current release was never tested on the PHP the target needs, it says to change PHP and upgrade in one maintenance window, since the old version may not run on the new PHP. Then it lists the upgrade scripts `sql_upgrade.php` will run and the upgrade notes for each step. It runs on PHP 7.4 and later, since it runs on the current install's PHP. Exit code 1 if any check fails.
@@ -120,7 +122,7 @@ For an OpenEMR installed from the release tarball (with the official Docker imag
 1. runs the pre-flight check, and stops on a FAIL unless `--force`;
 2. gets the target release: downloaded from GitHub with its published sha256 checked, or `--tarball`;
 3. unpacks it beside the old folder;
-4. finds OpenEMR's own files that were changed here, each shipped file's git hash compared with the release or patch as published, and the files added outside `sites/`, `vendor/` and modules. A file the target's package also has counts as built by the release, such as compiled CSS. It saves them all and writes each change as a patch against the original. Then it tries each change on the target's copy: a file the target left as it was takes yours as is, and otherwise `patch` decides. If there are any changes, it stops unless `--customizations=apply` (carry the changes that apply and the added files, list the rest) or `--customizations=leave`. Until here nothing on the server has changed, and a stop removes the unpacked folder;
+4. finds OpenEMR's own files that were changed here, each shipped file's git hash compared with the release or patch as published, and the files added outside `sites/`, `vendor/` and modules. A file the target's package also has counts as built by the release, such as compiled CSS. It saves them all and writes each change as a patch against the original. Then it tries each change on the target's copy: a file the target left as it was takes yours as is, and otherwise `patch` decides. If there are any changes, it stops unless `--customizations=apply` (carry the changes that apply and the added files, list the rest) or `--customizations=leave`. It then reads what will go in for what the PHP running it has removed: the lines each change writes, on the copy it goes into, and the added files and modules whole. It stops on any that won't load or stop with an error, unless `--force`. Until here nothing on the server has changed, and a stop removes the unpacked folder;
 5. stops the web server (`--service`), or asks you to keep users out, and backs up each site's database (`mysqldump`) and the whole `sites/` folder, which holds documents and encryption keys;
 6. carries over `sites/`, the modules this install added (module folders and Composer packages not in its release's own lists) and, with `apply`, the changes from step 4;
 7. runs the target's own `sql_upgrade.php --from=<current>` for each site, as the web server's user, from inside the new folder. It stops on any failed statement;
@@ -195,6 +197,7 @@ The web server can run a different PHP from the command line's, with different s
 | Page assets | a built file every page loads is missing: the npm build didn't run (fail) | t/26790 |
 | Files | a file the release package ships is missing from a folder OpenEMR runs from (fail; a note on a build that isn't the release the facts describe); documentation and tooling are optional | t/25717, t/23699 |
 | Local changes | a file the release package ships was edited here, compared by git hash with the release or patch as published (note, naming the files); an edited PHP file that no longer parses with this PHP, with its line (fail; PHP 7.0 and later) | |
+| Local changes on this PHP | an edited PHP file that parses but uses something this PHP removed, which fails only when its line runs, such as `each()` on PHP 8 (fail, with the line); deprecated uses as one line (note). Needs `scan.php` beside the doctor | |
 | Site, setup | the site's `sqlconf.php` is missing (the real sites are listed), or setup hasn't finished | t/26989 |
 | Documents folder | the web server can't write it (browser), or it belongs to root (command line) | t/24855 |
 | Database SSL | `documents/certificates/mysql-ca`, `mysql-cert` or `mysql-key` can't be read or isn't PEM (fail); a client certificate without its key, or the reverse (fail from 8.1, which refuses to connect; warn before, which ignores it); a client certificate without `mysql-ca`, which turns SSL on (warn) | t/27148 |
@@ -250,6 +253,7 @@ On the official 8.4.1 image as installed, it reports one real gap: the image has
 
 - **Floors** that a broken extraction would trip (no tables, no settings, no CI setups).
 - **Known facts** from outside the pipeline: the Backup page and the Configuration Export/Import setting are in 8.2.0 and gone in 8.3.0 (openemr/openemr#13471), `patient_data.financial_review` is a datetime, the PHP floor never falls, an enum-keyed setting resolves, ClaimRev is a Composer module from 8.2.0, and the tabs template whose loss blanked logins (t/25717) is in the 8.4.1 package.
+- **php-upgrade-catalogue, pinned** (`gen/catalogue.json`): `preflight/scan.php` and `site/preflight/php-changes.json` are the pinned release's files byte for byte, the facts are the shape the scanner reads, and they still hold what every PHP since 7.4 must (PHP 8.0 removed `each` and `create_function`; 8.4 the imap and pspell extensions). A copy one byte off fails the build. `gen/fetch_catalogue.py` fetches them when the pin changes.
 - **Runtime** (`--runtime <openemr-container> <db-container>`), against a running OpenEMR of the latest release. Every extracted setting is in what OpenEMR loads, and every extracted table and column is in its database with the same type.
 
 On 2026-10-11, against a running 8.4.1:
@@ -266,9 +270,21 @@ OPENEMR_REPO=~/dev/openemr python3 gen/run.py    # new releases only; --all for 
 
 `.github/workflows/update.yml` runs this daily and commits when OpenEMR tags a release.
 
+## PHP changes in a site's own code
+
+A PHP upgrade breaks code that uses what PHP removed: `each()` and `create_function()` in PHP 8.0, string offsets written `$s{0}`, the imap extension in 8.4. OpenEMR's own code is tested on the PHP each release supports, but a site's own changes, added files and modules aren't. The scanner is [php-upgrade-catalogue](https://github.com/anun333/php-upgrade-catalogue)'s `scan.php` with its facts, measured on real PHP builds and checked against php-src, pinned here at a release (`gen/catalogue.json`) and shipped with these tools. It reads files and never runs them. A use behind `function_exists()`, `is_callable()`, `defined()`, `class_exists()`, `extension_loaded()` or a polyfill elsewhere in the install isn't counted; a guard covers its whole file, so it errs toward not failing.
+
+- **The pre-flight check**, when the target needs a newer PHP: the files this site added and the modules the target doesn't ship, for what changes from this PHP to the one the target needs. Changed copies of OpenEMR's own files aren't read here, since the new release's copies replace them.
+- **`openemr-upgrade.sh`, step 4:** what will go in, for the PHP running it: the lines each change writes on the new release's copy, and the added files and modules whole. It stops before the backup on any use that won't load or stops with an error, unless `--force`.
+- **The doctor:** edited files of OpenEMR's own that parse, for what the PHP it runs on has removed, so a leftover `each()` explains a blank page after a PHP upgrade.
+- **The upgrade notes:** each step that raises OpenEMR's PHP minimum lists what that PHP removed.
+
+To read any folder yourself: `php scan.php --facts=php-changes.json --php=7.4:8.3 PATH` (add `--json` for one record per finding). The facts cover PHP 7.4 to 8.5; a newer PHP is said to be beyond them rather than passed.
+
 ## Limits
 
 - Patches between releases (`vX_Y_Z_N` tags) and test builds aren't covered, except for the doctor's file lists.
 - What the upgrade scripts do to existing data isn't covered, only the schema they leave.
 - Files removed under `interface/` and `portal/` include helper files as well as pages.
 - CI-tested databases are what CI ran, not a support statement.
+- The PHP changes are what the scanner can see without running code: a removed function, class, constant or setting, and syntax that no longer loads. A change in behaviour, such as how strings compare with numbers in PHP 8, needs the code run. A guard covers its whole file, so a use outside its `if` isn't counted.

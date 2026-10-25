@@ -18,7 +18,7 @@
 set -euo pipefail
 
 main() {
-    VERSION=0.3.10
+    VERSION=0.4.0
     BASE=${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$VERSION}
     OE=/var/www/localhost/htdocs/openemr
     DEBUG=${DEBUG:-0}
@@ -86,6 +86,23 @@ main() {
         DOCTOR=$WORK/openemr-doctor.php
         say "doctor: downloaded from release v$VERSION, matches its SHA256SUMS"
     fi
+    # scan.php, which the doctor reads edited files with, beside the doctor: the copy beside a
+    # doctor of your own, else this release's, checked the same way. Without it the doctor says so.
+    SCAN=""
+    if [ -f "$(dirname "$DOCTOR")/scan.php" ]; then
+        SCAN=$(dirname "$DOCTOR")/scan.php
+        [ "$DOCTOR" = "$WORK/openemr-doctor.php" ] || say "scan.php: $SCAN, beside your doctor (not checked against SHA256SUMS)"
+    elif [ "$DOCTOR" = "$WORK/openemr-doctor.php" ] && curl -fsSL -o "$WORK/scan.php" "$BASE/scan.php"; then
+        WANT=$(awk '$2 == "scan.php" || $2 == "*scan.php" {print $1}' "$WORK/SHA256SUMS")
+        if command -v sha256sum >/dev/null; then GOT=$(sha256sum "$WORK/scan.php" | cut -d' ' -f1); else GOT=$(shasum -a 256 "$WORK/scan.php" | cut -d' ' -f1); fi
+        if [ -n "$WANT" ] && [ "$WANT" = "$GOT" ]; then
+            chmod 644 "$WORK/scan.php"; SCAN=$WORK/scan.php
+            say "scan.php: downloaded from release v$VERSION, matches its SHA256SUMS"
+        else
+            rm -f "$WORK/scan.php"
+            say "the downloaded scan.php doesn't match SHA256SUMS of release v$VERSION (expected ${WANT:-no entry}, got $GOT); the doctor runs without it"
+        fi
+    fi
     ARGS=(--openemr="$OE")
     [ "$DEBUG" != 1 ] || ARGS+=(--debug)
 
@@ -96,14 +113,17 @@ main() {
         NETWORK=$(echo "$NETWORKS" | awk '{print $1}')
         [ "$(echo "$NETWORKS" | wc -w)" -le 1 ] || say "the container is on several networks ($NETWORKS); using $NETWORK"
         say "sites/ is on a volume: running the doctor in a throwaway container of the same image, with its volumes, on network $NETWORK"
+        SCAN_MOUNT=()
+        [ -z "$SCAN" ] || SCAN_MOUNT=(-v "$SCAN:/tools/scan.php:ro")
         docker run --rm --volumes-from "$CONTAINER" --network "$NETWORK" --user apache --entrypoint php \
-          -v "$DOCTOR:/tools/openemr-doctor.php:ro" "$IMAGE" /tools/openemr-doctor.php "${ARGS[@]}"
+          -v "$DOCTOR:/tools/openemr-doctor.php:ro" ${SCAN_MOUNT[@]+"${SCAN_MOUNT[@]}"} "$IMAGE" /tools/openemr-doctor.php "${ARGS[@]}"
     elif [ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" = true ]; then
         # sites/ lives inside the container, so a throwaway container would see the image's empty one.
         say "sites/ is inside the container: running the doctor in it"
         docker cp "$DOCTOR" "$CONTAINER:/tmp/openemr-doctor.php" >/dev/null
+        [ -z "$SCAN" ] || docker cp "$SCAN" "$CONTAINER:/tmp/scan.php" >/dev/null
         docker exec -u apache "$CONTAINER" php /tmp/openemr-doctor.php "${ARGS[@]}" || true
-        docker exec "$CONTAINER" rm -f /tmp/openemr-doctor.php
+        docker exec "$CONTAINER" rm -f /tmp/openemr-doctor.php /tmp/scan.php
     else
         say "sites/ isn't on a volume and the container isn't running; start it (docker compose up -d), then run this again"
         exit 1

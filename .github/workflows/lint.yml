@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: openemr-doctor.php parses on PHP ${{ matrix.php }}
         run: docker run --rm -v "$PWD:/app" -w /app php:${{ matrix.php }}-cli php -l preflight/openemr-doctor.php
+      - name: scan.php (php-upgrade-catalogue, pinned) parses on PHP ${{ matrix.php }}
+        run: docker run --rm -v "$PWD:/app" -w /app php:${{ matrix.php }}-cli php -l preflight/scan.php
       - name: openemr-preflight.php parses on PHP ${{ matrix.php }} (it needs 7.4 or later)
         if: ${{ !contains(fromJSON('["5.5", "5.6", "7.0"]'), matrix.php) }}
         run: docker run --rm -v "$PWD:/app" -w /app php:${{ matrix.php }}-cli php -l preflight/openemr-preflight.php

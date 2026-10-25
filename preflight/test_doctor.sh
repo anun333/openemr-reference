@@ -6,7 +6,7 @@
 #   OpenEMR's PHP-error display on; a switched-on module with no files; the keys folder
 #   emptied, and a key from another install; a document without its file, and one moved
 #   from another root; a half-finished upgrade; a wrong password, a missing site, setup not
-#   finished; an edited file, and one that no longer parses; then the browser mode (local
+#   finished; an edited file, one that no longer parses, and one calling each() (scan.php); then the browser mode (local
 #   only), PHP 7.4, too old for 8.4.1, when intl is required before 7.0.0, and
 #   openemr-doctor-docker.sh; then MySQL over SSL: a database that only accepts it, its CA,
 #   a connection by IP, the wrong CA, a client certificate without its key, a CA that isn't PEM.
@@ -30,8 +30,9 @@ if [ "$(docker exec $C php -r 'echo version_compare(PHP_VERSION, "8.5.12", "<") 
     wait_ready $C $OE
 fi
 docker cp openemr-doctor.php $C:/tmp/doctor.php
+docker cp scan.php $C:/tmp/scan.php
 docker exec $C mkdir -p /tmp/facts
-for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-files.json ../site/preflight/8.4.1-hashes.json; do docker cp "$f" $C:/tmp/facts/; done
+for f in ../site/preflight/releases.json ../site/preflight/8.4.1.json ../site/preflight/8.4.1-files.json ../site/preflight/8.4.1-hashes.json ../site/preflight/php-changes.json; do docker cp "$f" $C:/tmp/facts/; done
 q() { docker exec $D mariadb -uroot -proot openemr -N -e "SET SESSION sql_mode=''; $1"; }
 x() { docker exec $C sh -c "$1"; }
 run() { docker exec -u apache $C php /tmp/doctor.php --openemr=$OE --facts=/tmp/facts "$@" || true; }
@@ -78,6 +79,23 @@ expect "^FAIL  Local changes: 1 edited file of OpenEMR's own doesn't parse with 
 expect "^NOTE  Local changes: 2 of OpenEMR's own files differ" "5b: both edited files are named"
 x "cp -p /tmp/about_page.php $OE/interface/main/about_page.php && cp -p /tmp/main_screen.php $OE/interface/main/main_screen.php"
 out=$(run); expect "^PASS  Local changes: all" "5b: restored files pass again"
+# An edit that parses but calls what PHP 8.0 removed fails only when its line runs: scan.php finds it.
+# A call behind function_exists() isn't counted, and without scan.php beside the doctor it says so.
+x "cat > $OE/interface/main/about_page.php <<'PHPX'
+<?php
+\$pfList = [1];
+while (list(, \$pfValue) = each(\$pfList)) {
+}
+if (function_exists('create_function')) {
+    \$pfMade = create_function('', '');
+}
+PHPX"; out=$(run)
+expect "^FAIL  Local changes on this PHP: 1 use in edited files of OpenEMR's own won't load or stop with an error on PHP 8.5: interface/main/about_page.php line 3 each (error when it runs)" "5c: an edit calling each() fails on PHP 8, with its line"
+refute "create_function (error" "5c: and a call behind function_exists() isn't counted"
+x "mv /tmp/scan.php /tmp/scan.php.away"; out=$(run)
+expect "^NOTE  Local changes on this PHP: scan skipped: put scan.php beside this file" "5c: without scan.php beside it, the doctor says the scan was skipped"
+x "mv /tmp/scan.php.away /tmp/scan.php && cp -p /tmp/about_page.php $OE/interface/main/about_page.php"
+out=$(run); refute "Local changes on this PHP" "5c: with nothing edited, nothing is scanned"
 
 q "UPDATE globals SET gl_value='style_gone.css' WHERE gl_name='css_header'"; out=$(run)
 expect "^FAIL  Theme: the chosen theme public/themes/style_gone.css is missing" "6: a missing theme fails"

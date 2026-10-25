@@ -97,6 +97,42 @@ def php_min(r: dict) -> str:
     return (r["php"]["requires"] or "").lstrip(">=") or "?"
 
 
+def php_changes(a: str, b: str) -> list[str]:
+    """What PHP removed and changed on the way from PHP a to PHP b (the pinned php-upgrade-catalogue's
+    facts, site/preflight/php-changes.json), as lines for the upgrade notes."""
+    path = SITE / "preflight" / "php-changes.json"
+    if not path.exists():
+        return []
+    facts = json.loads(path.read_text())
+    short = lambda v: tuple(int(x) for x in v.split(".")[:2])
+    lines = []
+    for version, entry in facts["versions"].items():
+        if not (short(a) < short(version) <= short(b)):
+            continue
+        removed = entry["removed"]
+        parts = []
+        for kind, one, many in (("functions", "function", "functions"), ("classes", "class", "classes"), ("constants", "constant", "constants"), ("ini", "ini setting", "ini settings")):
+            names = sorted(removed.get(kind, {}))
+            if names:
+                parts.append(f"{len(names)} {one if len(names) == 1 else many}" + (f" ({', '.join(f'`{n}`' for n in names[:6])}{', ...' if len(names) > 6 else ''})" if kind != "constants" else ""))
+        if entry.get("extensions_removed"):
+            parts.append("the " + ", ".join(f"`{e}`" for e in entry["extensions_removed"]) + (" extension" if len(entry["extensions_removed"]) == 1 else " extensions"))
+        syntax = [r["summary"] for r in entry.get("syntax", []) if r["kind"] == "wontload"]
+        deprecated = len(entry.get("deprecated", {}).get("functions", {}))
+        line = f"**PHP {version} removed:** " + ("; ".join(parts) if parts else "no functions, classes or constants") + "."
+        if syntax:
+            line += " No longer loads: " + " ".join(syntax)
+        if deprecated:
+            line += f" It deprecates {deprecated} more {'function, which still works' if deprecated == 1 else 'functions, which still work'} with a warning."
+        lines.append(line)
+    if lines:
+        span = f"{'.'.join(a.split('.')[:2])}:{'.'.join(b.split('.')[:2])}"
+        lines.append(f"Check this site's own code for these before moving PHP: `php scan.php --facts=php-changes.json --php={span} PATH` "
+                     f"(the pre-flight check and `openemr-upgrade.sh` do it for the files a site added and its changes). "
+                     f"From [php-upgrade-catalogue](https://github.com/anun333/php-upgrade-catalogue) {facts['version']}, which covers PHP up to {facts['covers']['to']}.")
+    return lines
+
+
 # ---------------------------------------------------------------- upgrade scripts
 
 def scripts_between(r_from: dict, r_to: dict) -> list[str]:
@@ -193,6 +229,8 @@ def upgrade_page(a: dict, b: dict) -> str:
     checks = []
     if php_min(a) != php_min(b):
         checks.append(f"**PHP must be {php_min(b)} or later** (was {php_min(a)}). Upgrade PHP first.")
+        if "?" not in (php_min(a), php_min(b)):
+            checks += php_changes(php_min(a), php_min(b))
     ea, eb = set(a["extensions"]["requires"]), set(b["extensions"]["requires"])
     if eb - ea:
         checks.append(f"**New PHP extensions required:** {', '.join(f'`{e}`' for e in sorted(eb - ea))}.")

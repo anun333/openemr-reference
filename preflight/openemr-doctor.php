@@ -26,7 +26,7 @@
 
 error_reporting(E_ALL);
 // The openemr-reference release this doctor belongs to (gen/check.py: the same as the scripts').
-define('DOCTOR_VERSION', '0.3.10');
+define('DOCTOR_VERSION', '0.4.0');
 // Facts: a folder beside this file (openemr-doctor-facts/), else the generator's own output,
 // else the published copy, which is updated from OpenEMR's release tags every day.
 $factsDefault = 'https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight';
@@ -685,6 +685,7 @@ if ($hashes !== null && isset($hashes['dirs'])) {
     $compared = 0;
     $edited = array();
     $unparsable = array();
+    $unparsablePaths = array();
     foreach ($hashes['dirs'] as $dir => $names) {
         foreach ($names as $name => $sha) {
             $path = $dir === '' ? $name : "$dir/$name";
@@ -705,6 +706,7 @@ if ($hashes !== null && isset($hashes['dirs'])) {
                     token_get_all($content, TOKEN_PARSE);
                 } catch (ParseError $e) {
                     $unparsable[] = "$path line " . $e->getLine() . ' (' . $e->getMessage() . ')';
+                    $unparsablePaths[$path] = true;
                 }
             }
             // phpcs:enable
@@ -713,6 +715,60 @@ if ($hashes !== null && isset($hashes['dirs'])) {
     if ($unparsable !== array()) {
         report('FAIL', 'Local changes', count($unparsable) . ' edited ' . (count($unparsable) === 1 ? "file of OpenEMR's own doesn't" : "files of OpenEMR's own don't") . ' parse with this PHP: ' . listSome($unparsable, 3),
             "Every page that loads one is blank or an error 500. Fix the line, or put back the file from the $label package.");
+    }
+    // What a parse can't see: a call PHP has removed parses, and fails only when its line runs.
+    // scan.php (php-upgrade-catalogue, pinned beside this file) reads the edited files that parse
+    // for everything PHP has removed or changed up to this PHP; it never runs them, and a use
+    // behind function_exists() and the like isn't counted.
+    $scanEdited = array();
+    foreach ($edited as $path) {
+        if (preg_match('/\.(php|inc|phtml)$/i', $path) && !isset($unparsablePaths[$path])) {
+            $scanEdited[] = "$root/$path";
+        }
+    }
+    $scanTool = dirname(__FILE__) . '/scan.php';
+    $scanPhp = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+    $scanFacts = $scanEdited !== array() && is_file($scanTool) ? facts($factsBase, 'php-changes') : null;
+    if ($scanEdited !== array() && !is_file($scanTool)) {
+        report('NOTE', 'Local changes on this PHP', 'scan skipped: put scan.php beside this file (it comes with this file\'s release) to check the ' . count($scanEdited) . ' edited PHP files for what PHP has removed');
+    } elseif ($scanEdited !== array() && $scanFacts === null) {
+        report('NOTE', 'Local changes on this PHP', 'the facts have no php-changes.json, so the ' . count($scanEdited) . ' edited PHP files weren\'t checked for what PHP has removed');
+    } elseif ($scanFacts !== null) {
+        require_once $scanTool;
+        $scanMissing = array();
+        $scanDefs = upgradeScanFiles(array_values(array_filter(array("$root/vendor", "$root/library", "$root/src"), 'is_dir')), $scanMissing);
+        $scanStarted = microtime(true);
+        $scanResult = upgradeScanRun($scanFacts, null, $scanPhp, $scanEdited, $scanDefs);
+        debug('Local changes on this PHP: ' . count($scanEdited) . ' edited files scanned, ' . count($scanDefs) . ' read for polyfills, '
+            . sprintf('%.1fs', microtime(true) - $scanStarted) . ', php-upgrade-catalogue ' . $scanResult['scanner'] . ', facts ' . $scanResult['facts']);
+        $scanBad = array();
+        $scanKinds = array('wontload' => "won't load", 'fatal' => 'error when it runs', 'silent' => 'works differently');
+        foreach ($scanResult['findings'] as $x) {
+            if ($x['guard'] === null && isset($scanKinds[$x['kind']])) {
+                $scanBad[] = substr($x['file'], strlen($root) + 1) . ' line ' . $x['line'] . ' ' . $x['name'] . ' (' . $scanKinds[$x['kind']] . ')';
+            }
+        }
+        $scanStops = $scanResult['counts']['wontload'] + $scanResult['counts']['fatal'];
+        if ($scanStops > 0) {
+            report('FAIL', 'Local changes on this PHP', ($scanStops === 1 ? '1 use' : "$scanStops uses") . ' in edited files of OpenEMR\'s own won\'t load or stop with an error on PHP ' . $scanPhp . ': ' . listSome($scanBad, 4),
+                "A page that loads one is blank, or fails when it reaches that line. Fix it, or put back the file from the $label package.");
+        } elseif ($scanBad !== array()) {
+            report('WARN', 'Local changes on this PHP', (count($scanBad) === 1 ? '1 use' : count($scanBad) . ' uses') . ' in edited files work differently on PHP ' . $scanPhp . ': ' . listSome($scanBad, 4));
+        } else {
+            report('PASS', 'Local changes on this PHP', (count($scanEdited) === 1 ? 'the edited PHP file uses' : 'the ' . count($scanEdited) . ' edited PHP files use') . ' nothing PHP ' . $scanPhp . ' has removed');
+        }
+        $scanDeprecated = (array)$scanResult['deprecated_by_name'];
+        if ($scanDeprecated !== array()) {
+            $scanTop = array();
+            foreach (array_slice($scanDeprecated, 0, 6, true) as $scanName => $scanN) {
+                $scanTop[] = "$scanName ($scanN)";
+            }
+            $scanD = $scanResult['counts']['deprecated'];
+            report('NOTE', 'Local changes on this PHP', ($scanD === 1 ? '1 use' : "$scanD uses") . ' deprecated on PHP ' . $scanPhp . ' still ' . ($scanD === 1 ? 'works' : 'work') . ', with a warning: ' . implode(', ', $scanTop) . (count($scanDeprecated) > 6 ? ', ...' : ''));
+        }
+        if ($scanResult['beyond_facts']) {
+            report('NOTE', 'Local changes on this PHP', 'the PHP changes known cover PHP up to ' . $scanResult['facts_cover'] . ', so what PHP ' . $scanPhp . ' itself changes isn\'t checked yet');
+        }
     }
     // version.php is one of them, and the doctor stops earlier without it, so $compared > 0.
     if ($edited === array()) {

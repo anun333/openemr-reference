@@ -354,6 +354,98 @@ if ($base === $current) {
     }
 }
 
+// ------------------------------------------------------------ the site's own code on the new PHP
+// Files this site added, and the modules the target doesn't ship, carry over as they are, so they
+// meet the new PHP unchanged. scan.php (php-upgrade-catalogue, pinned beside this file) reads them
+// for what PHP removes or changes between this PHP and the one the target needs; it never runs
+// them, and a use behind function_exists() and the like isn't counted. Changed copies of
+// OpenEMR's own files aren't scanned here: the new release's copies replace them, and
+// openemr-upgrade.sh checks each change on the new copy.
+
+$scanFix = '';
+$scanNow = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+$scanNew = implode('.', array_slice(versionKey($to['php']), 0, 2));
+$scanTool = __DIR__ . '/scan.php';
+$scanFacts = cmpVersion($scanNow, $scanNew) < 0 && is_file($scanTool) ? facts($factsBase, 'php-changes') : null;
+if (cmpVersion($scanNow, $scanNew) >= 0) {
+    echo "NOTE  Site code on the new PHP: $target runs on this PHP ($scanNow), so the code this site added meets no PHP change\n";
+} elseif (!is_file($scanTool)) {
+    echo "NOTE  Site code on the new PHP: scan skipped: put scan.php beside this file (it comes with this file's release) to check the code this site added for what PHP $scanNew removes\n";
+} elseif ($scanFacts === null) {
+    echo "NOTE  Site code on the new PHP: the facts have no php-changes.json, so the code this site added wasn't checked\n";
+} else {
+    require_once $scanTool;
+    $scanList = $base === $current ? facts($factsBase, $current . ($patch > 0 ? "-p$patch" : '') . '-files') : null;
+    $scanFiles = [];
+    $scanAdded = 0;
+    if ($scanList !== null && isset($scanList['dirs'])) {
+        $scanShipped = [];
+        foreach ($scanList['dirs'] as $scanDir => $scanNames) {
+            foreach ($scanNames as $scanName) {
+                $scanShipped[$scanDir === '' ? $scanName : "$scanDir/$scanName"] = true;
+            }
+        }
+        // As openemr-upgrade.sh tells added files apart: not under what installing and running puts there.
+        $scanSkip = ['sites', 'interface/modules/custom_modules', 'interface/modules/zend_modules/module', 'vendor', 'node_modules', 'public/assets', '.git'];
+        $scanUnder = function (string $rel) use ($scanSkip): bool {
+            foreach ($scanSkip as $p) {
+                if ($rel === $p || strpos($rel, "$p/") === 0 || basename($rel) === 'node_modules') {
+                    return true;
+                }
+            }
+            return false;
+        };
+        $scanWalk = new RecursiveIteratorIterator(new RecursiveCallbackFilterIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+            function (SplFileInfo $f) use ($root, $scanUnder): bool { return !$f->isDir() || !$scanUnder(substr($f->getPathname(), strlen($root) + 1)); }));
+        foreach ($scanWalk as $f) {
+            $rel = substr($f->getPathname(), strlen($root) + 1);
+            if ($f->isFile() && !is_link($f->getPathname()) && !isset($scanShipped[$rel]) && preg_match('/\.(php|inc|phtml)$/i', $rel)) {
+                $scanFiles[] = $f->getPathname();
+                $scanAdded++;
+            }
+        }
+    } else {
+        echo "NOTE  Site code on the new PHP: the facts have no file list for $current, so files this site added can't be told apart; only its modules are checked\n";
+    }
+    $scanMissing = [];
+    $scanFiles = array_merge($scanFiles, upgradeScanFiles(array_map(function ($d) use ($moduleDir) { return "$moduleDir/$d"; }, $thirdParty), $scanMissing));
+    // Polyfills anywhere in the install count, though only the files above are reported on.
+    $scanDefs = upgradeScanFiles(array_values(array_filter(["$root/vendor", "$root/library", "$root/src"], 'is_dir')), $scanMissing);
+    $scanResult = upgradeScanRun($scanFacts, $scanNow, $scanNew, $scanFiles, $scanDefs);
+    $scanWhat = ($scanAdded === 1 ? 'the 1 file' : "the $scanAdded files") . ' this site added' . ($thirdParty !== [] ? ' and its ' . count($thirdParty) . (count($thirdParty) === 1 ? ' module' : ' modules') : '');
+    $scanBad = [];
+    foreach ($scanResult['findings'] as $x) {
+        if ($x['guard'] === null && in_array($x['kind'], ['wontload', 'fatal', 'silent'], true)) {
+            $scanBad[] = substr($x['file'], strlen($root) + 1) . ' line ' . $x['line'] . ' ' . $x['name'] . ' ('
+                . ['wontload' => "won't load", 'fatal' => 'error when it runs', 'silent' => 'works differently'][$x['kind']] . ')';
+        }
+    }
+    $scanStops = $scanResult['counts']['wontload'] + $scanResult['counts']['fatal'];
+    if ($scanStops > 0) {
+        report('FAIL', 'Site code on the new PHP', ($scanStops === 1 ? '1 use' : "$scanStops uses") . " in $scanWhat won't load or stop with an error on PHP $scanNew: "
+            . implode(', ', array_slice($scanBad, 0, 8)) . (count($scanBad) > 8 ? ', ...' : ''),
+            "Fix them before moving PHP, or every page that loads one breaks. Uses behind function_exists() and the like aren't counted.");
+        $scanFix = 'Fix the ' . ($scanStops === 1 ? 'use' : "$scanStops uses") . " of what PHP $scanNew removes in the code this site added (listed above), before moving PHP.";
+    } elseif ($scanBad !== []) {
+        report('WARN', 'Site code on the new PHP', (count($scanBad) === 1 ? '1 use' : count($scanBad) . ' uses') . " in $scanWhat work differently on PHP $scanNew: " . implode(', ', array_slice($scanBad, 0, 8)));
+    } else {
+        report('PASS', 'Site code on the new PHP', "$scanWhat use nothing PHP $scanNow to $scanNew removes (" . count($scanFiles) . ' PHP files read)');
+    }
+    $scanDeprecated = (array)$scanResult['deprecated_by_name'];
+    if ($scanDeprecated !== []) {
+        $scanTop = [];
+        foreach (array_slice($scanDeprecated, 0, 6, true) as $scanName => $scanN) {
+            $scanTop[] = "$scanName ($scanN)";
+        }
+        $scanD = $scanResult['counts']['deprecated'];
+        echo 'NOTE  Site code on the new PHP: ' . ($scanD === 1 ? '1 use' : "$scanD uses") . " deprecated between PHP $scanNow and $scanNew still " . ($scanD === 1 ? 'works' : 'work') . ', with a warning: '
+            . implode(', ', $scanTop) . (count($scanDeprecated) > 6 ? ', ...' : '') . "\n";
+    }
+    if ($scanResult['beyond_facts']) {
+        echo 'NOTE  Site code on the new PHP: the PHP changes known cover PHP up to ' . $scanResult['facts_cover'] . ", so what PHP $scanNew itself changes isn't checked yet\n";
+    }
+}
+
 // ------------------------------------------------------------ room for the whole process
 // Each step needs room on a particular disk, and an upgrade that runs out part-way is the worst
 // outcome. The backup needs the database (a dump holds about its data, not its indexes) and the
@@ -500,6 +592,9 @@ if ($needPhp || $missing !== []) {
 }
 if ($connected && $tested !== [] && !in_array($short, $tested, true) && cmpVersion($short, $tested[0]) < 0) {
     $plan[] = "Upgrade the database server from $name $short to one CI tested $target with (" . implode(', ', $tested) . ').';
+}
+if ($scanFix !== '') {
+    $plan[] = $scanFix;
 }
 $plan[] = "Unpack OpenEMR $target beside the current folder, copy sites/ into it, and run sql_upgrade.php from $base"
     . ($scripts ? ' (it runs ' . count($scripts) . ' upgrade scripts)' : '') . '. Keep the old folder until the new one works.';

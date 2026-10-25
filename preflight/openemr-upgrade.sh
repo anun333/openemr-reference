@@ -10,7 +10,9 @@
 #   2. gets the target release (downloaded from GitHub and its sha256 checked, or --tarball);
 #   3. unpacks it beside the old folder;
 #   4. finds OpenEMR's own files changed or added here, saves them, and tries each change on the
-#      target; stops unless --customizations=apply (carry what applies) or =leave. Until here
+#      target; stops unless --customizations=apply (carry what applies) or =leave. It reads what will
+#      go in (the lines each change writes, added files, added modules) for what this PHP removed,
+#      and stops on any that won't load or stops with an error, unless --force. Until here
 #      nothing on the server has changed, and a stop removes the unpacked folder;
 #   5. stops the web server (--service), or asks you to keep users out, and backs up each site's
 #      database (mysqldump) and the whole sites/ folder: documents, keys;
@@ -27,13 +29,14 @@
 # folders switched) and prints a "check:" line, or stops. Everything it prints also goes to a log in the
 # backup folder. If it stops after the backup, it says how far it got and the exact --rollback command.
 # Only one run at a time per install. --debug also traces every command (passwords are left out).
-# The pre-flight check and the doctor come from beside this script, else from this script's own
-# release, checked against that release's SHA256SUMS.
+# The pre-flight check, the doctor and scan.php (php-upgrade-catalogue's, which reads what goes in for
+# what PHP removed) come from beside this script, else from this script's own release, checked
+# against that release's SHA256SUMS.
 #
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.3.10
+SCRIPT_VERSION=0.4.0
 # Where the helpers come from when they aren't beside this script: this script's own release.
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 
@@ -308,6 +311,7 @@ customizations_php() { cat <<'PHP'
 // Which of OpenEMR's own files this install changed or added, and what each change would do on the
 // target, unpacked beside it. Reads only; writes into the backup folder's customizations/.
 [, $oe, $facts, $from, $patch, $new, $out] = $argv;
+$scanTool = $argv[7] ?? '';   // scan.php, or '' to skip reading what goes in for what PHP removed
 $patch = (int)$patch;
 $fromTag = 'v' . str_replace('.', '_', $from) . ($patch > 0 ? "_$patch" : '');
 $get = function (string $name) use ($facts) {
@@ -421,10 +425,86 @@ foreach ($changed as $rel) {
         copy("$new/$rel", "$work/t/$rel");
         exec('patch -d ' . escapeshellarg("$work/t") . ' -p1 -s -i ' . escapeshellarg("$out/patches/$rel.patch") . ' >/dev/null 2>&1', $o, $rc);
         $result[$rel] = $rc === 0 ? ['status' => 'applies', 'how' => 'patch'] : ['status' => 'conflicts'];
+        if ($rc === 0) {
+            // The new release's copy with the change in it, and which of its lines the change wrote.
+            @mkdir(dirname("$out/patched/$rel"), 0700, true);
+            copy("$work/t/$rel", "$out/patched/$rel");
+            file_put_contents("$out/patches/$rel.on-new.patch", (string)shell_exec('diff -u ' . escapeshellarg("$new/$rel") . ' ' . escapeshellarg("$work/t/$rel")));
+        }
     }
     exec('rm -rf ' . escapeshellarg($work));
 }
-file_put_contents("$out/report.json", json_encode(['facts' => true, 'from' => $fromTag, 'changed' => $result, 'added' => $added, 'built' => $built], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+// The modules this install added: folders not in the current release's file list, and not ones the
+// new release has its own of (step 6 carries over the same ones).
+$modules = [];
+foreach (['interface/modules/custom_modules', 'interface/modules/zend_modules/module'] as $kind) {
+    foreach (glob("$oe/$kind/*", GLOB_ONLYDIR) ?: [] as $d) {
+        $rel = "$kind/" . basename($d);
+        if (!isset($files['dirs'][$rel]) && !file_exists("$new/$rel")) {
+            $modules[] = $rel;
+        }
+    }
+}
+// What PHP removes or changes, in what goes into the new release from here: for each change that
+// applies, only the lines it writes, on the copy it goes into; added files and modules whole. For
+// the PHP running this, which the new release runs on (the pre-flight check saw it is new enough).
+// scan.php is php-upgrade-catalogue's, pinned beside this script; it reads files, never runs them.
+$scan = null;
+$phpChanges = $scanTool !== '' ? $get('php-changes.json') : null;
+if ($phpChanges !== null) {
+    require_once $scanTool;
+    $touched = function (string $diff): array {
+        $lines = [];
+        $n = 0;
+        foreach (explode("\n", $diff) as $l) {
+            if (preg_match('/^@@ -\d+(?:,\d+)? \+(\d+)/', $l, $m)) {
+                $n = (int)$m[1];
+            } elseif ($n > 0 && $l !== '' && $l[0] === '+' && strpos($l, '+++') !== 0) {
+                $lines[$n++] = true;
+            } elseif ($n > 0 && $l !== '' && $l[0] === ' ') {
+                $n++;
+            }
+        }
+        return $lines;
+    };
+    $scanFiles = [];
+    $within = [];   // file scanned => [the rel path it is, the lines that count (null: all), group]
+    foreach ($result as $rel => $r) {
+        if ($r['status'] === 'applies' && preg_match('/\.(php|inc|phtml)$/i', $rel)) {
+            [$copy, $diff] = $r['how'] === 'copy' ? ["$out/changed/$rel", "$out/patches/$rel.patch"] : ["$out/patched/$rel", "$out/patches/$rel.on-new.patch"];
+            $scanFiles[] = $copy;
+            // Without diff there is no patch to read the lines from, so the whole copy counts.
+            $text = (string)@file_get_contents($diff);
+            $within[$copy] = [$rel, $text !== '' ? $touched($text) : null, 'changes'];
+        }
+    }
+    foreach ($added as $rel) {
+        if (preg_match('/\.(php|inc|phtml)$/i', $rel)) {
+            $scanFiles[] = "$oe/$rel";
+            $within["$oe/$rel"] = [$rel, null, 'added'];
+        }
+    }
+    $none = [];
+    foreach (upgradeScanFiles(array_map(function ($m) use ($oe) { return "$oe/$m"; }, $modules), $none) as $f) {
+        $scanFiles[] = $f;
+        $within[$f] = [substr($f, strlen($oe) + 1), null, 'modules'];
+    }
+    $php = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+    $run = upgradeScanRun($phpChanges, null, $php, $scanFiles, upgradeScanFiles(array_values(array_filter(["$new/vendor", "$new/library", "$new/src"], 'is_dir')), $none));
+    $scan = ['php' => $php, 'facts_cover' => $run['facts_cover'], 'beyond_facts' => $run['beyond_facts'], 'stops' => [], 'deprecated' => [], 'files' => count($scanFiles)];
+    foreach ($run['findings'] as $x) {
+        [$rel, $lines, $group] = $within[$x['file']];
+        if ($x['guard'] !== null || ($lines !== null && !isset($lines[$x['line']]))) {
+            continue;
+        }
+        if ($x['kind'] === 'deprecated') {
+            $scan['deprecated'][$group][$x['name']] = ($scan['deprecated'][$group][$x['name']] ?? 0) + 1;
+        } elseif ($x['kind'] === 'wontload' || $x['kind'] === 'fatal') {
+            $scan['stops'][$group][] = "$rel line {$x['line']} {$x['name']} (" . ($x['kind'] === 'wontload' ? "won't load" : 'error when it runs') . ')';
+        }
+    }
+}
+file_put_contents("$out/report.json", json_encode(['facts' => true, 'from' => $fromTag, 'changed' => $result, 'added' => $added, 'built' => $built, 'modules' => $modules, 'scan' => $scan], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 $to = basename($new);
 $why = [
     'applies' => 'applies to the new release',
@@ -444,11 +524,45 @@ foreach (array_slice($added, 0, 40) as $rel) {
 if (count($added) > 40) {
     printf("    ... and %d more added (all in %s/added)\n", count($added) - 40, $out);
 }
+foreach ($modules as $rel) {
+    printf("    module   %s (added to this install; step 6 carries it over)\n", $rel);
+}
+if ($scan === null) {
+    printf("  %s\n", $scanTool === '' ? "scan.php isn't here, so what goes in wasn't read for what PHP removed" : "the facts have no php-changes.json, so what goes in wasn't read for what PHP removed");
+} else {
+    $names = ['changes' => 'your changes', 'added' => 'added files', 'modules' => 'modules'];
+    printf("  On PHP %s, what goes in from here (%d PHP files: the lines your changes write, added files and modules whole) was read for what PHP removed:\n", $scan['php'], $scan['files']);
+    foreach ($names as $group => $label) {
+        foreach (array_slice($scan['stops'][$group] ?? [], 0, 20) as $line) {
+            printf("    STOP in %-13s %s\n", $label, $line);
+        }
+        if (count($scan['stops'][$group] ?? []) > 20) {
+            printf("    ... and %d more in %s\n", count($scan['stops'][$group]) - 20, $label);
+        }
+        if (!empty($scan['deprecated'][$group])) {
+            arsort($scan['deprecated'][$group]);
+            $top = [];
+            foreach (array_slice($scan['deprecated'][$group], 0, 6, true) as $name => $n) {
+                $top[] = "$name ($n)";
+            }
+            printf("    deprecated in %s, still works with a warning: %s\n", $label, implode(', ', $top));
+        }
+    }
+    if (empty($scan['stops'])) {
+        printf("    nothing that won't load or stops with an error\n");
+    }
+    if ($scan['beyond_facts']) {
+        printf("    the PHP changes known cover PHP up to %s, so what PHP %s itself changes isn't read yet\n", $scan['facts_cover'], $scan['php']);
+    }
+}
 PHP
 }
 
 step "1. Pre-flight check"
+# scan.php reads code for what PHP removed; the pre-flight check (here), step 4 and the doctor use it.
+fetch_tool scan.php; scan="$TOOL"
 fetch_tool openemr-preflight.php; pf="$TOOL"
+[[ -f "$(dirname "$pf")/scan.php" ]] || { cp "$scan" "$(dirname "$pf")/scan.php"; chmod 644 "$(dirname "$pf")/scan.php"; }
 # As root: it only reads, and it must see the backup folder, which may be one the web server's user can't.
 set +e; php "$pf" --openemr="$OE" --target="$TO" --backup-dir="${BACKUP:-$PARENT}"; rc=$?; set -e
 (( rc == 0 )) || (( FORCE )) || die "the pre-flight check found something to fix first (above); fix it, or pass --force"
@@ -486,9 +600,17 @@ step "4. Local changes to OpenEMR's own files"
 CUSTOM_DIR="$BACKUP_DIR/customizations"
 mkdir -p "$CUSTOM_DIR"; chmod 700 "$BACKUP_DIR" "$CUSTOM_DIR"
 helper="$(mktemp)"; customizations_php > "$helper"
-php "$helper" "$OE" "$facts" "$FROM" "$patch" "$NEW" "$CUSTOM_DIR"
+php "$helper" "$OE" "$facts" "$FROM" "$patch" "$NEW" "$CUSTOM_DIR" "$scan"
 rm -f "$helper"
 found="$(php -r '$r = json_decode((string)@file_get_contents($argv[1]), true); echo count($r["changed"] ?? []) + count($r["added"] ?? []);' "$CUSTOM_DIR/report.json")"
+# What goes in and won't load or stops with an error on this PHP: with apply, the changes, the added
+# files and the modules; with leave, the modules only (step 6 carries them over either way).
+stops="$(php -r '$r = json_decode((string)@file_get_contents($argv[1]), true); $s = $r["scan"]["stops"] ?? [];
+    echo count($s["modules"] ?? []) + ($argv[2] === "apply" ? count($s["changes"] ?? []) + count($s["added"] ?? []) : 0);' "$CUSTOM_DIR/report.json" "$CUSTOM")"
+if (( stops > 0 && ! FORCE )); then
+    die "code that goes into $TO from here won't load or stops with an error on PHP $(php -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;') ($stops of the STOP lines above). Nothing on the server has changed. Fix it (the saved copies are in $CUSTOM_DIR), or rerun with --force to upgrade anyway."
+fi
+(( stops == 0 )) || say "  --force: going on, though code that goes in won't load or stops with an error ($stops of the STOP lines above)"
 if (( found > 0 )); then
     say "  saved: the changed and added files, and each change as a patch, in $CUSTOM_DIR"
     case "$CUSTOM" in
@@ -645,7 +767,7 @@ done
 step "8. Checking the new folder with the install doctor"
 fetch_tool openemr-doctor.php; dr="$TOOL"
 # As the web server's user, since it checks what that user can read and write; from a folder it can read.
-drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; chmod 644 "$drdir/openemr-doctor.php"
+drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; cp "$scan" "$drdir/scan.php"; chmod 644 "$drdir/openemr-doctor.php" "$drdir/scan.php"
 doctor_failed=0; php_insecure=0
 for site in $SITES; do
     debug_flag=(); (( ! DEBUG )) || debug_flag=(--debug)

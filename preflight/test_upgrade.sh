@@ -23,7 +23,7 @@ fi
 # and bash and patch, which servers usually have and this Alpine image doesn't.
 docker exec $C apk add --no-cache bash patch php83-bcmath php83-pecl-imagick >/dev/null
 docker exec $C mkdir -p /root/tools /root/backups
-docker cp openemr-upgrade.sh $C:/root/tools/ && docker cp openemr-preflight.php $C:/root/tools/ && docker cp openemr-doctor.php $C:/root/tools/
+docker cp openemr-upgrade.sh $C:/root/tools/ && docker cp openemr-preflight.php $C:/root/tools/ && docker cp openemr-doctor.php $C:/root/tools/ && docker cp scan.php $C:/root/tools/
 # This checkout's facts beside the tools (/root/site/preflight), as when run from a clone, so the test
 # uses the facts it was built with, not the published ones.
 docker exec $C mkdir -p /root/site && docker cp ../site/preflight $C:/root/site/preflight
@@ -38,7 +38,7 @@ echo "before: OpenEMR $v0, $p0 patients, $t0 tables, login page HTTP $l0"
 # Local changes to OpenEMR's own files, as a clinic makes them (synthetic):
 #   a template edit in a file 8.4.1 didn't change (applies cleanly),
 #   an edit to a line 8.4.1 rewrote (conflicts; the @link line went from http to https),
-#   a report file of its own (added).
+#   a report file of its own (added); and, apart, an added file calling each(), which PHP 8.0 removed.
 TWIG=interface/forms/newpatient/templates/newpatient/partials/common/_form-heading.html.twig
 REPORT=interface/reports/appointments_report.php
 ADDED=interface/reports/synthetic_custom_report.php
@@ -57,9 +57,23 @@ check "$(report | python3 -c 'import json, sys; print("found" if sys.argv[1] in 
 check "$(grep -c 'before the backup was finished: nothing on the server was changed' "$LOG/upgrade-stop.log")" 1 "local changes: the stop says nothing on the server changed"
 docker exec $C sh -c 'rm -rf /root/backups/*'
 
+# What goes in is read for what this PHP removed (scan.php): an added file calling each(), which PHP
+# 8.0 removed, stops step 4 before the backup; with --force it goes on (stopped before step 5 here).
+EACH=interface/reports/synthetic_each_report.php
+docker exec $C sh -c "printf '%s\n' '<?php' '\$synthetic = [1];' 'while (list(, \$value) = each(\$synthetic)) {' '}' > $OE/$EACH && chown apache $OE/$EACH"
+set +e; docker exec -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=5 $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/scan-stop.log" 2>&1; rc=$?; set -e
+grep -E "STOP|deprecated in|On PHP" "$LOG/scan-stop.log" | sed 's/^/    /' | cut -c1-160
+check "$(grep -cE "STOP in added files +$EACH line 3 each \(error when it runs\)" "$LOG/scan-stop.log")" 1 "PHP changes: an added file calling each() is named, with its line"
+check "$(grep -c "won't load or stops with an error on PHP 8.3 (1 of the STOP lines above). Nothing on the server has changed." "$LOG/scan-stop.log")" 1 "PHP changes: step 4 stops before anything changes"
+check "$(grep -c '^== 5' "$LOG/scan-stop.log" || true)" 0 "PHP changes: and goes no further"
+docker exec $C sh -c 'rm -rf /root/backups/*'
+set +e; docker exec -e OPENEMR_UPGRADE_TEST_FAIL_BEFORE_STEP=5 $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply --force > "$LOG/scan-force.log" 2>&1; rc=$?; set -e
+check "$(grep -c -- '--force: going on, though code that goes in' "$LOG/scan-force.log")" 1 "PHP changes: with --force it goes on, and says so"
+docker exec $C sh -c "rm -rf /root/backups/* $OE/$EACH"
+
 # The helpers, when they aren't beside the script, come from the script's own release and must match
 # its SHA256SUMS: a release folder of our own (file://), first with a changed pre-flight check.
-docker exec $C sh -c "mkdir -p /root/alone /root/rel && cp /root/tools/openemr-upgrade.sh /root/alone/ && cp /root/tools/openemr-preflight.php /root/tools/openemr-doctor.php /root/rel/ && cd /root/rel && echo '// changed' >> openemr-preflight.php && sha256sum openemr-doctor.php > SHA256SUMS && cp /root/tools/openemr-preflight.php /tmp/pf && sha256sum /tmp/pf | sed 's| /tmp/pf| openemr-preflight.php|' >> SHA256SUMS"
+docker exec $C sh -c "mkdir -p /root/alone /root/rel && cp /root/tools/openemr-upgrade.sh /root/alone/ && cp /root/tools/openemr-preflight.php /root/tools/openemr-doctor.php /root/tools/scan.php /root/rel/ && cd /root/rel && echo '// changed' >> openemr-preflight.php && sha256sum openemr-doctor.php scan.php > SHA256SUMS && cp /root/tools/openemr-preflight.php /tmp/pf && sha256sum /tmp/pf | sed 's| /tmp/pf| openemr-preflight.php|' >> SHA256SUMS"
 alone() { set +e; docker exec -e OPENEMR_REFERENCE_BASE=file:///root/rel "$@" $C bash /root/alone/openemr-upgrade.sh --openemr=$OE --to=$TO --yes --backup-dir=/root/backups --customizations=apply > "$LOG/alone.log" 2>&1; rc=$?; set -e; }
 alone
 check "$(grep -c "openemr-preflight.php from file:///root/rel doesn't match that release's SHA256SUMS" "$LOG/alone.log")" 1 "downloads: a pre-flight check that doesn't match SHA256SUMS is refused"

@@ -106,6 +106,31 @@ def tools() -> None:
           f"the scripts name one release to fetch their helpers from ({', '.join(f'{k} {v}' for k, v in found.items())})")
 
 
+def catalogue() -> None:
+    """The php-upgrade-catalogue files beside the tools are the pinned release's, byte for byte, and
+    the facts are the shape scan.php reads: the scanner and its facts can't drift apart."""
+    import hashlib
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    pin = json.loads((root / "gen" / "catalogue.json").read_text())
+    for name, f in pin["files"].items():
+        path = root / f["to"]
+        got = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+        check(got == f["sha256"], f"{f['to']} is php-upgrade-catalogue {pin['version']}'s {name} (sha256 {(got or 'missing')[:12]}, pinned {f['sha256'][:12]})")
+    facts = json.loads((root / "site" / "preflight" / "php-changes.json").read_text())
+    check(facts.get("schema") == "php-upgrade-catalogue php-changes 1" and facts.get("version") == pin["version"],
+          f"php-changes.json says schema {facts.get('schema')!r}, version {facts.get('version')!r}")
+    versions = facts.get("versions", {})
+    # Floors any PHP since 7.4 must meet: if one of these goes missing, the facts are broken, not PHP.
+    removed80 = versions.get("8.0", {}).get("removed", {}).get("functions", {})
+    check(all(fn in removed80 for fn in ("each", "create_function", "money_format", "get_magic_quotes_gpc")),
+          "PHP 8.0's removals include each, create_function, money_format and get_magic_quotes_gpc")
+    check(set(versions.get("8.4", {}).get("extensions_removed", [])) >= {"imap", "pspell"}, "PHP 8.4 removed the imap and pspell extensions")
+    scanner = (root / "preflight" / "scan.php").read_text()
+    check(f"const VERSION = '{pin['version']}';" in scanner and "function upgradeScanRun(" in scanner,
+          f"scan.php is the scanner, version {pin['version']}, with upgradeScanRun()")
+
+
 def runtime(tag: str, app: str, db: str) -> None:
     php = r"""$ignoreAuth = true; $_GET['site'] = 'default'; $sessionAllowWrite = true;
 require '/var/www/localhost/htdocs/openemr/interface/globals.php';
@@ -140,6 +165,7 @@ def main() -> int:
                   key=lambda t: tuple(int(x) for x in t[1:].split("_")))
     floors(tags)
     tools()
+    catalogue()
     known_facts(tags)
     if "--runtime" in sys.argv:
         i = sys.argv.index("--runtime")
