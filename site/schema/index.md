@@ -1,6 +1,6 @@
-# Database schema, OpenEMR 8.4.1
+# Database schema, OpenEMR 8.5.0
 
-283 tables, as a fresh install creates them (`sql/database.sql` loaded into MariaDB and read back). Modules add their own tables when installed; those aren't here.
+286 tables, as a fresh install creates them (`sql/database.sql` loaded into MariaDB and read back). Modules add their own tables when installed; those aren't here.
 
 | Table | Columns | Since | Comment |
 |---|---|---|---|
@@ -46,6 +46,7 @@
 | [`contact_address`](contact_address.md) | 16 | 7.0.0 or earlier |  |
 | [`contact_relation`](contact_relation.md) | 19 | 7.0.4 |  |
 | [`contact_telecom`](contact_telecom.md) | 16 | 7.0.4 |  |
+| [`content_assignments`](content_assignments.md) | 17 | 8.5.0 |  |
 | [`customlists`](customlists.md) | 10 | 7.0.0 or earlier |  |
 | [`dated_reminders`](dated_reminders.md) | 10 | 7.0.0 or earlier |  |
 | [`dated_reminders_link`](dated_reminders_link.md) | 3 | 7.0.0 or earlier |  |
@@ -59,7 +60,7 @@
 | [`drug_inventory`](drug_inventory.md) | 13 | 7.0.0 or earlier |  |
 | [`drug_sales`](drug_sales.md) | 25 | 7.0.0 or earlier |  |
 | [`drug_templates`](drug_templates.md) | 8 | 7.0.0 or earlier |  |
-| [`drugs`](drugs.md) | 24 | 7.0.0 or earlier |  |
+| [`drugs`](drugs.md) | 27 | 7.0.0 or earlier |  |
 | [`dsi_source_attributes`](dsi_source_attributes.md) | 10 | 7.0.3 | Holds information about decision support intervention system source attributes |
 | [`edi_sequences`](edi_sequences.md) | 1 | 7.0.2 |  |
 | [`eligibility_verification`](eligibility_verification.md) | 8 | 7.0.0 or earlier |  |
@@ -164,7 +165,7 @@
 | [`insurance_data`](insurance_data.md) | 34 | 7.0.0 or earlier |  |
 | [`insurance_numbers`](insurance_numbers.md) | 8 | 7.0.0 or earlier |  |
 | [`insurance_type_codes`](insurance_type_codes.md) | 3 | 7.0.0 or earlier |  |
-| [`ip_tracking`](ip_tracking.md) | 8 | 7.0.2 |  |
+| [`ip_tracking`](ip_tracking.md) | 10 | 7.0.2 |  |
 | [`issue_encounter`](issue_encounter.md) | 10 | 7.0.0 or earlier |  |
 | [`issue_types`](issue_types.md) | 10 | 7.0.0 or earlier |  |
 | [`jwt_grant_history`](jwt_grant_history.md) | 5 | 7.0.0 or earlier | Holds JWT authorization grant ids to prevent replay attacks |
@@ -183,7 +184,7 @@
 | [`lists_touch`](lists_touch.md) | 3 | 7.0.0 or earlier |  |
 | [`log`](log.md) | 15 | 7.0.0 or earlier |  |
 | [`log_comment_encrypt`](log_comment_encrypt.md) | 6 | 7.0.0 or earlier |  |
-| [`login_mfa_registrations`](login_mfa_registrations.md) | 6 | 7.0.0 or earlier |  |
+| [`login_mfa_registrations`](login_mfa_registrations.md) | 7 | 7.0.0 or earlier |  |
 | [`medex_icons`](medex_icons.md) | 6 | 7.0.0 or earlier |  |
 | [`medex_outgoing`](medex_outgoing.md) | 9 | 7.0.0 or earlier |  |
 | [`medex_prefs`](medex_prefs.md) | 16 | 7.0.0 or earlier |  |
@@ -200,6 +201,7 @@
 | [`notes`](notes.md) | 6 | 7.0.0 or earlier |  |
 | [`notification_log`](notification_log.md) | 15 | 7.0.0 or earlier |  |
 | [`notification_settings`](notification_settings.md) | 7 | 7.0.0 or earlier |  |
+| [`oauth_auth_code_revocations`](oauth_auth_code_revocations.md) | 3 | 8.5.0 |  |
 | [`oauth_clients`](oauth_clients.md) | 25 | 7.0.0 or earlier |  |
 | [`oauth_trusted_user`](oauth_trusted_user.md) | 9 | 7.0.0 or earlier |  |
 | [`onetime_auth`](onetime_auth.md) | 15 | 7.0.1 |  |
@@ -214,7 +216,7 @@
 | [`openemr_modules`](openemr_modules.md) | 11 | 7.0.0 or earlier |  |
 | [`openemr_postcalendar_categories`](openemr_postcalendar_categories.md) | 20 | 7.0.0 or earlier |  |
 | [`openemr_postcalendar_events`](openemr_postcalendar_events.md) | 39 | 7.0.0 or earlier |  |
-| [`patient_access_onsite`](patient_access_onsite.md) | 8 | 7.0.0 or earlier |  |
+| [`patient_access_onsite`](patient_access_onsite.md) | 10 | 7.0.0 or earlier |  |
 | [`patient_birthday_alert`](patient_birthday_alert.md) | 3 | 7.0.0 or earlier |  |
 | [`patient_care_experience_preferences`](patient_care_experience_preferences.md) | 14 | 7.0.4 |  |
 | [`patient_data`](patient_data.md) | 132 | 7.0.0 or earlier |  |
@@ -267,6 +269,7 @@
 | [`standardized_tables_track`](standardized_tables_track.md) | 6 | 7.0.0 or earlier |  |
 | [`supported_external_dataloads`](supported_external_dataloads.md) | 6 | 7.0.0 or earlier |  |
 | [`syndromic_surveillance`](syndromic_surveillance.md) | 4 | 7.0.0 or earlier |  |
+| [`task`](task.md) | 22 | 8.5.0 |  |
 | [`template_users`](template_users.md) | 5 | 7.0.0 or earlier |  |
 | [`therapy_groups`](therapy_groups.md) | 9 | 7.0.0 or earlier |  |
 | [`therapy_groups_counselors`](therapy_groups_counselors.md) | 2 | 7.0.0 or earlier |  |
@@ -277,7 +280,7 @@
 | [`user_settings`](user_settings.md) | 3 | 7.0.0 or earlier |  |
 | [`users`](users.md) | 66 | 7.0.0 or earlier |  |
 | [`users_facility`](users_facility.md) | 4 | 7.0.0 or earlier | joins users or patient_data to facility table |
-| [`users_secure`](users_secure.md) | 15 | 7.0.0 or earlier |  |
+| [`users_secure`](users_secure.md) | 17 | 7.0.0 or earlier |  |
 | [`uuid_mapping`](uuid_mapping.md) | 7 | 7.0.0 or earlier |  |
 | [`uuid_registry`](uuid_registry.md) | 8 | 7.0.0 or earlier |  |
 | [`valueset`](valueset.md) | 7 | 7.0.0 or earlier |  |
@@ -295,4 +298,4 @@
 
 ---
 
-*Generated by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*
+*Generated by [openemr-reference](../../README.md) from OpenEMR `v8_5_0` (c1b2b8bcbe). Every statement on this page was read from the source at those tags; nothing is written by hand.*

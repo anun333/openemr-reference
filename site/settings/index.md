@@ -1,4 +1,4 @@
-# Settings, OpenEMR 8.4.1
+# Settings, OpenEMR 8.5.0
 
 Every setting under Administration > Config, from `library/globals.inc.php`. A default shown as *set at run time* is computed when OpenEMR starts. Modules add their own settings when they're enabled (Care Coordination adds six in its own section, for example); those aren't here.
 
@@ -175,6 +175,7 @@ Every setting under Administration > Config, from `library/globals.inc.php`. A d
 | `default_fee_sheet_line_item_provider` | Default to a provider for line item in the fee sheet | bool | `0` | Default to a provider for line item in the fee sheet.(only applicable if Support line item billing in option above) |  |
 | `include_inactive_providers` | Include inactive providers in the fee sheet | bool | `0` | Include inactive providers in the fee sheet. |  |
 | `replicate_justification` | Automatically replicate justification codes in Fee Sheet | bool | `0` | Automatically replicate justification codes in Fee Sheet (basically fills in the blanks with the justification code above it). |  |
+| `fee_sheet_save_appt_status` | Fee Sheet Save: Ask to Set Appointment Status | text |  | Code of an appointment status, for example $ for Coding done. When set, Save on the fee sheet asks whether to set the patient's appointment on the visit date to this status, and on Yes opens the calendar on that date. Not asked for an appointment that already has the status or is canceled or a no show. Blank: off. | 8.5.0 |
 | `display_units_in_billing` | Display the Units Column on the Billing Screen | bool | `0` | Display the Units Column on the Billing Screen |  |
 | `notes_to_display_in_Billing` | Which notes are to be displayed in the Billing Screen | one of: `0` None; `1` Encounter Billing Note; `2` Patient Billing Note; `3` All | `3` | Display the Encounter Billing Note or Patient Billing Note or Both in the Billing Screen. |  |
 | `MedicareReferrerIsRenderer` | Medicare Referrer Is Renderer | bool | `0` | For Medicare only, forces the referring provider to be the same as the rendering provider. |  |
@@ -311,6 +312,7 @@ Every setting under Administration > Config, from `library/globals.inc.php`. A d
 | `time_reset_password_max_failed_logins` | Time (seconds) to Reset Maximum Failed Login Attempts For User | num | `3600` | Time (seconds) to Reset Maximum Failed Login Attempts Counter For User (0 for no reset). | 7.0.2 |
 | `ip_max_failed_logins` | Maximum Failed Login Attempts From IP Address | num | `100` | Maximum Failed Login Attempts From IP Address (0 for no maximum). | 7.0.2 |
 | `ip_time_reset_password_max_failed_logins` | Time (seconds) to Reset Maximum Failed Login Attempts From IP Address | num | `3600` | Time (seconds) to Reset Maximum Failed Login Attempts Counter From IP Address (0 for no reset). | 7.0.2 |
+| `clear_ip_counter_on_auth_success` | Clear IP Failed-Login Counter on Successful Authentication | bool | `1` | When enabled (default), a successful login (staff, portal, or MFA) zeros the per-IP failed-login counter for that IP. This matches the pre-8.5.0 behaviour and is convenient in shared-NAT environments where legitimate users would otherwise accumulate strikes across a day. When disabled, the per-IP counter decays only via its own time-based reset window, so a valid login on one account cannot clear an in-progress lockout being accumulated against another account from the same IP — recommended for higher-security deployments. If disabled AND the reset window is also 0 (never auto-reset), an administrator can clear both per-IP counters via the IP Tracker report (Reports → Administrative → IP Tracker). | 8.5.0 |
 | `portal_onetime_max_pin_attempts` | Portal One-Time Token Maximum PIN Attempts | num | `5` | Maximum PIN attempts allowed for a patient portal one-time (e.g. invoice) token before it is refused. 0 or blank uses the built-in default. | 8.4.0 |
 | `gbl_fac_warehouse_restrictions` | Enable Facility/Warehouse Permissions | bool | `0` | Enable facility/warehouse restrictions in the user administration form. |  |
 | `Emergency_Login_email_id` | Emergency Login Email Address | text |  | Email address, if any, to receive emergency login user activation messages. |  |
@@ -432,6 +434,7 @@ Every setting under Administration > Config, from `library/globals.inc.php`. A d
 |---|---|---|---|---|---|
 | `portal_onsite_two_enable` | Enable Patient Portal | bool | `0` | Enable Patient Portal |  |
 | `portal_onsite_two_address` | Patient Portal Site Address | text | `https://your_web_site.com/openemr/portal` | Website link for the Patient Portal. |  |
+| `pdf_allowed_host` | Patient Portal PDF Renderer Allowed Host | text |  | Origin the patient-portal PDF renderer accepts http(s) resource references for (barcodes, letterhead images, inline CSS url() values). Formats accepted: `host` (either scheme, default port), `host:port`, `http://host`, `https://host:port`. When left blank the renderer rejects all remote http(s) resources, which disables same-host barcodes and letterhead images. | 8.5.0 |
 | `portal_css_header` | Portal Default Theme | one of: `style_light.css` Light; `style_dark.css` Dark | `style_light.css` | Pick a default portal theme. | 7.0.2 |
 | `portal_force_credential_reset` | Portal Login Forced Credential Reset | one of: `0` Allow (Recommended); `1` Disable; `2` User optional from credential dialog. | `0` | Select the credentials create or reset behavior for forcing patient to change password on portal login.User optional persists the options checkbox state in the credential dialog to allow deciding on a patient by patient basis. | 7.0.2 |
 | `portal_onsite_two_basepath` | Portal Uses Server Base Path (internal) | bool | `0` | Use servers protocol and host in urls (portal internal only). |  |
@@ -490,6 +493,7 @@ Every setting under Administration > Config, from `library/globals.inc.php`. A d
 | `sphere_ecomm_tc_link_pass` | Sphere Ecomm TC Link Password | encrypted |  | Sphere Ecomm TC Link Password |  |
 | `sphere_credit_void_confirm_pin` | Sphere Void/Credit Confirmation PIN | encrypted_hash |  | Sphere Void/Credit Confirmation Password. OpenEMR confirms pin/password before proceeding with void/credit. |  |
 | `medex_enable` | Enable MedEx Communication Service | bool | `0` | Enable MedEx Communication Service |  |
+| `medex_cancelled_apptstatus` | MedEx Cancelled Appointment Statuses | set at run time: `GlobalSetting::DATA_TYPE_MULTI_SORTED_LIST_SELECTOR` | `%;x` | Appointment statuses that mean the appointment is cancelled or rescheduled. MedEx sends no reminders for these appointments and withdraws messages already queued. Add any custom statuses your practice uses for this. | 8.5.0 |
 | `erx_enable` | Enable Ensora eRx Service | bool | `0` | Enable Ensora eRx Service. |  |
 | `erx_newcrop_path` | Ensora eRx Site Address | text | `https://secure.newcropaccounts.com/ux2/InterfaceV7/RxEntry.aspx` | URL for Ensora eRx Site Address. |  |
 | `erx_newcrop_path_soap` | Ensora eRx Web Service Address | text | `https://secure.newcropaccounts.com/v7/WebServices/Update1.asmx?WSDL;https://secure.newcropaccounts.com/v7/WebServices/Patient.asmx?WSDL` | URLs for Ensora eRx Service Address, separated by a semi-colon. |  |
@@ -505,7 +509,7 @@ Every setting under Administration > Config, from `library/globals.inc.php`. A d
 | `erx_allergy_display` | Do not display Ensora eRx Allergy uploaded | bool | `0` | Do not display Allergies uploaded after visiting Ensora eRx. |  |
 | `erx_default_patient_country` | Ensora eRx Default Patient Country | one of: `` ; `US` USA; `CA` Canada; `MX` Mexico |  | Default Patient Country sent to Ensora eRx, only if patient country is not set. |  |
 | `erx_debug_setting` | Ensora eRx Debug Setting | one of: `0` None; `1` Request Only; `2` Response Only; `3` Request & Response | `0` | Log all Ensora eRx Requests and / or Responses. |  |
-| `ccda_alt_service_enable` | Enable C-CDA Service | one of: `0` Off; `1` Care Coordination Only; `2` Portal Only; `3` Both | `0` | Enable C-CDA Service |  |
+| `ccda_alt_service_enable` | Enable C-CDA Documents | one of: `0` Off; `1` Care Coordination Only; `2` Portal Only; `3` Both | `0` | Where C-CDA documents can be generated: the Care Coordination module, the patient portal, or both. |  |
 | `phimail_enable` | Enable phiMail Direct Messaging Service | bool | `0` | Enable phiMail Direct Messaging Service |  |
 | `phimail_testmode_disabled` | Disable phiMail Test Mode | bool | `0` | When you are ready to run phiMail in production mode. Turn on this flag. |  |
 | `phimail_verifyrecipientreceived_enable` | phiMail default force message receipt confirmation to on | bool | `0` | Marks a message as successful only if recipient confirms they received the message.  This can fail messages that otherwise would have been received if the recipient's system does not support confirmation receipt |  |
@@ -640,4 +644,4 @@ Every setting under Administration > Config, from `library/globals.inc.php`. A d
 
 ---
 
-*Generated by [openemr-reference](../../README.md) from OpenEMR `v8_4_1` (a43edad9ea). Every statement on this page was read from the source at those tags; nothing is written by hand.*
+*Generated by [openemr-reference](../../README.md) from OpenEMR `v8_5_0` (c1b2b8bcbe). Every statement on this page was read from the source at those tags; nothing is written by hand.*
