@@ -162,7 +162,7 @@ echo json_encode(array_map(fn($s) => array_keys($s), $GLOBALS_METADATA));"""
 
     sql = ("SET SESSION group_concat_max_len=1073741824; SELECT JSON_ARRAYAGG(JSON_OBJECT('t',TABLE_NAME,'c',COLUMN_NAME,'type',COLUMN_TYPE)) "
            "FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='openemr'")
-    run = subprocess.run(["docker", "exec", db, "mariadb", "-uroot", "-proot", "-N", "-B", "-e", sql], capture_output=True, text=True)
+    run = subprocess.run(["docker", "exec", db, "mariadb", "-uroot", "-proot", "-N", "-B", "-r", "-e", sql], capture_output=True, text=True)
     rows = json.loads(run.stdout) if run.returncode == 0 and run.stdout.strip().startswith("[") else []
     live_cols: dict[str, dict] = {}
     for r in rows:
