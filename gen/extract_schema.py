@@ -26,8 +26,9 @@ def sh(*args: str, input: str | None = None) -> str:
     return run.stdout
 
 
+# -r (raw): batch mode otherwise escapes backslashes, which corrupts JSON holding a quote (8.5.0's schema did, 2026-10-28).
 def mariadb(sql: str, database: str = "", script: str | None = None) -> str:
-    cmd = ["docker", "exec", "-i", CONTAINER, "mariadb", "-uroot", "-proot", "-N", "-B", "--default-character-set=utf8mb4"]
+    cmd = ["docker", "exec", "-i", CONTAINER, "mariadb", "-uroot", "-proot", "-N", "-B", "-r", "--default-character-set=utf8mb4"]
     if database:
         cmd.append(database)
     if script is None:
