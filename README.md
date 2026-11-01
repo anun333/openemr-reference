@@ -112,6 +112,8 @@ What it finds that a site should know about, from rehearsals of real installs of
 
 Needs Docker with compose, and the target must be 8.2.0 or later (`sql_upgrade.php` runs from the command line from 8.2.0). The dump is restored into MariaDB, not the site's own server, so it rehearses a move to a current server too.
 
+**Using the upgraded copy.** With `--keep` the copy stays up, logged in to with the site's own accounts, so a site can try what needs the newer release before upgrading: the UDS Report module's guide, [Run your UDS report on a rehearsal copy of an older OpenEMR](https://github.com/anun333/oe-module-uds-report/blob/main/docs/rehearsal-copy.md), does that from 7.0.3 to 8.5.0. The copy holds the site's patient records and answers only on 127.0.0.1. Its port changes if the container restarts; ask again with the `port` command the rehearsal prints.
+
 ## Upgrade
 
 ```
