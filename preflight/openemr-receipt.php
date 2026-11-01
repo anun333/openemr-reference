@@ -5,7 +5,7 @@
  * (before and after an upgrade, a copy and its source) can be shown to hold the same data.
  *
  *     php openemr-receipt.php --openemr=/var/www/html/openemr [--site=default] [--out=FILE.json] [--label=TEXT] [--against=FIRST.json]
- *     php openemr-receipt.php --compare FIRST.json SECOND.json
+ *     php openemr-receipt.php --compare [--strict] FIRST.json SECOND.json
  *
  * It only reads. A receipt holds no patient data: no names, no dates of birth, no values from any
  * record. It holds counts, money totals, and checksums of each table and column, from which nothing
@@ -26,7 +26,8 @@
  * --compare prints MATCH when nothing differs but what the upgrade is known to change, with the
  * explanation for each. Every other difference is listed, and so is any change at all to a figure in
  * "what the clinic has": those are never explained away. Exit code 0 for MATCH, 1 otherwise, 2 for a
- * usage error.
+ * usage error. --strict (for a database restored from a backup) allows no difference at all: every
+ * table the same, rows, row checksum and column checksums, not even what an upgrade is known to change.
  *
  * For openemr-rehearse.sh, which runs it in a container on a database copy:
  *     --host=H --port=P --user=U --password-file=F --database=D --documents=DIR [--openemr=DIR]
@@ -591,7 +592,7 @@ function receiptText(array $r): string
  * Compares two receipts. Returns [$match, $lines]: $match is true when nothing differs but what the
  * upgrade is known to change.
  */
-function compare(array $a, array $b): array
+function compare(array $a, array $b, bool $strict = false): array
 {
     $t = [];
     $bad = [];   // unexplained differences, in plain words
@@ -772,12 +773,40 @@ function compare(array $a, array $b): array
         $t[] = sprintf("  ok   settings, lists and other tables that aren't a patient's: %d gained rows, %d changed in place, %d created (the upgrade scripts' own work)",
             count($settings['added']), count($settings['changed']), count($created));
     }
+    // --strict, for a restore: nothing may differ at all, not even what an upgrade is known to change.
+    // Every table there and gone alike, with the same rows, row checksum and column checksums.
+    if ($strict) {
+        foreach (array_keys($created) as $name) {
+            $bad[] = "strict: the table $name is in the second receipt only";
+        }
+        foreach ($a['tables'] as $name => $x) {
+            $y = $b['tables'][$name] ?? null;
+            if ($y === null) {
+                $bad[] = "strict: the table $name is in the first receipt only";
+                continue;
+            }
+            $cols = [];
+            foreach ($x['columns'] as $c => $cx) {
+                $cy = $y['columns'][$c] ?? null;
+                if ($cy === null || $cx['type'] !== $cy['type'] || $cx['sum'] !== $cy['sum']) {
+                    $cols[] = $c;
+                }
+            }
+            $cols = array_merge($cols, array_keys(array_diff_key($y['columns'], $x['columns'])));
+            if ($x['rows'] !== $y['rows'] || $x['row_sum'] !== $y['row_sum'] || $cols) {
+                $bad[] = "strict: $name differs (" . ($x['rows'] !== $y['rows'] ? "{$x['rows']} -> {$y['rows']} rows" : ($cols ? 'columns ' . implode(', ', array_slice($cols, 0, 5)) : 'its rows')) . ')';
+            }
+        }
+        $bad = array_values(array_unique($bad));
+    }
     foreach ($bad as $line) {
         $t[] = "  DIFF $line";
     }
     $t[] = "";
     if ($bad) {
-        $t[] = 'RESULT: DIFFERENT. ' . count($bad) . ' difference' . (count($bad) === 1 ? '' : 's') . ' that the upgrade isn\'t known to make (the DIFF lines above).';
+        $t[] = 'RESULT: DIFFERENT. ' . count($bad) . ' difference' . (count($bad) === 1 ? '' : 's') . ($strict ? ' (strict: every table must be the same)' : ' that the upgrade isn\'t known to make') . ' (the DIFF lines above).';
+    } elseif ($strict) {
+        $t[] = 'RESULT: MATCH (strict). Every table is the same: rows, and the checksum of every row and column; every document file and money figure too.';
     } else {
         $t[] = 'RESULT: MATCH. Every patient record, document and money figure is the same' . ($explained ? '; the changes marked ok are the upgrade\'s own, each explained.' : '.');
     }
@@ -797,7 +826,7 @@ function readReceipt(string $file): array
 if (PHP_SAPI !== 'cli' || realpath($_SERVER['SCRIPT_FILENAME'] ?? '') !== realpath(__FILE__)) {
     return;   // included as a library
 }
-$opts = getopt('', ['openemr:', 'site:', 'out:', 'label:', 'against:', 'compare', 'host:', 'port:', 'user:', 'password-file:', 'database:', 'documents:', 'require:', 'help', 'version']);
+$opts = getopt('', ['openemr:', 'site:', 'out:', 'label:', 'against:', 'compare', 'strict', 'host:', 'port:', 'user:', 'password-file:', 'database:', 'documents:', 'require:', 'help', 'version']);
 if (isset($opts['version'])) {
     echo RECEIPT_VERSION, "\n";
     exit(0);
@@ -816,7 +845,7 @@ if (isset($opts['compare'])) {
     if (count($files) !== 2) {
         usage('--compare takes two receipt files');
     }
-    [$match, $lines] = compare(readReceipt($files[0]), readReceipt($files[1]));
+    [$match, $lines] = compare(readReceipt($files[0]), readReceipt($files[1]), isset($opts['strict']));
     $text = implode("\n", $lines) . "\n";
     echo $text;
     if (!empty($opts['out'])) {

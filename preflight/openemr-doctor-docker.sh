@@ -19,7 +19,7 @@
 set -euo pipefail
 
 main() {
-    VERSION=0.4.0
+    VERSION=0.5.0
     BASE=${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$VERSION}
     OE=/var/www/localhost/htdocs/openemr
     DEBUG=${DEBUG:-0}

@@ -19,29 +19,37 @@
 #      go in (the lines each change writes, added files, added modules) for what this PHP removed,
 #      and stops on any that won't load or stops with an error, unless --force. Until here
 #      nothing on the server has changed, and a stop removes the unpacked folder;
-#   5. stops the web server (--service), or asks you to keep users out, and backs up each site's
-#      database (mysqldump) and the whole sites/ folder: documents, keys;
+#   5. stops the web server (--service), or asks you to keep users out, takes a receipt of each site
+#      (openemr-receipt.php: counts, money totals and checksums of everything, no patient data), and
+#      backs up each site's database (mysqldump) and the whole sites/ folder: documents, keys;
 #   6. carries over sites/, the modules this install added and, with =apply, its changes;
 #   7. runs the target's own sql_upgrade.php --from=<current> for each site, as the web server's user;
-#   8. checks the new folder with openemr-doctor.php (stops on a FAIL unless --force; a PHP that
+#   8. takes a second receipt of each site and compares it with the first. On any difference the
+#      upgrade isn't known to make, or any change to a patient count or a money figure, it stops
+#      before switching, rolls back by itself (the old folder stays live, each database is restored
+#      from the backup and checked against the first receipt), and says why;
+#   9. checks the new folder with openemr-doctor.php (stops on a FAIL unless --force; a PHP that
 #      needs its own security update is reported, not a stop: updating PHP is a separate job);
-#   9. swaps the folders (the old one is kept as <folder>.old-<version>) and starts the web server.
+#  10. swaps the folders (the old one is kept as <folder>.old-<version>) and starts the web server.
 # Nothing is deleted. --rollback first saves each database as it is (everything entered since the
-# upgrade) and, apart, the tables the upgrade created; then restores the backup and swaps the folders back.
+# upgrade) and, apart, the tables the upgrade created; then restores the backup, checks each restored
+# database against the receipt taken before the upgrade, and swaps the folders back. The receipts and
+# their comparisons stay in the backup folder.
 #
 # It checks its own work: after each step it verifies the result (the unpacked release's version, each
-# dump complete and with every table, sites/ copied whole, each database at the target's version, the
-# folders switched) and prints a "check:" line, or stops. Everything it prints also goes to a log in the
+# receipt, each dump complete and with every table, sites.tar.gz whole, sites/ copied whole, each
+# database at the target's version, the receipts matching, the folders switched) and prints a "check:"
+# line, or stops. Everything it prints also goes to a log in the
 # backup folder. If it stops after the backup, it says how far it got and the exact --rollback command.
 # Only one run at a time per install. --debug also traces every command (passwords are left out).
-# The pre-flight check, the doctor and scan.php (php-upgrade-catalogue's, which reads what goes in for
-# what PHP removed) come from beside this script, else from this script's own release, checked
-# against that release's SHA256SUMS.
+# The pre-flight check, the doctor, the receipt and scan.php (php-upgrade-catalogue's, which reads what
+# goes in for what PHP removed) come from beside this script, else from this script's own release,
+# checked against that release's SHA256SUMS.
 #
 # Run it as root on the server, after rehearsing the upgrade on a copy (openemr-rehearse.sh).
 # The target must be 8.2.0 or later (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.4.0
+SCRIPT_VERSION=0.5.0
 # Where the helpers come from when they aren't beside this script: this script's own release.
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 
@@ -83,7 +91,7 @@ PARENT="$(dirname "$OE")"
 NAME="$(basename "$OE")"
 STATE="$PARENT/.$NAME-upgrade-state"
 WEBUSER="$(stat -c %U "$OE/sites")"
-LOGFILE="" NEW="" NEW_MADE=0 LOCK_DIR="" SERVICE_STOPPED=0
+LOGFILE="" NEW="" NEW_MADE=0 LOCK_DIR="" SERVICE_STOPPED=0 AUTO_ROLLING_BACK=0 AUTO_ROLLED_BACK=0 RECEIPT=""
 
 # One run at a time on this install: two would back up, upgrade and swap the same folders.
 LOCK="$PARENT/.$NAME-upgrade.lock"
@@ -101,10 +109,12 @@ on_exit() {
     set +x
     [[ -z "$LOCK_DIR" ]] || rmdir "$LOCK_DIR" 2>/dev/null || true
     (( rc != 0 )) || return 0
-    if (( ROLLBACK )); then
+    if (( AUTO_ROLLED_BACK )); then
+        :   # the automatic rollback has said what happened, and where everything is
+    elif (( ROLLBACK || AUTO_ROLLING_BACK )); then
         say ""
         say "The rollback stopped during $STEP_NOW (exit $rc). Nothing was deleted: the backup is still in ${BACKUP_DIR:-?},"
-        say "and $STATE is kept. Fix what the message above says, then run the same command again:  $0 --rollback --openemr=$OE"
+        say "and $STATE is kept. Fix what the message above says, then run:  $0 --rollback --openemr=$OE"
     elif [[ ! -f "$STATE" ]]; then
         if (( NEW_MADE )) && [[ -n "$NEW" && -d "$NEW" ]]; then rm -rf "$NEW"; fi
         say ""
@@ -211,25 +221,40 @@ fetch_tool() {
     audit "$1 downloaded from release v$SCRIPT_VERSION matches its SHA256SUMS"
 }
 
+# The differences a comparison ($1) found, one per line, in plain words (its closing list, not its tables).
+receipt_diffs() { awk '/^Every table/ {list = 1} list && /^  DIFF / {sub(/^  DIFF /, ""); print}' "$1"; }
+
+# One line of a receipt ($1) in plain words, after a label ($2): the figures a clinic knows.
+receipt_summary() {
+    say "  $2 $(php -r '$r = json_decode((string) file_get_contents($argv[1]), true); $f = $r["figures"];
+        $n = function ($v) { return $v === null ? "n/a" : number_format((float) $v); };
+        $m = function ($v) { return $v === null ? "n/a" : number_format((float) $v, 2); };
+        echo $n($f["patients"]), " patients, ", $n($f["encounters"]), " encounters, ", $n($f["documents"]), " documents (",
+            $n($f["document_files"]), " files on disk, ", $n($f["document_files_missing"]), " missing), payments ", $m($f["payments"]),
+            ", balance ", $m($f["balance"]), "; ", count($r["tables"]), " tables";' "$1")"
+}
+
 # ---------------------------------------------------------------- rollback
-if (( ROLLBACK )); then
-    [[ -f "$STATE" ]] || die "no upgrade to undo: $STATE not found"
+# The way back, from the state file: each database saved as it is, restored from the backup and checked
+# against the receipt taken before the upgrade; the folders switched back. Used by --rollback and, when
+# the receipts disagree, by the upgrade itself. Returns 1 if a restored database doesn't match its
+# receipt (everything else is still put back); stops (die) on anything that keeps it from finishing.
+rollback_all() {
     # shellcheck disable=SC1090
     source "$STATE"
-    start_log "$BACKUP_DIR/openemr-rollback-$(date +%Y%m%d-%H%M%S).log"
-    STEP_NOW="the rollback's start"
+    local conf_dir site cnf saved restored dumped live t created rb back mismatch=0
     if (( SWITCHED )); then
         [[ -d "$OLD_DIR" ]] || die "the old folder $OLD_DIR is gone; restore it from $BACKUP_DIR first"
-        CONF_DIR="$OLD_DIR"
+        conf_dir="$OLD_DIR"
     else
-        CONF_DIR="$OE"
+        conf_dir="$OE"
     fi
     step "Rolling back $NAME to $FROM_VERSION (backup in $BACKUP_DIR)"
     service_do stop
-    RB="$(date +%Y%m%d-%H%M%S)"
+    rb="$(date +%Y%m%d-%H%M%S)"
     for site in $SITES; do
         STEP_NOW="the rollback of site $site"
-        mapfile -t c < <(sqlconf "$CONF_DIR/sites/$site/sqlconf.php")
+        mapfile -t c < <(sqlconf "$conf_dir/sites/$site/sqlconf.php")
         cnf="$(mycnf)"
         # The tables the upgrade created: neither in the dump nor in the list taken just before the
         # upgrade. (A lookup, not "printf | grep -q": under pipefail, grep -q closing the pipe early
@@ -246,12 +271,12 @@ if (( ROLLBACK )); then
         unset keep
         # Nothing is discarded: the restore below replaces every table with its pre-upgrade copy, so
         # whatever was entered since the upgrade is saved first, all of it and the new tables apart.
-        saved="$BACKUP_DIR/$site.before-rollback-$RB.sql"
+        saved="$BACKUP_DIR/$site.before-rollback-$rb.sql"
         "$(dumper)" --defaults-extra-file="$cnf" --single-transaction --skip-lock-tables --routines --triggers "${c[4]}" > "$saved"
         say "  $site: saved ${c[4]} as it is now, with everything entered since the upgrade -> $saved"
         if (( ${#created[@]} )); then
-            "$(dumper)" --defaults-extra-file="$cnf" --single-transaction --skip-lock-tables "${c[4]}" "${created[@]}" > "$BACKUP_DIR/$site.created-tables-$RB.sql"
-            say "  $site: and the ${#created[@]} tables the upgrade created, on their own -> $BACKUP_DIR/$site.created-tables-$RB.sql"
+            "$(dumper)" --defaults-extra-file="$cnf" --single-transaction --skip-lock-tables "${c[4]}" "${created[@]}" > "$BACKUP_DIR/$site.created-tables-$rb.sql"
+            say "  $site: and the ${#created[@]} tables the upgrade created, on their own -> $BACKUP_DIR/$site.created-tables-$rb.sql"
         fi
         say "  $site: restoring ${c[4]} from $BACKUP_DIR/$site.sql"
         "$(client)" --defaults-extra-file="$cnf" "${c[4]}" < "$BACKUP_DIR/$site.sql"
@@ -266,6 +291,23 @@ if (( ROLLBACK )); then
         [[ "${restored%% *}" == "$FROM_VERSION" ]] || die "$site: ${c[4]} says it is ${restored%% *} after the restore, not $FROM_VERSION"
         audit "$site: ${c[4]} is $FROM_VERSION again (database version ${restored##* }), with the backup's $dumped tables"
         rm -f "$cnf"
+        # The restored database, with the old folder's documents, against the receipt taken before the
+        # upgrade: the backup brought back exactly what was there.
+        if [[ -f "$BACKUP_DIR/receipt-$site-before.json" && -n "$RECEIPT" ]]; then
+            php "$RECEIPT" --openemr="$conf_dir" --site="$site" --label="after the rollback" --out="$BACKUP_DIR/receipt-$site-after-rollback-$rb.json" > "$BACKUP_DIR/receipt-$site-after-rollback-$rb.txt" \
+                || die "$site: the receipt of the restored database didn't finish ($BACKUP_DIR/receipt-$site-after-rollback-$rb.txt)"
+            # Strict: a restore brings back every table as it was, rows and checksums, settings included,
+            # not only what an upgrade must leave alone.
+            if php "$RECEIPT" --compare --strict "$BACKUP_DIR/receipt-$site-before.json" "$BACKUP_DIR/receipt-$site-after-rollback-$rb.json" > "$BACKUP_DIR/receipts-$site-rollback-compared-$rb.txt"; then
+                audit "$site: the restored database and documents match the receipt taken before the upgrade, every table (receipts-$site-rollback-compared-$rb.txt)"
+            else
+                mismatch=1
+                say "  $site: WARNING: the restored database does NOT match the receipt taken before the upgrade:"
+                receipt_diffs "$BACKUP_DIR/receipts-$site-rollback-compared-$rb.txt" | head -10 | sed 's/^/    /'
+            fi
+        else
+            say "  $site: no receipt from before the upgrade in $BACKUP_DIR (an upgrade by an older openemr-upgrade.sh); the restore is checked by its tables and version only"
+        fi
     done
     STEP_NOW="the rollback's folder switch"
     if (( SWITCHED )); then
@@ -279,10 +321,29 @@ if (( ROLLBACK )); then
     audit "$OE is the $FROM_VERSION folder again"
     service_do start
     rm -f "$STATE"
+    RB_STAMP="$rb"
+    return "$mismatch"
+}
+
+if (( ROLLBACK )); then
+    [[ -f "$STATE" ]] || die "no upgrade to undo: $STATE not found"
+    # shellcheck disable=SC1090
+    source "$STATE"
+    start_log "$BACKUP_DIR/openemr-rollback-$(date +%Y%m%d-%H%M%S).log"
+    STEP_NOW="the rollback's start"
+    if [[ -f "$BACKUP_DIR/receipt-${SITES%% *}-before.json" ]]; then
+        fetch_tool openemr-receipt.php; RECEIPT="$TOOL"
+    fi
+    rb_rc=0; rollback_all || rb_rc=$?
     say ""; say "Rolled back: $OE is $FROM_VERSION again, and its databases are as they were at $STAMP."
-    say "Kept, nothing discarded: each database as it was before this rollback ($BACKUP_DIR/*.before-rollback-$RB.sql),"
-    say "the tables the upgrade created on their own (*.created-tables-$RB.sql), and the $TO_VERSION folder with any"
+    say "Kept, nothing discarded: each database as it was before this rollback ($BACKUP_DIR/*.before-rollback-$RB_STAMP.sql),"
+    say "the tables the upgrade created on their own (*.created-tables-$RB_STAMP.sql), and the $TO_VERSION folder with any"
     say "documents uploaded since the upgrade ($OE.failed-$TO_VERSION-*)."
+    if (( rb_rc )); then
+        say ""; say "But a restored database doesn't match the receipt taken before the upgrade (the WARNING above). OpenEMR runs"
+        say "on it; before users rely on it, have someone compare $BACKUP_DIR/receipts-*-rollback-compared-$RB_STAMP.txt."
+        exit 1
+    fi
     exit 0
 fi
 
@@ -567,7 +628,8 @@ PHP
 
 step "1. Pre-flight check"
 fetch_tool openemr-preflight.php; pf="$TOOL"
-fetch_tool openemr-doctor.php; dr="$TOOL"   # for step 8; fetched now, so --skip is checked before anything changes
+fetch_tool openemr-doctor.php; dr="$TOOL"   # for step 9; fetched now, so --skip is checked before anything changes
+fetch_tool openemr-receipt.php; RECEIPT="$TOOL"   # for steps 5 and 8
 # --skip, split between this script (scan), the pre-flight check and the doctor, each of which names its own checks.
 SKIP_SELF="" SKIP_PF="" SKIP_DR=""
 pf_checks="$(php "$pf" --list-checks)"; dr_checks="$(php "$dr" --list-checks)"
@@ -666,10 +728,17 @@ if (( ! YES )); then
     read -r answer; [[ "$answer" == [yY]* ]] || die "stopped at your request; nothing on the server changed"
 fi
 
-step "5. Stopping the web server and backing up"
+step "5. Stopping the web server, taking a receipt and backing up"
 service_do stop
 [[ -z "$SERVICE" ]] || SERVICE_STOPPED=1
 mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
+# The receipt: what each site holds, as counts, money totals and checksums (no patient data), with
+# nobody working. Step 8 takes another after the database upgrade, and the two must match.
+for site in $SITES; do
+    php "$RECEIPT" --openemr="$OE" --site="$site" --label="before the upgrade ($FROM)" --out="$BACKUP_DIR/receipt-$site-before.json" > "$BACKUP_DIR/receipt-$site-before.txt" \
+        || die "$site: the receipt didn't finish ($BACKUP_DIR/receipt-$site-before.txt)"
+    receipt_summary "$BACKUP_DIR/receipt-$site-before.json" "$site: receipt before the upgrade:"
+done
 for site in $SITES; do
     mapfile -t c < <(sqlconf "$OE/sites/$site/sqlconf.php")
     cnf="$(mycnf)"
@@ -682,7 +751,9 @@ for site in $SITES; do
     dumped="$(grep -c '^CREATE TABLE `' "$BACKUP_DIR/$site.sql" || true)"
     live="$(base_tables "$cnf" "${c[4]}")"
     (( dumped == live )) || die "$site: $site.sql has $dumped tables, the database $live"
-    audit "$site: the dump is complete ('Dump completed') and has all $live tables"
+    in_receipt="$(php -r 'echo count(json_decode((string) file_get_contents($argv[1]), true)["tables"] ?? []);' "$BACKUP_DIR/receipt-$site-before.json")"
+    (( in_receipt == live )) || die "$site: the receipt read $in_receipt tables, the database has $live"
+    audit "$site: the dump is complete ('Dump completed') and has all $live tables, as the receipt"
     rm -f "$cnf"
 done
 tar -czf "$BACKUP_DIR/sites.tar.gz" -C "$OE" sites
@@ -690,10 +761,15 @@ say "  sites/ (documents, encryption keys, settings) -> sites.tar.gz ($(du -h "$
 in_tar="$(tar -tzf "$BACKUP_DIR/sites.tar.gz" | grep -vc '/$' || true)"
 on_disk="$(find "$OE/sites" -not -type d | wc -l)"
 (( in_tar == on_disk )) || die "sites.tar.gz has $in_tar files, sites/ $on_disk (were users still working? use --service)"
+# Every byte: the archive's own checksum (gzip -t reads it all), and as many bytes of files in it as on disk.
+gzip -t "$BACKUP_DIR/sites.tar.gz" || die "sites.tar.gz doesn't read back (gzip -t): is the disk full?"
+tar_bytes="$(tar -tvzf "$BACKUP_DIR/sites.tar.gz" | awk '$1 ~ /^-/ {n += $3} END {printf "%d", n}')"
+disk_bytes="$(find "$OE/sites" -type f -exec stat -c %s {} + | awk '{n += $1} END {printf "%d", n}')"
+(( tar_bytes == disk_bytes )) || die "sites.tar.gz holds $tar_bytes bytes of files, sites/ $disk_bytes"
 for site in $SITES; do
     tar -tzf "$BACKUP_DIR/sites.tar.gz" "sites/$site/sqlconf.php" >/dev/null 2>&1 || die "sites.tar.gz has no sites/$site/sqlconf.php"
 done
-audit "sites.tar.gz reads back whole: $in_tar files, the same as sites/, with each site's sqlconf.php"
+audit "sites.tar.gz reads back whole: $in_tar files and $disk_bytes bytes, the same as sites/, with each site's sqlconf.php"
 cat > "$STATE" <<EOF
 FROM_VERSION=$FROM
 TO_VERSION=$TO
@@ -785,6 +861,12 @@ for site in $SITES; do
     (cd "$NEW" && OPENEMR_UPGRADE_SITE="$site" as_web php -d memory_limit=-1 "$tmp" --from="$FROM") > "$BACKUP_DIR/upgrade-$site.log" 2>&1; rc=$?
     set -e
     rm -f "$tmp"
+    # For the tests only: change the data as if the upgrade had (step 8 must catch it).
+    if [[ -n "${OPENEMR_UPGRADE_TEST_CHANGE_SQL:-}" ]]; then
+        mapfile -t c < <(sqlconf "$NEW/sites/$site/sqlconf.php"); cnf="$(mycnf)"
+        "$(client)" --defaults-extra-file="$cnf" "${c[4]}" -e "$OPENEMR_UPGRADE_TEST_CHANGE_SQL"; rm -f "$cnf"
+        say "  $site: TEST: changed the data after sql_upgrade.php (OPENEMR_UPGRADE_TEST_CHANGE_SQL)"
+    fi
     n="$(grep -c 'The above statement failed' "$BACKUP_DIR/upgrade-$site.log" || true)"
     say "  $site: exit $rc, $n statement(s) failed (log: $BACKUP_DIR/upgrade-$site.log)"
     (( rc == 0 && n == 0 )) || failed=1
@@ -803,7 +885,48 @@ for site in $SITES; do
     audit "$site: ${c[4]} is now $TO, database version $want_db, as the new folder's version.php says"
 done
 
-step "8. Checking the new folder with the install doctor"
+step "8. Comparing the data before and after the database upgrade (receipts)"
+# A second receipt, read the way the first was (--against), from the new folder's sites/. Any
+# difference the upgrade isn't known to make, and any change to a patient count or a money figure,
+# stops the upgrade here, before the switch, and puts everything back.
+receipts_bad=""
+for site in $SITES; do
+    php "$RECEIPT" --openemr="$NEW" --site="$site" --label="after the database upgrade ($TO)" --against="$BACKUP_DIR/receipt-$site-before.json" \
+        --out="$BACKUP_DIR/receipt-$site-after-upgrade.json" > "$BACKUP_DIR/receipt-$site-after-upgrade.txt" \
+        || die "$site: the receipt after the upgrade didn't finish ($BACKUP_DIR/receipt-$site-after-upgrade.txt)"
+    if php "$RECEIPT" --compare "$BACKUP_DIR/receipt-$site-before.json" "$BACKUP_DIR/receipt-$site-after-upgrade.json" > "$BACKUP_DIR/receipts-$site-compared.txt"; then
+        audit "$site: the receipts match: every patient record, document and money figure is the same ($(grep -c '^  ok ' "$BACKUP_DIR/receipts-$site-compared.txt" || true) of the upgrade's own changes explained; receipts-$site-compared.txt)"
+    else
+        receipts_bad="${receipts_bad:+$receipts_bad }$site"
+        say "  $site: the receipts DON'T match:"
+        receipt_diffs "$BACKUP_DIR/receipts-$site-compared.txt" | head -12 | sed 's/^/    /'
+    fi
+done
+if [[ -n "$receipts_bad" ]]; then
+    # The safer of stopping to ask and putting back: put back. Nothing is lost either way (the
+    # database as the upgrade left it is saved by the rollback), and the clinic can work again.
+    say ""
+    say "  The data after the upgrade isn't the data before it, so this upgrade stops here and puts everything back by itself."
+    AUTO_ROLLING_BACK=1
+    rb_rc=0; rollback_all || rb_rc=$?
+    AUTO_ROLLING_BACK=0 AUTO_ROLLED_BACK=1
+    say ""
+    say "STOPPED AND PUT BACK. The database upgrade changed data it isn't known to change (site: $receipts_bad):"
+    for site in $receipts_bad; do receipt_diffs "$BACKUP_DIR/receipts-$site-compared.txt" | head -12 | sed 's/^/  - /'; done
+    say "Nothing was switched: $OE is still OpenEMR $FROM, and each database was restored from the backup taken minutes ago."
+    if (( rb_rc )); then
+        say "WARNING: a restored database doesn't match the receipt taken before the upgrade (above). Don't let users in"
+        say "until someone has compared $BACKUP_DIR/receipts-*-rollback-compared-$RB_STAMP.txt."
+    else
+        say "A receipt of each restored database matches the one taken before the upgrade: the clinic's data is as it was."
+        [[ -z "$SERVICE" ]] || say "$SERVICE is running again; users can work."
+    fi
+    say "For help, send the comparison (it holds no patient data): $BACKUP_DIR/receipts-${receipts_bad%% *}-compared.txt"
+    say "Everything is kept in $BACKUP_DIR: the receipts, the backup, and the database as the upgrade left it (*.before-rollback-$RB_STAMP.sql)."
+    exit 1
+fi
+
+step "9. Checking the new folder with the install doctor"
 # As the web server's user, since it checks what that user can read and write; from a folder it can read.
 drdir="$(mktemp -d)"; chmod 755 "$drdir"; cp "$dr" "$drdir/openemr-doctor.php"; chmod 644 "$drdir/openemr-doctor.php"
 [[ -z "$scan" ]] || { cp "$scan" "$drdir/scan.php"; chmod 644 "$drdir/scan.php"; }
@@ -829,7 +952,7 @@ if (( doctor_failed && ! FORCE )); then
     die "the install doctor found a problem in $NEW (above). Nothing is switched yet; fix it and run '$0 --rollback --openemr=$OE' or switch by hand. --force switches anyway."
 fi
 
-step "9. Switching to $TO"
+step "10. Switching to $TO"
 if [[ -L "$OE" ]]; then
     target="$(readlink -f "$OE")"; ln -sfn "$NEW" "$OE.tmp-link" && mv -T "$OE.tmp-link" "$OE"
     sed -i "s|^OLD_DIR=.*|OLD_DIR=$target|" "$STATE"

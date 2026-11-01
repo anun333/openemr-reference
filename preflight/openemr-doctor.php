@@ -28,7 +28,7 @@
 
 error_reporting(E_ALL);
 // The openemr-reference release this doctor belongs to (gen/check.py: the same as the scripts').
-define('DOCTOR_VERSION', '0.4.0');
+define('DOCTOR_VERSION', '0.5.0');
 // Facts: a folder beside this file (openemr-doctor-facts/), else the generator's own output,
 // else the published copy, which is updated from OpenEMR's release tags every day.
 $factsDefault = 'https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight';
