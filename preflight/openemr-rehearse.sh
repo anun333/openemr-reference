@@ -374,7 +374,7 @@ docker create --name "$P-pristine" "openemr/openemr:$TO" >/dev/null
 for f in sql_upgrade.php acl_upgrade.php; do
     docker cp "$P-pristine:$OE/$f" "$WORK/$f" && docker cp "$WORK/$f" "$APP:$OE/$f"
 done
-docker rm "$P-pristine" >/dev/null
+docker rm -v "$P-pristine" >/dev/null
 
 say "  restoring the dump twice (to upgrade, and to keep as it was)..."
 t0=$(date +%s)

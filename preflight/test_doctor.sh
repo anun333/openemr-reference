@@ -256,7 +256,7 @@ rm -rf "$rel" "$empty" "$TMPDIR_SHORT"
 # with a test CA, and sites pointing at it with each mistake. The certificates are made
 # here and deleted with the database.
 CERTS=$(mktemp -d); DS=$P-dbssl
-trap 'docker rm -f $DS >/dev/null 2>&1; rm -rf "$CERTS"; docker compose -p $P -f test-doctor-compose.yml down -v >/dev/null 2>&1' EXIT
+trap 'docker rm -f -v $DS >/dev/null 2>&1; rm -rf "$CERTS"; docker compose -p $P -f test-doctor-compose.yml down -v >/dev/null 2>&1' EXIT
 docker run --rm -u "$(id -u):$(id -g)" -v "$CERTS":/c -w /c --entrypoint sh alpine/openssl -c '
 openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=Test CA" -keyout ca-key.pem -out ca.pem &&
 openssl req -newkey rsa:2048 -nodes -subj "/CN=dbssl" -keyout server-key.pem -out server.csr &&
