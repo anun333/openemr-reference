@@ -1,16 +1,22 @@
 # Throwaway OpenEMR 7.0.3 for test_upgrade.sh. Demo credentials only; deleted after the test.
+# DB_IMAGE picks the database server (default MariaDB 10.11); MySQL images take the same options.
 services:
   mysql:
-    image: mariadb:10.11
-    command: ['mysqld', '--character-set-server=utf8mb4']
+    image: ${DB_IMAGE:-mariadb:10.11}
+    cpus: 1
+    mem_limit: 2g
+    command: ['--character-set-server=utf8mb4', '${DB_EXTRA_OPTION:---character-set-server=utf8mb4}']
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MARIADB_ROOT_PASSWORD: root
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ['CMD-SHELL', 'healthcheck.sh --connect --innodb_initialized 2>/dev/null || mysqladmin ping -uroot -proot --silent']
       interval: 5s
-      retries: 40
+      retries: 60
   openemr:
     image: openemr/openemr:7.0.3
+    cpus: 2
+    mem_limit: 3g
     ports:
       - "127.0.0.1:8372:80"
     environment:
