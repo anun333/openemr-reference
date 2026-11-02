@@ -1,32 +1,55 @@
-# Upgrading OpenEMR without losing anything: step by step
+# Upgrade OpenEMR 7.0 to 8.5 without losing anything
 
-For whoever looks after an OpenEMR installed from the release tarball (on Ubuntu or a similar Linux), moving from 7.0.x to 8.5.0. No programming is needed: you copy and paste the commands below, in order, and read what they print.
+A checklist for whoever looks after the clinic's OpenEMR server. You don't need to be a programmer: copy each command, paste it into the terminal, press Enter, and check that you see what the step says you should see.
 
-The order is the point. Steps 1 to 3 only read your live system: they work on a copy. Step 4 changes the live system, and only after the copy has shown the upgrade works. Step 4 then checks itself: if anything in your data changed that shouldn't have, it puts everything back by itself.
+**How it keeps you safe:**
+- Steps 1 to 5 never change your OpenEMR. They check your server and test the upgrade on a **copy** first.
+- Step 6 changes your OpenEMR, only after the copy passed. If anything in your data doesn't match afterwards, step 6 **puts everything back by itself**.
 
-You need:
-- root (sudo) on the OpenEMR server;
-- a machine with Docker for the rehearsal. It can be the server itself: the rehearsal is capped (3 CPUs and 6 GB of memory unless you say otherwise) so it can't slow your OpenEMR down;
-- room on that machine. The rehearsal says how much before it starts.
+**Time:** about 2 to 3 hours in all, mostly waiting. Nobody can use OpenEMR during step 6, which usually takes 15 to 45 minutes.
 
-Your release and patch are in OpenEMR under **Administration › About**. The commands below use `7.0.3`, the folder `/var/www/html/openemr` and the database `openemr`: put in your own. The database's name is the `$dbase` line in `sites/default/sqlconf.php`.
+This is for an OpenEMR installed from the release download (a `.tar.gz`) on Ubuntu or a similar Linux. If yours runs in Docker, ask for help first.
 
-## 1. Copy your site
+---
 
-On the server:
+## Before you start
+
+Tick each box:
+
+- [ ] I can log in to the OpenEMR server and use `sudo`.
+- [ ] I have a computer with Docker. It can be the server itself. To check, type `docker compose version`: it must print a version number.
+- [ ] I know my OpenEMR version. It's in OpenEMR under **Administration > About**, for example `7.0.3 (4)`.
+- [ ] The server and the Docker computer can reach the internet (github.com).
+- [ ] I have picked a quiet time for step 6, when nobody needs OpenEMR for an hour.
+- [ ] I know who I will ask for help if a step says **STOP**.
+
+---
+
+## Step 0. Fill in your four values
+
+Change these four lines to match your server, then paste them into the terminal:
 
 ```
-sudo mysqldump --single-transaction --routines --triggers openemr > site.sql
-sudo tar -czf sites.tar.gz -C /var/www/html/openemr sites
+OE=/var/www/html/openemr
+FROM=7.0.3
+DB=openemr
+WEB=apache2
 ```
 
-If `mysqldump` asks for a password or says access is denied, add the user and password from `sites/default/sqlconf.php` (the `$login` and `$pass` lines): `mysqldump -u LOGIN -p --single-transaction ...`, and type the password when asked.
+| Line | What to put |
+|---|---|
+| `OE` | the folder OpenEMR is in. `/var/www/html/openemr` is the usual one. |
+| `FROM` | your version from **Administration > About**, without the part in brackets: `7.0.3 (4)` is `7.0.3`. |
+| `DB` | your database's name. To see it, run `sudo grep dbase $OE/sites/default/sqlconf.php` and use the name between the quotes. |
+| `WEB` | `apache2` on Ubuntu or Debian; `httpd` on Red Hat, Rocky or Alma. |
 
-`site.sql` is the database; `sites.tar.gz` is the `sites/` folder, with your documents and the keys that unlock them. Together they are your whole site. **They hold every patient's record:** keep them on your own machines, never email them, and delete them when you're done.
+> If you close the terminal window, paste these four lines again before you go on.
 
-## 2. Get the tools
+---
 
-On the machine with Docker, in an empty folder:
+## Step 1. Get the tools (on the server, 1 minute)
+
+On the server, make a new empty folder, go into it, and paste:
 
 ```
 FILES="openemr-rehearse.sh openemr-receipt.php openemr-doctor.php openemr-upgrade.sh openemr-preflight.php scan.php"
@@ -36,90 +59,146 @@ done
 for f in $FILES; do grep " $f\$" SHA256SUMS; done | sha256sum -c
 ```
 
-(This checks only the files you downloaded, and works with GNU's `sha256sum` and with BusyBox's, as in OpenEMR's Docker image, which has no `--ignore-missing`.)
+**You should see:** six lines, each ending in `OK`.
 
-Every line must end in `OK`. If one doesn't, stop: the file isn't the one published. Copy the same folder to the server for step 4.
+**If any line says** `FAILED`: **STOP.** The download isn't the published file. Delete the folder and try again later.
 
-## 3. Rehearse on the copy
+If your Docker computer isn't the server, copy this folder to it too (a USB drive or `scp`).
 
-```
-bash openemr-rehearse.sh --dump=site.sql --sites=sites.tar.gz --from=7.0.3 --to=8.5.0
-```
+---
 
-It takes from 10 minutes to an hour, depending on the size of your site. It upgrades a copy in Docker, never your live system, and checks the copy three ways:
+## Step 2. Check the server is ready (on the server, 1 minute)
 
-1. **Receipts.** A receipt is a count of what your clinic has: patients, visits, appointments, prescriptions, lab orders and results, documents, and the money. It is taken of the copy before the upgrade and again after, and the two must say `RESULT: MATCH`.
-2. **The install doctor** checks the upgraded copy the way it will check your server. It must show `0 fail`.
-3. **The access check** has OpenEMR itself read your data back: it logs in, reads every patient, opens every document, runs the money reports, and opens a sample of charts in a browser. It must end `ACCESS: PASS`.
-
-The last line is the verdict. **Go on to step 4 only if it says `VERDICT: ready`.** If it says `not ready`, the lines marked `FAIL` or `DIFF` above say why. Send the folder it names at the end (`openemr-rehearsal-...`) to whoever helps you: the report and the receipts in it hold no patient data. One file there, `php-errors.log`, may quote part of a record in an error message: read it before you send it.
-
-A known problem in OpenEMR 8.5.0 itself: if your clinic records co-pays on the Fee Sheet, the report **Receipts by Payment Method** stops with an error for any dates that include a co-pay, and the access check says so. That is OpenEMR's bug, not your data. Decide with whoever helps you whether you can do without that report until it is fixed.
-
-## Reading a receipt
-
-Each line of "What the clinic has" and "Money" counts one thing, for the whole site:
-
-| Line | What it counts | Where to see it in OpenEMR |
-|---|---|---|
-| Patients | every patient record | Patient › Finder, all |
-| Encounters (visits) | every visit | a patient's encounter list |
-| Appointments (with a patient) | every calendar appointment for a patient | the calendar |
-| Prescriptions | every prescription | a patient's prescriptions |
-| Lab orders, Lab results | every order, every result line | Procedures › Lab results |
-| Documents (database rows) | every document OpenEMR knows | a patient's Documents |
-| Document files on disk | the files those documents are, with their total size and a checksum (a fingerprint of every byte) | |
-| Document files missing | documents whose file isn't on disk | |
-| Charges (fee sheet) | everything charged on fee sheets, removed lines left out | |
-| Co-pays (fee sheet) | co-pays entered on fee sheets | |
-| Drug sales | drugs dispensed and charged | |
-| Payments, Adjustments | every payment and adjustment posted, voided ones left out | |
-| Balance | charges and drug sales, less co-pays, payments and adjustments | each patient's dashboard, Billing card, **Total Balance Due**, added up over all patients |
-| Receipts by year | payments by the date they were paid | **Reports › Financial › Receipts by Payment Method**, Report by: Payment Method, Payment Date, January 1 to December 31: the **Grand Total** line |
-
-The last part, "Every table", gives each table of the database a checksum, so that a change anywhere is seen, not only in the lines above.
-
-When two receipts are compared, each line says `same` or `DIFF`. Lines marked `ok` under "Every table" are changes the upgrade always makes, each with its reason: it gives records that lacked one an ID for OpenEMR's FHIR interface, it fixes a misspelled code, it records an empty appointment end date in a new way. A figure in "What the clinic has" or "Money" is never allowed to change.
-
-## 4. Upgrade the live system
-
-Choose a quiet time and tell everyone to stay out of OpenEMR until you say. On the server, in the folder with the tools:
+In the tools folder, paste:
 
 ```
-sudo bash openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.5.0 --service=apache2 --backup-dir=/root/openemr-backups
+sudo php openemr-preflight.php --openemr="$OE" --target=8.5.0
 ```
 
-(`apache2` is the web server's name on Ubuntu; `httpd` on Red Hat and its relatives.) It checks the server first and asks `Continue?` Answer `y`. Then, in order, it:
+It only reads; it changes nothing.
 
-1. stops the web server, so nobody can change anything;
-2. takes a receipt of your site;
-3. backs up the database and the `sites/` folder, and checks that the backup is whole;
-4. upgrades a copy of the program beside the old one, and the database;
-5. takes a second receipt and compares it with the first;
-6. runs the install doctor;
-7. switches to the new release and starts the web server.
+**You should see, on the last line:** `No blocking problems found.` ("warning(s) to read" after it is fine; read them.)
 
-It prints `Done` at the end. Log in, open a few patients, and run Receipts by Payment Method for last year: it shows the same totals as the receipt. The receipts and their comparison are in the backup folder it named.
+**If it says** `Fix the ... failed check(s) before upgrading.`: **STOP.** The lines marked `FAIL` say what. The usual ones are PHP itself (OpenEMR 8.5 needs PHP 8.2 or later) and missing PHP extensions, such as `bcmath` or `imagick`. Updating PHP is a separate job, so ask whoever helps you, and come back to this guide once this step passes.
 
-## If it stops
+---
 
-- **Before the backup** (it says "nothing on the server was changed"): your OpenEMR is as it was, and running. Fix what the message says, and run the command again.
-- **"STOPPED AND PUT BACK"**: the second receipt didn't match the first. It has already put everything back: your OpenEMR is the old release, its database is restored from the backup made minutes before, and a third receipt shows it matches the first. Users can work again. Don't run the upgrade again until someone has read why: send them `receipts-default-compared.txt` from the backup folder. It holds no patient data.
-- **Any other stop after the backup**: it prints the exact command that puts everything back. Run it.
+## Step 3. Copy your site (on the server, about 5 minutes)
 
-## Rolling back later
-
-If something is wrong after the upgrade, within days:
+In the tools folder, paste:
 
 ```
-sudo bash openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr
+sudo mysqldump --single-transaction --routines --triggers "$DB" > site.sql
+sudo tar -czf sites.tar.gz -C "$OE" sites
+ls -lh site.sql sites.tar.gz
 ```
 
-It first saves the database as it is (with everything entered since the upgrade), then restores the backup, checks the restored database against the receipt taken before the upgrade, and switches the folders back. Nothing is deleted.
+**You should see:** two files with sizes bigger than 0, such as `site.sql 812M`.
 
-When you're sure all is well, after a week or two: delete the file `/var/www/html/.openemr-upgrade-state` (the rollback needs it until then), and later the old folder (`openemr.old-7.0.3`) and the backup folder. The backup holds patient records: delete it the way you delete any.
+**If you see** `Access denied`: open `$OE/sites/default/sqlconf.php` and find the `$login` and `$pass` lines. Run the first command again as `sudo mysqldump -u LOGIN -p --single-transaction --routines --triggers "$DB" > site.sql`, with LOGIN replaced by the `$login` value, and type the `$pass` value when it asks for a password.
 
-## More
+If your Docker computer isn't the server, copy these two files into the tools folder there.
 
-- What each tool checks, and how it was tested: [README](README.md).
-- Trying the UDS Report module on the rehearsal copy before you upgrade: [Run your UDS report on a rehearsal copy](https://github.com/anun333/oe-module-uds-report/blob/main/docs/rehearsal-copy.md).
+> ⚠️ These two files hold **every patient's record**. Keep them on clinic computers only. Never email them or upload them anywhere.
+
+---
+
+## Step 4. Test the upgrade on the copy (on the Docker computer, 10 minutes to an hour)
+
+In the tools folder, paste the four lines from step 0, then this, and **leave the window open** until it finishes:
+
+```
+bash openemr-rehearse.sh --dump=site.sql --sites=sites.tar.gz --from=$FROM --to=8.5.0
+```
+
+- The first time, it downloads OpenEMR's Docker images and says how much first. It also checks there's enough disk space.
+- If it says `permission denied` about Docker, run the same command with `sudo` in front.
+- It never touches your real OpenEMR.
+
+---
+
+## Step 5. Read the result
+
+Scroll up through the end of what it printed and find these four lines:
+
+| Look for | It means |
+|---|---|
+| `RESULT: MATCH` | Nothing was lost: every patient, visit, document and dollar counts the same after the upgrade as before. |
+| `... checks pass, 0 fail, ...` | The install check found no problems. |
+| `ACCESS: PASS` | OpenEMR could open every patient and every document on the upgraded copy. |
+| `VERDICT: ready` | All good. `ready, with notes` is good too: read the notes above it. |
+
+**If it says** `VERDICT: ready`: go on to step 6.
+
+**If it says** `VERDICT: not ready`: **STOP.** Don't upgrade. Send the folder it names at the very end, `openemr-rehearsal-...`, to whoever helps you.
+- That folder holds no patient data, except perhaps one file, `php-errors.log`, which can quote part of a record. Open it and check before you send it.
+- Never send `site.sql` or `sites.tar.gz`.
+
+**One known problem in OpenEMR 8.5.0 itself:** if your clinic enters co-pays on the Fee Sheet, the report **Receipts by Payment Method** shows an error for dates that include a co-pay, and step 5's result will mention it. That is a bug in OpenEMR, not a problem with your data. Ask whoever helps you whether you can manage without that report until it's fixed.
+
+---
+
+## Step 6. Upgrade the real OpenEMR (on the server, 15 to 45 minutes)
+
+1. At your quiet time, tell everyone to log out of OpenEMR and stay out until you say.
+2. Go into the tools folder from step 1, paste the four lines from step 0 again, then:
+
+```
+sudo bash openemr-upgrade.sh --openemr="$OE" --to=8.5.0 --service="$WEB" --backup-dir=/root/openemr-backups
+```
+
+3. It checks the server and asks `Continue?`. Type `y` and press Enter.
+4. Wait. It stops the website, makes a backup, upgrades, and checks your data before and after.
+
+**You should see, at the end:** `Done: ... is OpenEMR 8.5.0`.
+
+**If you see** `STOPPED AND PUT BACK`:
+- Your data didn't match, so it **already put everything back**. OpenEMR is the old version again, with all your data, and running. People can work again.
+- Don't try again yet. Send `receipts-default-compared.txt` from the backup folder (inside `/root/openemr-backups`) to whoever helps you. It has no patient data.
+
+**If it stops and says** `nothing on the server was changed`: your OpenEMR is untouched and running. Fix what the message says, or ask for help, then try step 6 again.
+
+**If it stops any other way:** it prints a command that puts everything back. Copy that command, paste it, and press Enter. Then ask for help.
+
+---
+
+## Step 7. Check it yourself (10 minutes)
+
+1. Log in to OpenEMR. **Administration > About** should say `8.5.0`.
+2. Open three patients you know, including one with documents. Open one document.
+3. Open **Reports > Financial > Receipts by Payment Method**. Choose Report by **Payment Method**, **Payment Date**, and last year from January 1 to December 31.
+4. Compare its **Grand Total** with the line for last year under "Receipts by year" in `receipt-default-before.txt`, in the backup folder. They should be the same.
+5. Tell everyone they can use OpenEMR again.
+
+---
+
+## If something is wrong in the days after
+
+Paste the four lines from step 0, then:
+
+```
+sudo bash openemr-upgrade.sh --rollback --openemr="$OE"
+```
+
+This goes back to your old version, with the database as it was before the upgrade. It first saves a copy of everything entered since the upgrade, so nothing is thrown away. Ask for help with getting that newer work back in.
+
+---
+
+## After two weeks with no problems: tidy up
+
+- Delete the file `.openemr-upgrade-state` next to your OpenEMR folder, for example `sudo rm /var/www/html/.openemr-upgrade-state`. Undoing the upgrade isn't possible after this.
+- Later, delete the old folder (for example `/var/www/html/openemr.old-7.0.3`) and the backup folder in `/root/openemr-backups`.
+- Delete `site.sql` and `sites.tar.gz` from step 3.
+
+> ⚠️ The backup and the step 3 files hold patient records. Delete them the way your clinic deletes any patient data.
+
+---
+
+## Words used here
+
+- **Copy / rehearsal:** a test run of the upgrade on a copy of your site, in Docker, away from your real OpenEMR.
+- **Receipt:** a count of what your clinic has: patients, visits, appointments, prescriptions, lab results, documents and money totals. It holds no patient names or details. Before and after must match.
+- **Install check (doctor):** a check that OpenEMR's files, settings and server are all right.
+- **Rollback / put back:** returning to the old version and the backup.
+
+What each receipt line counts, and more about each step: [the details](UPGRADE-GUIDE-DETAILS.md). How the tools were tested: [README](README.md).
