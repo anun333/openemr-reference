@@ -93,8 +93,13 @@ up() {
     while [[ "${1:-}" == -e ]]; do envs+=(-e "$2"); shift 2; done
     docker exec ${envs[@]+"${envs[@]}"} $C bash /root/tools/openemr-upgrade.sh --openemr=$OE --to=$TO --tarball=$TARBALL --yes --backup-dir=/root/backups "$@"
 }
-# A full dump of the database, as one checksum.
-sig() { docker exec $D sh -c "$DUMPER -uroot -proot --skip-dump-date --skip-comments openemr 2>/dev/null | md5sum | cut -d' ' -f1"; }
+# A full dump of the database, and its checksum. One difference in wording is read as none: MySQL 8.0,
+# after a dump is restored, writes each text column's character set out (CHARACTER SET utf8mb4
+# COLLATE utf8mb4_general_ci) where it wrote only the collation before (COLLATE utf8mb4_general_ci).
+# Same character set, same collation (the rollback's strict receipt compares each column's), and
+# only where the collation belongs to that character set. MariaDB writes it the same either way.
+dumpdb() { docker exec $D sh -c "$DUMPER -uroot -proot --skip-dump-date --skip-comments openemr 2>/dev/null" | sed -E 's/ CHARACTER SET ([a-z0-9]+) COLLATE (\1_[a-z0-9_]+)/ COLLATE \2/g'; }
+sig() { dumpdb | md5sum | cut -d' ' -f1; }
 # RECEIPTS_ONLY=1 (the other database servers) leaves out what doesn't touch the database server:
 # local changes, the PHP scan, --skip, downloads, the lock, and the stops before and after the backup.
 FULL=1; [[ "${RECEIPTS_ONLY:-0}" != 1 ]] || FULL=0
@@ -206,7 +211,7 @@ check "$([[ $tables_mid -gt $tables_before ]] && echo changed)" changed "half-up
 check "$([[ "$(sig)" != "$before" ]] && echo differs)" differs "half-upgraded: control: the database differs from before"
 set +e; docker exec $C bash /root/tools/openemr-upgrade.sh --rollback --openemr=$OE > "$LOG/half-rollback.log" 2>&1; rc=$?; set -e
 check "$rc" 0 "half-upgraded: the rollback finishes"
-check "$(sig)" "$before" "half-upgraded: after the rollback a full dump of the database is byte-for-byte the one before"
+check "$(sig)" "$before" "half-upgraded: after the rollback a full dump of the database is byte-for-byte the one before (MySQL's column character-set wording aside)"
 check "$(grep -c 'check: default: the restored database and documents match the receipt taken before the upgrade, every table' "$LOG/half-rollback.log")" 1 "half-upgraded: and the rollback's receipt matches the one before"
 docker exec -i $D sh -c "$DBC -uroot -proot openemr < /tmp/clean.sql 2>/dev/null && rm -f /tmp/clean.sql"
 docker exec $C sh -c "rm -rf /root/backups/* $OE.failed-*"
@@ -228,10 +233,10 @@ docker exec $C service fakeweb start
 inject() {  # inject NAME SQL EXPECTED-DIFF-PATTERN...
     local name="$1" sql="$2"; shift 2
     local sig0 sig1 sig2 rc v p t l pat
-    sig0=$(sig); docker exec $D sh -c "$DUMPER -uroot -proot --skip-dump-date --skip-comments openemr > /tmp/inject-before.sql 2>/dev/null"
+    sig0=$(sig); dumpdb > "$LOG/inject-$name-before.sql"
     set +e; up -e OPENEMR_UPGRADE_TEST_CHANGE_SQL="$sql" --customizations=apply --service=fakeweb > "$LOG/inject-$name.log" 2>&1; rc=$?; set -e
     # The dump straight after the run, before anything (the test's own login-page request) touches the site.
-    sig1=$(sig); docker exec $D sh -c "$DUMPER -uroot -proot --skip-dump-date --skip-comments openemr > /tmp/inject-after.sql 2>/dev/null"
+    sig1=$(sig); dumpdb > "$LOG/inject-$name-after.sql"
     grep -E "TEST:|check: default: the receipts|DON'T match|^    |^STOPPED|^  - |restored database|Nothing was switched|^A receipt|running again" "$LOG/inject-$name.log" | sed 's/^/    /' | cut -c1-190 || true
     check "$([[ $rc -ne 0 ]] && echo stopped)" stopped "changed during the upgrade ($name): the upgrade stops"
     check "$(grep -c "default: the receipts DON'T match" "$LOG/inject-$name.log")" 1 "changed during the upgrade ($name): the receipts disagree"
@@ -241,17 +246,17 @@ inject() {  # inject NAME SQL EXPECTED-DIFF-PATTERN...
     check "$(grep -c '^STOPPED AND PUT BACK' "$LOG/inject-$name.log")" 1 "changed during the upgrade ($name): it puts everything back by itself, and says so"
     check "$(grep -c '^== 9\|^== 10' "$LOG/inject-$name.log" || true)" 0 "changed during the upgrade ($name): before the doctor and the switch"
     check "$(grep -c 'check: default: the restored database and documents match the receipt taken before the upgrade, every table' "$LOG/inject-$name.log")" 1 "changed during the upgrade ($name): the restored database matches the first receipt (the script's check)"
-    check "$sig1" "$sig0" "changed during the upgrade ($name): a full dump of the database is byte for byte the one before"
-    [[ "$sig1" == "$sig0" ]] || docker exec $D sh -c 'diff /tmp/inject-before.sql /tmp/inject-after.sql | cut -c1-160 | head -12' | sed 's/^/       | /' || true
+    check "$sig1" "$sig0" "changed during the upgrade ($name): a full dump of the database is byte for byte the one before (MySQL's column character-set wording aside)"
+    [[ "$sig1" == "$sig0" ]] || { diff "$LOG/inject-$name-before.sql" "$LOG/inject-$name-after.sql" | cut -c1-200 | head -16 | sed 's/^/       | /'; } || true
     IFS='|' read -r v p t l <<<"$(state)"
     check "$v|$p|$t|$l" "$v0|$p0|$t0|200" "changed during the upgrade ($name): the same version, patients, tables and login page as before"
     # What the login page itself writes, for the record (a site's users would do the same once it's back).
     sig2=$(sig)
     if [[ "$sig2" != "$sig1" ]]; then
         echo "    note: loading the login page changed the database:"
-        docker exec $D sh -c "$DUMPER -uroot -proot --skip-dump-date --skip-comments openemr 2>/dev/null | diff /tmp/inject-after.sql - | grep '^[<>]' | cut -c1-160 | head -6" | sed 's/^/       | /' || true
+        dumpdb | diff "$LOG/inject-$name-after.sql" - | grep '^[<>]' | cut -c1-160 | head -6 | sed 's/^/       | /' || true
     fi
-    docker exec $D rm -f /tmp/inject-before.sql /tmp/inject-after.sql
+    [[ "$sig1" != "$sig0" ]] || rm -f "$LOG/inject-$name-before.sql" "$LOG/inject-$name-after.sql"   # kept when they differ
     check "$(docker exec $C sh -c "php -r 'include \"$OE/version.php\"; echo \"\$v_major.\$v_minor.\$v_patch\n\";'; ls -d $OE.failed-$TO-* >/dev/null 2>&1 && echo kept; ls -d $OE.new-$TO 2>/dev/null; ls $(dirname $OE)/.openemr-upgrade-state 2>/dev/null" | tr '\n' ' ')" "${v0%% db *} kept " "changed during the upgrade ($name): the old folder is live; the $TO folder is kept aside; no upgrade is left half done"
     check "$(docker exec $C sh -c "pgrep -f 'sleep 900' >/dev/null && echo running || echo stopped")" running "changed during the upgrade ($name): the web server is running again"
     set +e; receipt /root/receipt-after-$name.json "the test's own, after the automatic rollback" > /dev/null 2>&1

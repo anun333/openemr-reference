@@ -27,7 +27,8 @@
  * explanation for each. Every other difference is listed, and so is any change at all to a figure in
  * "what the clinic has": those are never explained away. Exit code 0 for MATCH, 1 otherwise, 2 for a
  * usage error. --strict (for a database restored from a backup) allows no difference at all: every
- * table the same, rows, row checksum and column checksums, not even what an upgrade is known to change.
+ * table the same (rows, row and column checksums, column types and collations), not even what an
+ * upgrade is known to change.
  *
  * For openemr-rehearse.sh, which runs it in a container on a database copy:
  *     --host=H --port=P --user=U --password-file=F --database=D --documents=DIR [--openemr=DIR]
@@ -245,8 +246,10 @@ function tables(mysqli $db, string $schema, ?array $against): array
 {
     $s = $db->real_escape_string($schema);
     $cols = [];
-    foreach (rows($db, "SELECT c.table_name, c.column_name, c.data_type, c.column_type, c.numeric_scale, c.extra FROM information_schema.columns c JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE' WHERE c.table_schema = '$s' ORDER BY c.table_name, c.ordinal_position") as [$t, $c, $dt, $ct, $scale, $extra]) {
+    $collation = [];
+    foreach (rows($db, "SELECT c.table_name, c.column_name, c.data_type, c.column_type, c.numeric_scale, c.extra, c.collation_name FROM information_schema.columns c JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE' WHERE c.table_schema = '$s' ORDER BY c.table_name, c.ordinal_position") as [$t, $c, $dt, $ct, $scale, $extra, $coll]) {
         $cols[$t][$c] = [strtolower($dt), strtolower($ct), $scale === null ? null : (int)$scale, stripos((string)$extra, 'on update') !== false];
+        $collation[$t][$c] = $coll;
     }
     // The ids uuid_registry says were created after the first receipt: the backfill's, set aside
     // so that every id that was there can be shown to be there still.
@@ -308,7 +311,7 @@ function tables(mysqli $db, string $schema, ?array $against): array
         $entry = ['rows' => (int)$r[0], 'patient_rows' => (int)$r[1], 'patient_column' => $pidColumn, 'row_sum' => (string)$r[2],
             'row_columns' => $complete ? count($parts) : null, 'columns' => []];
         foreach ($columns as $c => $type) {
-            $entry['columns'][$c] = ['type' => $type[1], 'family' => family($type[0])];
+            $entry['columns'][$c] = ['type' => $type[1], 'family' => family($type[0]), 'collation' => $collation[$t][$c]];
             if ($type[3]) {
                 $entry['columns'][$c]['auto_update'] = true;
             }
@@ -788,7 +791,7 @@ function compare(array $a, array $b, bool $strict = false): array
             $cols = [];
             foreach ($x['columns'] as $c => $cx) {
                 $cy = $y['columns'][$c] ?? null;
-                if ($cy === null || $cx['type'] !== $cy['type'] || $cx['sum'] !== $cy['sum']) {
+                if ($cy === null || $cx['type'] !== $cy['type'] || $cx['sum'] !== $cy['sum'] || ($cx['collation'] ?? null) !== ($cy['collation'] ?? null)) {
                     $cols[] = $c;
                 }
             }
@@ -806,7 +809,7 @@ function compare(array $a, array $b, bool $strict = false): array
     if ($bad) {
         $t[] = 'RESULT: DIFFERENT. ' . count($bad) . ' difference' . (count($bad) === 1 ? '' : 's') . ($strict ? ' (strict: every table must be the same)' : ' that the upgrade isn\'t known to make') . ' (the DIFF lines above).';
     } elseif ($strict) {
-        $t[] = 'RESULT: MATCH (strict). Every table is the same: rows, and the checksum of every row and column; every document file and money figure too.';
+        $t[] = 'RESULT: MATCH (strict). Every table is the same: rows, the checksum of every row and column, and each column\'s type and collation; every document file and money figure too.';
     } else {
         $t[] = 'RESULT: MATCH. Every patient record, document and money figure is the same' . ($explained ? '; the changes marked ok are the upgrade\'s own, each explained.' : '.');
     }
