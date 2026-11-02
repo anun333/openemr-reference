@@ -29,11 +29,14 @@ If `mysqldump` asks for a password or says access is denied, add the user and pa
 On the machine with Docker, in an empty folder:
 
 ```
-for f in openemr-rehearse.sh openemr-receipt.php openemr-doctor.php openemr-upgrade.sh openemr-preflight.php scan.php SHA256SUMS; do
+FILES="openemr-rehearse.sh openemr-receipt.php openemr-doctor.php openemr-upgrade.sh openemr-preflight.php scan.php"
+for f in $FILES SHA256SUMS; do
   curl -fsSLO https://github.com/anun333/openemr-reference/releases/latest/download/$f
 done
-sha256sum -c SHA256SUMS --ignore-missing
+for f in $FILES; do grep " $f\$" SHA256SUMS; done | sha256sum -c
 ```
+
+(This checks only the files you downloaded, and works with GNU's `sha256sum` and with BusyBox's, as in OpenEMR's Docker image, which has no `--ignore-missing`.)
 
 Every line must end in `OK`. If one doesn't, stop: the file isn't the one published. Copy the same folder to the server for step 4.
 

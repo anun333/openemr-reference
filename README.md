@@ -27,7 +27,7 @@ The two PHP tools and the upgrade script run on the server; the rehearsal runs o
 - [openemr-receipt.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-receipt.php), which the rehearsal and the upgrade run (and anyone can, on the server)
 - [openemr-upgrade.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-upgrade.sh), for installs from the release tarball
 - [scan.php](https://github.com/anun333/openemr-reference/releases/latest/download/scan.php), put beside the doctor and the pre-flight check: it reads a site's own code for what PHP removed (see [PHP changes in a site's own code](#php-changes-in-a-sites-own-code))
-- [SHA256SUMS](https://github.com/anun333/openemr-reference/releases/latest/download/SHA256SUMS), to check them (`sha256sum -c SHA256SUMS --ignore-missing`)
+- [SHA256SUMS](https://github.com/anun333/openemr-reference/releases/latest/download/SHA256SUMS), to check them (`sha256sum -c SHA256SUMS --ignore-missing`; with BusyBox's `sha256sum`, as in OpenEMR's Docker image, check each file you downloaded: `grep ' openemr-receipt.php$' SHA256SUMS | sha256sum -c`)
 
 **What they do and don't do.** The doctor and the pre-flight check only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`, and one request to `github.com` asking which release of these tools is newest, so a tool can say when a newer one is out. It never updates itself; `OPENEMR_REFERENCE_NO_UPDATE_CHECK=1` turns the question off, and the doctor doesn't ask when its facts come from a local folder. Nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. The rehearsal never touches the live site: it works on a copy of a database dump and of `sites/` (which it only reads), in containers it caps and deletes afterwards. It downloads the official OpenEMR and database images, Playwright's browser image and the pinned Playwright package from PyPI, and the same facts; its browser talks to the copy and nowhere else. The receipt only reads, and holds no patient data: counts, money totals and checksums. `openemr-utf8mb4.sql` only prints statements; nothing changes until you run them. `openemr-upgrade.sh` does change the server, in the order described below, after backing up, and keeps a way back. Each is a single readable file: read it before you run it.
 
@@ -297,7 +297,7 @@ It says on stderr which container and image it checks and how it runs the doctor
 - When the project has more than one OpenEMR container it names them and checks the first; set `CONTAINER=name` to pick another, or to check an image of your own built on `openemr/openemr`.
 - `--debug` (`curl … | bash -s -- --debug`) traces the script and runs the doctor with `--debug`.
 
-To check the script itself before running it, download it with `SHA256SUMS` and run `sha256sum -c SHA256SUMS --ignore-missing`.
+To check the script itself before running it, download it with `SHA256SUMS` and run `sha256sum -c SHA256SUMS --ignore-missing` (or `grep ' openemr-upgrade.sh$' SHA256SUMS | sha256sum -c`, which BusyBox's `sha256sum` accepts too).
 
 The idea came from Asher Densmore-Lynn ([t/27118](https://community.open-emr.org/t/27118/8)).
 
