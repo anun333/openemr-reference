@@ -2,7 +2,7 @@
 """A synthetic, Pohnpei-shaped health center for the end-to-end tests. Every person is made up.
 
     python3 -I preflight/test_site.py [--copays] > site.sql SQL for an OpenEMR 7.0.3 database (--copays: with
-                                                          fee-sheet co-pays, which 8.5.0's Receipts by
+                                                          billing-line co-pays, which 7.0.4-8.5.0's Receipts by
                                                           Payment Method report can't show)
     python3 -I preflight/test_site.py --documents > d.php   PHP that stores its documents through
                                                           OpenEMR's own Document class (run in the
@@ -316,7 +316,7 @@ for pid, enc_, date, prov, fac, ins, lines in visits:
           f"({pay_row}, {pid}, '{date}', {enc_}, 'admin', 'cash', '', {amt:.2f}, 0.00, {amt:.2f}, 0.00);")
     if S.random() < 0.05 and '--copays' in sys.argv:
         # Off by default: OpenEMR 8.5.0's Receipts by Payment Method report stops with a TypeError on a
-        # fee-sheet co-pay (its co-pay query doesn't select code_text), so a site with them can't run it.
+        # billing-line co-pay, as the old Charges screen writes (its co-pay query doesn't select code_text), so a site with them can't run it.
         w("INSERT INTO billing (date, code_type, code, pid, provider_id, user, groupname, authorized, encounter, code_text, billed, activity, units, fee) "
           f"VALUES ('{date}', 'COPAY', '', {pid}, {prov}, 1, 'Default', 1, {enc_}, 'Co-pay (synthetic)', 0, 1, 1, -5.00);")
     if S.random() < 0.02:

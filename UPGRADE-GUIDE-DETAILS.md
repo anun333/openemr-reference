@@ -56,7 +56,7 @@ It takes from 10 minutes to an hour, depending on the size of your site. It upgr
 
 The last line is the verdict. **Go on to step 4 only if it says `VERDICT: ready`.** If it says `not ready`, the lines marked `FAIL` or `DIFF` above say why. Send the folder it names at the end (`openemr-rehearsal-...`) to whoever helps you: the report and the receipts in it hold no patient data. One file there, `php-errors.log`, may quote part of a record in an error message: read it before you send it.
 
-A known problem in OpenEMR 8.5.0 itself: if your clinic records co-pays on the Fee Sheet, the report **Receipts by Payment Method** stops with an error for any dates that include a co-pay, and the access check says so. That is OpenEMR's bug, not your data. Decide with whoever helps you whether you can do without that report until it is fixed.
+A known problem in OpenEMR itself, from 7.0.4 through 8.5.0: if your clinic recorded co-pays from a visit's Charges screen (shown only with "Use Charges Panel" on, which is off by default; imports can write the same rows), the report **Receipts by Payment Method** stops with an error for any dates that include one of those co-pays, and the access check says so. Co-pays added on the Fee Sheet are stored as payments and don't cause it. That is OpenEMR's bug, not your data; the fix is offered as openemr/openemr#15001. Decide with whoever helps you whether you can do without that report until it is fixed.
 
 ## Reading a receipt
 
