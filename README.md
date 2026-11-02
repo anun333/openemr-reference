@@ -7,8 +7,11 @@ Facts about each OpenEMR release (7.0.0 on), read from its source at the release
 - **[Settings](site/settings/index.md):** everything under Administration > Config, with defaults, choices and the release each setting appeared in.
 
 - **[Upgrade pre-flight check](preflight/openemr-preflight.php):** run it on a server before upgrading, and it lists what to fix first.
-- **[Upgrade rehearsal](preflight/openemr-rehearse.sh):** run the upgrade on a copy of the site's database in Docker first, and it reports what the upgrade did to the schema and to the data.
-- **[Upgrade](preflight/openemr-upgrade.sh):** for an install from the release tarball: backs up, unpacks the new release beside the old, upgrades the databases, checks with the doctor, switches, and rolls back on request.
+- **[Upgrade rehearsal](preflight/openemr-rehearse.sh):** run the upgrade on a copy of the whole site (database and `sites/`) in Docker first: it compares receipts of the copy before and after, runs the doctor on it, and has OpenEMR read every patient and document back.
+- **[Receipt](preflight/openemr-receipt.php):** what a site holds, as counts, money totals and checksums, with no patient data; two receipts compared say MATCH or name each difference.
+- **[Upgrade](preflight/openemr-upgrade.sh):** for an install from the release tarball: takes a receipt, backs up, unpacks the new release beside the old, upgrades the databases, takes a second receipt and puts everything back by itself if the two disagree, checks with the doctor, switches, and rolls back on request.
+
+**Upgrading a site?** [The step-by-step guide](UPGRADE-GUIDE.md) puts these in order for someone who isn't a programmer: copy the site, rehearse with receipts, the doctor and the access check, and only then upgrade the live system with receipts.
 - **[Install doctor](preflight/openemr-doctor.php):** run it when an install shows a blank page, an error 500, a broken login or missing documents, and it names the cause.
 
 Nothing in `site/` is written by hand. It complements the OpenEMR wiki, which has the upgrade *procedure* and the release features; these pages have the version-specific facts the procedure doesn't. A daily job adds each new OpenEMR release.
@@ -21,11 +24,12 @@ The two PHP tools and the upgrade script run on the server; the rehearsal runs o
 - [openemr-doctor-docker.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-doctor-docker.sh), to run the doctor on an install from OpenEMR's Docker images
 - [openemr-preflight.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-preflight.php)
 - [openemr-rehearse.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-rehearse.sh) and [openemr-utf8mb4.sql](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-utf8mb4.sql)
+- [openemr-receipt.php](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-receipt.php), which the rehearsal and the upgrade run (and anyone can, on the server)
 - [openemr-upgrade.sh](https://github.com/anun333/openemr-reference/releases/latest/download/openemr-upgrade.sh), for installs from the release tarball
 - [scan.php](https://github.com/anun333/openemr-reference/releases/latest/download/scan.php), put beside the doctor and the pre-flight check: it reads a site's own code for what PHP removed (see [PHP changes in a site's own code](#php-changes-in-a-sites-own-code))
 - [SHA256SUMS](https://github.com/anun333/openemr-reference/releases/latest/download/SHA256SUMS), to check them (`sha256sum -c SHA256SUMS --ignore-missing`)
 
-**What they do and don't do.** The doctor and the pre-flight check only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`, and one request to `github.com` asking which release of these tools is newest, so a tool can say when a newer one is out. It never updates itself; `OPENEMR_REFERENCE_NO_UPDATE_CHECK=1` turns the question off, and the doctor doesn't ask when its facts come from a local folder. Nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. The rehearsal never touches the live site: it works on a copy of a database dump, in containers it deletes afterwards, and downloads only the official OpenEMR and MariaDB images and the same facts. `openemr-utf8mb4.sql` only prints statements; nothing changes until you run them. `openemr-upgrade.sh` does change the server, in the order described below, after backing up, and keeps a way back. Each is a single readable file: read it before you run it.
+**What they do and don't do.** The doctor and the pre-flight check only read: nothing in the install or its database is changed. They print no passwords, keys or setting values. The only network access is downloading this repository's facts for your release (about 300 KB) from `raw.githubusercontent.com`, and one request to `github.com` asking which release of these tools is newest, so a tool can say when a newer one is out. It never updates itself; `OPENEMR_REFERENCE_NO_UPDATE_CHECK=1` turns the question off, and the doctor doesn't ask when its facts come from a local folder. Nothing about your server is sent anywhere. On a server without internet, copy `site/preflight/` across and pass `--facts=` that folder. The rehearsal never touches the live site: it works on a copy of a database dump and of `sites/` (which it only reads), in containers it caps and deletes afterwards. It downloads the official OpenEMR and database images, Playwright's browser image and the pinned Playwright package from PyPI, and the same facts; its browser talks to the copy and nowhere else. The receipt only reads, and holds no patient data: counts, money totals and checksums. `openemr-utf8mb4.sql` only prints statements; nothing changes until you run them. `openemr-upgrade.sh` does change the server, in the order described below, after backing up, and keeps a way back. Each is a single readable file: read it before you run it.
 
 Every push runs ShellCheck on the scripts, parses the PHP tools with each PHP they support (5.5 to 8.5 for the doctor and `scan.php`, 7.4 on for the pre-flight check), and runs `gen/check.py` (`.github/workflows/lint.yml`). The end-to-end suites below need Docker and several minutes each, so they run before each release: `release.sh` runs the same fast checks and then every suite, one at a time, and tags and publishes nothing unless all of them pass. It then downloads what it published and checks it against `SHA256SUMS`. (It exists because v0.3.8 went out with the doctor's suites run but not the upgrade suite, which also runs the doctor.)
 
@@ -70,41 +74,110 @@ It then prints **the plan, in order, from what it found**: the backup (including
 ## Upgrade rehearsal
 
 ```
-preflight/openemr-rehearse.sh --dump=site.sql --from=7.0.3 [--to=8.4.1] [--db=mariadb:11.8] [--convert-utf8mb4] [--keep]
+preflight/openemr-rehearse.sh --dump=site.sql --sites=sites.tar.gz --from=7.0.3 [--to=8.5.0] [--site=default] [--db=mariadb:11.8]
+                              [--cpus=3] [--memory=6g] [--sample=10] [--out=DIR] [--no-access-check] [--convert-utf8mb4] [--keep]
 ```
 
-The pre-flight check reads the server; the rehearsal runs the upgrade itself, on a copy, before the real one. Give it a `mysqldump` of the site's database (the backup the upgrade needs anyway) on any machine with Docker. The live site is never touched, and the copy never leaves that machine. It:
+The pre-flight check reads the server; the rehearsal runs the upgrade itself, on a copy of the whole site, before the real one. Give it a `mysqldump` of the site's database (the backup the upgrade needs anyway) and its `sites/` folder (a `.tar.gz` of it, or the folder, which is only read), on any machine with Docker. The live site is never touched, and the copy never leaves that machine. It:
 
-1. starts the target release's official image on a database server that release is tested on (by default the newest MariaDB in its CI), which also installs a fresh database of the target to compare with;
-2. restores the dump twice, one copy to upgrade and one to keep as it was;
-3. runs the target's own `sql_upgrade.php --from=<from>` on the first copy, timed;
-4. compares the upgraded copy with the fresh install (tables, columns, indexes) and with the untouched copy (row counts and the values of every column, per table), and asks for the login page served from the upgraded copy;
-5. prints a report and deletes everything (`--keep` leaves it running to look around).
+1. checks there is room, and says how much the copy needs (the database four times over, `sites/` twice, and any images not yet downloaded);
+2. starts the target release's official image on a database server that release is tested on (by default the newest MariaDB in its CI), which also installs a fresh database of the target to compare with;
+3. restores the dump twice, one copy to upgrade and one to keep as it was, and copies `sites/` in: documents, the encryption keys they need, the site's own files;
+4. takes a [receipt](#receipt) of the untouched copy, runs the target's own `sql_upgrade.php --from=<from>` on the other, timed, and takes a receipt of the upgraded copy. The two must match, as they must on the live upgrade, which stops and puts everything back when they don't;
+5. compares the upgraded copy with the fresh install (tables, columns, indexes), and asks for the login page served from it;
+6. runs the [install doctor](#install-doctor) on the upgraded copy, as the live upgrade does;
+7. has OpenEMR read the upgraded copy back (the access check), as a temporary administrator it removes afterwards:
+   - every patient through OpenEMR's API, with each patient's encounters, appointments, prescriptions and lab orders counted and matched with the receipt;
+   - every document through OpenEMR's own document route, decrypted with the site's keys, against the hash OpenEMR stored when it was saved;
+   - Reports › Financial › Receipts by Payment Method for each year, and every patient's balance by OpenEMR's own `get_patient_balance` (the Billing card's Total Balance Due), against the receipt;
+   - a sample of charts in a browser (Playwright, in Docker, allowed to talk to the copy only): random patients, the first and last registered, the oldest, the one with the most encounters, two with documents, two with a balance, one with lab results and one with prescriptions. For each it opens the dashboard (and reads the balance on its Billing card), demographics, the encounter list, documents, prescriptions, lab results, the latest lab order and the latest encounter with every form in it. Then one of each kind of encounter form on the site, in its own encounter. Every page must load without a PHP error: a status of 500, PHP's own message on the page, or a fatal error, uncaught exception or parse error in the log while it loaded. Warnings and JavaScript errors are listed as notes;
+8. prints a report and writes it, with both receipts, their comparison, the doctor's output and the access check's, to `--out` (by default `openemr-rehearsal-<from>-to-<to>-<time>/`). Then it deletes everything; `--keep` leaves the copy running to look around.
 
-Each difference it already knows is named with its cause and effect, and the rest are listed as not known. Patient tables (those with a `pid`, `patient_id` or `pc_pid` column) that lose rows, a failed statement or a PHP fatal error make the verdict **not ready**. A rehearsal of 7.0.3 with 40 synthetic patients (Synthea, 1,716 encounters, 4,307 results, 553 immunizations) to 8.4.1 on MariaDB 12.3 took under 3 minutes for a 21 MB dump:
+The verdict is **ready** only when `sql_upgrade.php` finished cleanly, the schema differs from a fresh install only in known ways, the receipts match, the doctor fails nothing (other than PHP's own security update), and the access check passes.
+
+**Capped.** Its containers share `--cpus` (3 unless given) and `--memory` (6 GB) equally: the database, OpenEMR and the browser each get a third. So it can run on the server beside the live site without starving it.
+
+A rehearsal of the synthetic Pohnpei-shaped 7.0.3 (patch 4) site (`preflight/test_site.py`: 420 patients, 1,309 encounters, 811 appointments, 287 prescriptions, 213 lab orders with 401 results, 122 documents stored encrypted by OpenEMR itself, insurance and patient payments) to 8.5.0, on MariaDB 12.3 (abridged: "..." marks lines left out; the access check is from `test_rehearse.sh`'s clean run on the same data):
 
 ```
-sql_upgrade.php: exit 0 in 50s; database now 8.4.1 (database 543); size 47 MB -> 54 MB; login page from the upgraded copy: HTTP 200
+Rehearsing OpenEMR 7.0.3 -> 8.5.0 on mariadb:12.3 with site-703.sql (16 MB) and sites/ from sites-703.tar.gz (0 MB)
+  the copy needs about 68 MB under /var/lib/docker (the database four times over, sites/ twice); 73738 MB free
+  capped at 3 CPUs and 6g of memory in all (1.00 CPUs and 2048m each for the database, OpenEMR and the browser)
+  ...
+  check: sites/default copied whole into the copy (167 files)
+  ...
+sql_upgrade.php: exit 0 in 60s; database now 8.5.0 (database 555); size 37 MB -> 48 MB; login page from the upgraded copy: HTTP 200
 Upgrade: 0 statements failed and were skipped; 0 PHP fatal errors
 
-Schema against a fresh 8.4.1 install: 11 differences, 0 of them not known
+Schema against a fresh 8.5.0 install: 11 differences, 0 of them not known
   ok      5  timestamp columns with the old server's defaults: ...
-  ok      3  contact_address lacks created_by, updated_date, updated_by: ...
-  ok      1  procedure_order lacks the index idx_specimen_type: ...
-  ok      2  drug_sales: the uuid index is named uuid_unique: ...
-
-Data against the copy before the upgrade: 82 patient tables, 15202 rows
-  patient rows lost: none
-  patient rows added by the upgrade: none
-  tables dropped that held rows: none
-  ok   patient_data (last_updated) changed: the 7.0.4 script updates every patient (sex_identified, interpreter_needed), so last_updated, and with it FHIR meta.lastUpdated and _lastUpdated searches, show the upgrade time.
-  ok   document_templates (send_date, end_date) changed: 8.1.0 replaces zero dates: ...
-  ok   rows removed from uuid_registry: 14267 -> 14147: 7.0.4 retires the FHIR ids of four vital-sign Observations ...
   ...
+
+Data: receipts of the copy before and after the upgrade (no patient data; in .../openemr-rehearsal-7.0.3-to-8.5.0-...)
+  What the clinic has, and the money
+    same Patients                                       420
+    same Encounters (visits)                            1,309
+    same Appointments (with a patient)                  811
+    same Prescriptions                                  287
+    same Lab orders                                     213
+    same Lab results                                    401
+    same Documents (database rows)                      122
+    same Document files on disk                         122
+    same Document files: bytes                          112,070
+    same Document files missing                         0
+    same Document files: checksum of every file         dbe6a73554da36b3
+    same Charges (fee sheet)                            33,425.00
+    same Co-pays (fee sheet)                            0.00
+    same Drug sales                                     360.00
+    same Payments                                       11,667.00
+    same Adjustments                                    2,604.00
+    same Balance (charges and drug sales, less co-pays, payments and adjustments) 19,514.00
+    same Receipts / adjustments, 2024                   151.00 / 28.00
+    same Receipts / adjustments, 2025                   11,516.00 / 2,576.00
+    every figure the same, and each patient's counts and balance too
+
+  Every table: 264 compared (82 of them a patient's, with 11,312 rows of patients), 22 created by the upgrade, 1 gone
+    ok   drugs.uuid (1 row), form_encounter.uuid (1309 rows), ... patient_data.uuid (420 rows), ...: the upgrade gave each row that had no FHIR id (uuid) one; checked: every id that was there is still there, on as many rows.
+    ok   form_encounter.last_update, form_vitals.last_updated, ...: updates itself whenever its row is written (ON UPDATE CURRENT_TIMESTAMP), ...
+    ok   openemr_postcalendar_events.pc_endDate: 8.1.0 and 8.1.1 store a single appointment's empty end date as NULL instead of 0000-00-00 (...) (checked: exactly that rename, nothing else).
+    ok   patient_data.ethnicity: 8.1.0 corrects the misspelled code 'declne_to_specfy' to 'decline_to_specify' (checked: exactly that rename, nothing else).
+    ok   patient_data.last_updated: the 7.0.4 script updates every patient ...
+    ok   settings, lists and other tables that aren't a patient's: 13 gained rows, 6 changed in place, 22 created (the upgrade scripts' own work)
+
+  RESULT: MATCH. Every patient record, document and money figure is the same; the changes marked ok are the upgrade's own, each explained.
+
+Install doctor on the upgraded copy (exit 0; full output: .../doctor.txt)
+  14 checks pass, 0 fail, 0 warn
+
+Access check: OpenEMR reads the upgraded copy back (sample seed 67178; 420 patients through the API, 122 documents, 24 chart visits (19 patients sampled), 2 report years)
+  ok   logged in to the upgraded copy (a temporary administrator, removed afterwards)
+  ok   every patient read through OpenEMR's API: 420 of 420
+  ok   encounters per patient: the API's counts match the receipt for all 420 patients who have any
+  ok   appointments per patient: the API's counts match the receipt for all 365 patients who have any
+  ok   prescriptions per patient: the API's counts match the receipt for all 220 patients who have any
+  ok   lab orders per patient: the API's counts match the receipt for all 178 patients who have any
+  ok   every document fetched through OpenEMR's document route matches the hash OpenEMR stored: 122 of 122
+  ok   Reports > Financial > Receipts by Payment Method, 2024 (payment date): receipts 151.00, adjustments 28.00, as the receipt
+  ok   Reports > Financial > Receipts by Payment Method, 2025 (payment date): receipts 11,516.00, adjustments 2,576.00, as the receipt
+  ok   every patient's balance by OpenEMR's own get_patient_balance (the Billing card's Total Balance Due) matches the receipt: 380 with a balance, 19,514.00 in all
+  ok   the dashboard's Billing card shows each sampled patient's balance as the receipt has it (19 patients)
+  ok   176 pages of 21 patients' charts opened in a browser without a PHP error
+       opened: first registered (1); last registered (420); random (420, 176, ...); oldest (341); most encounters (7); has documents (321, 244); ...; a form of the kind 'procedure_order' (1); ...
+  note OpenEMR logged 8 kinds of PHP warning or deprecation while the pages loaded (not errors; the pages loaded):
+         patient 1: form 'procedure_order': PHP Warning:  Undefined array key 0 in .../interface/forms/procedure_order/templates/procedure_specimen_row.php on line 21
+         ...
+ACCESS: PASS
+...
 VERDICT: ready
 ```
 
-A column whose type the upgrade changed (`date` to `datetime`, `float(5,2)` to `decimal(12,6)`) is compared through a form both types share, so a conversion that keeps every value isn't reported; 6.1.0 with the same patients has five such conversions, all value-preserving. Rehearsed on real installs of 5.0.2 (with `--convert-utf8mb4`), 6.1.0 and 7.0.3, all to 8.4.1.
+`preflight/test_rehearse.sh` (55 checks) checks it both ways: the clean rehearsal above passes, with each container capped, and a rehearsal of the same site with faults planted in the source (one document's file missing, another's stored hash wrong, an encounter form whose code isn't in 8.5.0, and fee-sheet co-pays) fails and names each one. The receipts of that copy still match: the faults were there before the upgrade, which is why the access check reads the data back through OpenEMR and doesn't stop at counting it.
+
+**Two findings about OpenEMR 8.5.0 itself, from these rehearsals** (both reported here, not upstream yet):
+- Reports › Financial › Receipts by Payment Method stops with a TypeError when the dates include a co-pay entered on the Fee Sheet: its co-pay query doesn't select `code_text`, and 8.5.0 made the function's `$memo` a `string`. A 7.0.3 site has the Fee Sheet's co-pay button unless it runs the IPPF settings. Also on OpenEMR's master branch as of 2026-11-01.
+- A lab order made before 8.x has no rows in 8.5.0's new `procedure_specimen` table, and opening it logs PHP warnings (`procedure_specimen_row.php`, an undefined array key and a `foreach` over null). The page still loads.
+
+A column whose type the upgrade changed (`date` to `datetime`, `float(5,2)` to `decimal(12,6)`) is compared through a form both types share, so a conversion that keeps every value isn't reported. Rehearsed on real installs of 5.0.2 (with `--convert-utf8mb4`), 6.1.0 and 7.0.3, all to 8.4.1, before the receipts and the access check were added.
 
 What it finds that a site should know about, from rehearsals of real installs of 5.0.2, 6.1.0 and 7.0.3:
 - **Sites installed before 6.0.0 still have `utf8mb3` tables**, which no upgrade converts. OpenEMR connects as `utf8mb4`, so an emoji or other 4-byte character typed into them is saved as `?` with no error. [`preflight/openemr-utf8mb4.sql`](preflight/openemr-utf8mb4.sql) prints the statements that convert them while keeping every column's type (`ALTER TABLE … CONVERT TO` would widen `text` to `mediumtext` and so on, and the schema would no longer match a fresh install). `--convert-utf8mb4` rehearses it on the upgraded copy. MariaDB only; back up first.
@@ -114,10 +187,42 @@ Needs Docker with compose, and the target must be 8.2.0 or later (`sql_upgrade.p
 
 **Using the upgraded copy.** With `--keep` the copy stays up, logged in to with the site's own accounts, so a site can try what needs the newer release before upgrading: the UDS Report module's guide, [Run your UDS report on a rehearsal copy of an older OpenEMR](https://github.com/anun333/oe-module-uds-report/blob/main/docs/rehearsal-copy.md), does that from 7.0.3 to 8.5.0. The copy holds the site's patient records and answers only on 127.0.0.1. Its port changes if the container restarts; ask again with the `port` command the rehearsal prints.
 
+## Receipt
+
+```
+php openemr-receipt.php --openemr=/var/www/html/openemr [--site=default] [--out=FILE.json] [--label=TEXT] [--against=FIRST.json]
+php openemr-receipt.php --compare FIRST.json SECOND.json
+```
+
+What a site holds, so that two moments (before and after an upgrade, a copy and its source, a backup restored) can be shown to hold the same data. It only reads, and it holds **no patient data**: counts, money totals and checksums, from which nothing about a patient can be read back. It runs on PHP 7.4 and later, with the PHP the site runs on. It has three parts:
+
+- **A header:** the site, the OpenEMR release the files and the database say, the database server, when.
+- **What the clinic has, in plain words:** patients, encounters, appointments, prescriptions, lab orders and lab results, documents (database rows, and the files on disk they point to, found the way OpenEMR's document route finds them: their count, bytes, a checksum of every file, and how many are missing), charges, co-pays and drug sales, payments and adjustments (voided ones left out), the total balance, and receipts and adjustments by year.
+- **Every table:** its rows, the rows of a patient (tables with a `pid`, `patient_id` or `pc_pid`), a checksum of its rows, and one of each column.
+
+The money figures are OpenEMR's own: the balance is what `get_patient_balance($pid, true)` (each patient's Billing card, Total Balance Due) gives, added up, and "receipts by year" is what Reports › Financial › Receipts by Payment Method shows by payment date for January 1 to December 31, from the report's own query (the same in 7.0.3 and 8.5.0). The rehearsal's access check checks both against OpenEMR on the upgraded copy: the report for each year, and `get_patient_balance` for every patient, whose checksum must equal the receipt's.
+
+`--compare` prints **MATCH** when nothing differs but what an upgrade is known to change, each with its reason. A figure in "what the clinic has", or a patient's own counts or balance, is never explained away. The known changes are measured, and each is checked rather than assumed:
+
+| Change | How it is checked |
+|---|---|
+| FHIR ids (`uuid`) given to rows that had none | fewer rows without one, and every id that was there still there (ids `uuid_registry` says were created after the first receipt are set aside) |
+| a timestamp that updates itself when its row is written (`ON UPDATE CURRENT_TIMESTAMP`) | left out of the row checksums; every other column of the table is still compared |
+| 8.1.0's renames: `declne_to_specfy` to `decline_to_specify` in race, language and ethnicity; a single appointment's end date `0000-00-00` to NULL | the first receipt also checksums the column with the rename applied, and that must equal the second's |
+| 7.0.4 and 8.1.0 setting `patient_data.last_updated` and `document_templates` dates to the upgrade time | named columns; nothing else in those rows may change |
+| rows removed from `uuid_registry` and `uuid_mapping` (7.0.4's retired vital-sign ids) | named tables, not a patient's |
+| settings, lists and other tables that aren't a patient's gaining or changing rows, and the tables an upgrade creates | not a patient's; a created table with rows of a patient is a difference |
+
+Everything else is a difference: a table losing or gaining rows of a patient, a patient table changing in place (by column, or values moved between rows, which the row checksum sees), a table gone, a money figure. A known cause is named beside a difference without excusing it: 8.1.0 deletes calendar events with no date (`pc_eventDate` 0000-00-00), and the comparison says so.
+
+`--strict` allows no difference at all, not even what an upgrade is known to change (and each column's type and collation must be the same too): for a database restored from a backup, which the rollback checks this way.
+
+`--against=FIRST.json` takes the second receipt the way the first was taken, so the two compare even where the upgrade changed a column's type; the rehearsal and the upgrade take it that way. Exit code 0 for MATCH, 1 otherwise.
+
 ## Upgrade
 
 ```
-sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.4.1 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE] [--customizations=apply|leave] [--skip=NAME,...] [--debug]
+sudo preflight/openemr-upgrade.sh --openemr=/var/www/html/openemr --to=8.5.0 [--service=apache2] [--backup-dir=DIR] [--tarball=FILE] [--customizations=apply|leave] [--skip=NAME,...] [--debug]
 sudo preflight/openemr-upgrade.sh --rollback --openemr=/var/www/html/openemr [--debug]
 ```
 
@@ -127,41 +232,48 @@ For an OpenEMR installed from the release tarball (with the official Docker imag
 2. gets the target release: downloaded from GitHub with its published sha256 checked, or `--tarball`;
 3. unpacks it beside the old folder;
 4. finds OpenEMR's own files that were changed here, each shipped file's git hash compared with the release or patch as published, and the files added outside `sites/`, `vendor/` and modules. A file the target's package also has counts as built by the release, such as compiled CSS. It saves them all and writes each change as a patch against the original. Then it tries each change on the target's copy: a file the target left as it was takes yours as is, and otherwise `patch` decides. If there are any changes, it stops unless `--customizations=apply` (carry the changes that apply and the added files, list the rest) or `--customizations=leave`. It then reads what will go in for what the PHP running it has removed: the lines each change writes, on the copy it goes into, and the added files and modules whole. It stops on any that won't load or stop with an error, unless `--force`. Until here nothing on the server has changed, and a stop removes the unpacked folder;
-5. stops the web server (`--service`), or asks you to keep users out, and backs up each site's database (`mysqldump`) and the whole `sites/` folder, which holds documents and encryption keys;
+5. stops the web server (`--service`), or asks you to keep users out, takes a [receipt](#receipt) of each site, and backs up each site's database (`mysqldump`) and the whole `sites/` folder, which holds documents and encryption keys;
 6. carries over `sites/`, the modules this install added (module folders and Composer packages not in its release's own lists) and, with `apply`, the changes from step 4;
 7. runs the target's own `sql_upgrade.php --from=<current>` for each site, as the web server's user, from inside the new folder. It stops on any failed statement;
-8. checks the new folder with the install doctor, and stops on a FAIL unless `--force`. A PHP that needs its own security update (the doctor's PHP security check) is reported and doesn't stop the switch: updating PHP is a separate job, and holding back the upgrade would only hold back OpenEMR's own security fixes;
-9. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
+8. takes a second receipt of each site, from the new folder, and compares it with the first. On any difference the upgrade isn't known to make, or any change to a patient count or a money figure, it stops before switching and **puts everything back by itself**: the old folder stays live, each database is restored from the backup taken minutes before and checked against the first receipt, and the web server is started again. It says why in plain words and where the comparison is (stopping to ask would leave the clinic closed until someone answered; putting back loses nothing, since the database as the upgrade left it is saved first);
+9. checks the new folder with the install doctor, and stops on a FAIL unless `--force`. A PHP that needs its own security update (the doctor's PHP security check) is reported and doesn't stop the switch: updating PHP is a separate job, and holding back the upgrade would only hold back OpenEMR's own security fixes;
+10. swaps the folders, keeping the old one as `<folder>.old-<version>`, and starts the web server.
 
 **It checks its own work.** After each step it verifies the result and prints a `check:` line, or stops:
 - the unpacked release is the version asked for;
+- each receipt finished, and read as many tables as the database has;
 - each database dump ends with mysqldump's "Dump completed" line and has every table, so a dump cut short by a full disk is caught before anything changes;
-- `sites.tar.gz` reads back with as many files as `sites/`;
+- `sites.tar.gz` reads back whole: `gzip -t` reads every byte against the archive's own checksum, and it holds as many files, and as many bytes of them, as `sites/`;
 - the copied `sites/` is whole;
 - each database is at the target's version after `sql_upgrade.php`;
+- the receipts before and after the database upgrade match;
 - the folder is the target after the switch.
 
-The rollback checks each restored database and the folder the same way.
+The rollback checks each restored database and the folder the same way, and then takes a receipt of each restored database, with the old folder's documents, and compares it strictly with the receipt taken before the upgrade (`--compare --strict`): every table, settings included, must have the same rows and the same checksum of every row and column, and every document file the same bytes. That is what shows the backup brought back everything: the dump's own checks show it is whole and has every table, not that every row came back. A restore that doesn't match is reported loudly (the folders are still switched back, since the old folder is the safer one to run). The receipt doesn't cover a table's next AUTO_INCREMENT number; the upgrade suite checks that too, with a full dump of the database byte for byte the one before.
 
 **If it stops**, it says how far it got. Before the backup that means nothing changed: it removes the unpacked folder and starts the web server again if it stopped it. After the backup it says where the backup is, whether the folders were switched, and the exact `--rollback` command to run.
 
-**Everything it prints also goes to a log** in the backup folder (`openemr-upgrade.log`, and `openemr-rollback-<time>.log`), so a request for help can include it. `--debug` adds every command it runs; the database password stays out of both.
+**Everything it prints also goes to a log** in the backup folder (`openemr-upgrade.log`, and `openemr-rollback-<time>.log`), so a request for help can include it, and so do the receipts and their comparisons (`receipt-<site>-before`, `receipt-<site>-after-upgrade`, `receipts-<site>-compared.txt`, and after a rollback `receipt-<site>-after-rollback-<time>` and `receipts-<site>-rollback-compared-<time>.txt`). `--debug` adds every command it runs; the database password stays out of all of them.
 
 **Only one run at a time** per install: a second refuses to start while the first holds `.<folder>-upgrade.lock`. The web server it starts doesn't inherit the lock, so a later run, or the rollback, isn't refused because of it.
 
-**The pre-flight check and the doctor** it runs are the copies beside it, else they're downloaded from this script's own release and checked against that release's `SHA256SUMS`. One that doesn't match isn't run.
+**The pre-flight check, the doctor and the receipt** it runs are the copies beside it, else they're downloaded from this script's own release and checked against that release's `SHA256SUMS`. One that doesn't match isn't run.
 
-`preflight/test_upgrade.sh` (7.0.3 to 8.4.1, MariaDB 10.11), 57 checks, covers:
+`preflight/test_upgrade.sh` (7.0.3 patch 4 to 8.5.0, on MariaDB 10.11 or the server `DB_IMAGE` names), 107 checks, on the synthetic Pohnpei-shaped site (`preflight/test_site.py`, its documents stored by OpenEMR's own code), covers:
+- the receipt's floors on that site (patients, visits, appointments, prescriptions, labs, documents on disk, charges, payments, adjustments, a balance), and its comparison both ways: a receipt matches itself, and three planted differences are each named;
 - local changes found, applied, kept as patches;
-- the upgrade and the rollback, with work done in between kept;
-- a helper that doesn't match `SHA256SUMS` refused, and one that does used;
+- the upgrade and the rollback, with work done in between kept; the receipts match after the database upgrade, having compared what's there; the rollback's receipt matches the first, strictly; a receipt the test takes itself at the end matches the one it took at the start;
+- a change to the data during the upgrade, both ways: a payment deleted, and a charge and a date of birth edited, each right after `sql_upgrade.php`. The receipts disagree and name the change, the script stops before the doctor and the switch and puts everything back by itself (its strict check of the restored database passes), the web server runs again, a full dump of the database is byte for byte the one before, and a receipt the test takes itself matches the first. The dump is taken before anything loads a page: OpenEMR's audit log writes a row (`log`, `http-request-select`) for every request, the login page included, which the suite shows each time;
+- a helper that doesn't match `SHA256SUMS` refused, and one that does used (the receipt among them);
 - a second run refused while the first holds the lock;
 - a stop before the backup, which changes nothing;
 - a stop after it, which names the rollback, and that rollback;
 - a failure partway through `sql_upgrade.php`: a planted duplicate makes one statement fail while the others run, and after the rollback a full dump of the database is byte-for-byte the one taken before;
 - `--service`, with a stand-in SysV service whose child process keeps the descriptors it's given, as a web server does: the rollback after it still gets the lock;
 - each self-check;
-- a `--debug` log that traces every command, with the database password in no line of it.
+- a `--debug` log that traces every command, with the database password in no line of it nor in the receipts.
+
+Run on 2026-11-01 on each database server a site is likely to have: MariaDB 10.11 with the whole suite, and MariaDB 10.6 and 11.8 and MySQL 8.0 and 8.4 with `RECEIPTS_ONLY=1` (64 checks each: the receipt's floors and comparison, both changes made during the upgrade, the clean upgrade, and the rollback with its strict check). All pass. On MySQL, the first restore makes `SHOW CREATE TABLE` write each text column's character set out (`CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci` where it wrote `COLLATE utf8mb4_general_ci`): the same character set and collation, which the rollback's strict receipt compares column by column. The suite's byte-for-byte check reads that wording as one, and only where the collation belongs to that character set.
 
 Nothing is deleted. A rollback brings back the databases as they were before the upgrade, so anything entered since would be lost; `--rollback` therefore first saves each database as it is (`<site>.before-rollback-<time>.sql`) and, in a file of their own, the tables the upgrade created (`<site>.created-tables-<time>.sql`). Then it restores the backup, drops those tables, and swaps the folders back. The upgraded folder, with any documents uploaded since, is kept as `<folder>.failed-<version>-<time>`. The target must be 8.2.0 or later. A change the target conflicts with needs merging by hand: its patch is in the backup's `customizations/patches/`. Not covered yet: multisite setups with more than one database server.
 
@@ -344,7 +456,9 @@ To read any folder yourself: `php scan.php --facts=php-changes.json --php=7.4:8.
 ## Limits
 
 - Patches between releases (`vX_Y_Z_N` tags) and test builds aren't covered, except for the doctor's file lists.
-- What the upgrade scripts do to existing data isn't covered, only the schema they leave.
+- The upgrade notes (`site/`) cover the schema the upgrade scripts leave, not what they do to existing data; the receipts compare the data itself, on a rehearsal copy and on the live upgrade.
+- A receipt's checksums are sums of CRC32 values, per column and per row: they show a change, not which row changed, and two changes that cancel out exactly would go unseen. The counts and money totals beside them are exact.
+- For FHIR ids (`uuid`), which an upgrade fills in where they're empty, the receipts prove every id that was there is still in its table, on as many rows; not that each is still on the same row (row checksums leave ids out, since the upgrade changes them).
 - Files removed under `interface/` and `portal/` include helper files as well as pages.
 - CI-tested databases are what CI ran, not a support statement.
 - The PHP changes are what the scanner can see without running code: a removed function, class, constant or setting, and syntax that no longer loads. A change in behaviour, such as how strings compare with numbers in PHP 8, needs the code run. A guard covers its whole file, so a use outside its `if` isn't counted.
@@ -353,7 +467,7 @@ To read any folder yourself: `php scan.php --facts=php-changes.json --php=7.4:8.
 
 These are the gaps that matter, most first. What isn't listed here is polish.
 
-1. **PHP behaviour that depends on data.** The commonest PHP 8 breakage in old code isn't a removed function the scan can find: `count()` on null, a wrong type passed to a built-in function (now an error that stops the page), strings compared with numbers. Only running the code shows these. **Next:** the rehearsal already builds an upgraded copy of the site on the target; it will load each of the site's pages there with every PHP error logged, and list what each page raised.
+1. **PHP behaviour that depends on data.** The commonest PHP 8 breakage in old code isn't a removed function the scan can find: `count()` on null, a wrong type passed to a built-in function (now an error that stops the page), strings compared with numbers. Only running the code shows these. The rehearsal's access check now runs it on a sample: a sample of charts, one form of each kind, every document, the receipts report, every patient through the API, all on the upgraded copy with every PHP error logged (it found the 8.5.0 report crash above). **Next:** more of a site's pages (every report, the billing screens), and the site's own pages and modules.
 2. **Servers other than Alpine.** The end-to-end suites run on OpenEMR's official Docker images, which are Alpine. The upgrade script is for tarball installs, and most of those run on Ubuntu or Debian with Apache, which the suites don't yet cover. **Next:** an Ubuntu tarball install with Apache in the upgrade suite.
 3. **Real installs.** The tools have run on official images and synthetic data only. A real install has customizations and history the tests don't model, so the first runs on real servers are likely to find cases the suites don't have. Report them as issues on this repository.
 4. **PHP 8.6.** It ships on 2026-11-19. php-upgrade-catalogue measures it then, and a release here pins the new facts. Until then a target on PHP 8.6 is reported as beyond the facts, not passed.

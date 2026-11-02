@@ -558,13 +558,17 @@ with sync_playwright() as p:
             page.fill("#form_to_date", date(int(y), 12, 31))
             page.select_option("#form_report_by", "2")
             page.select_option("select[name=form_use_edate]", "0")
-            with page.expect_navigation(timeout=120000):
+            with page.expect_navigation(timeout=120000) as nav:
                 page.evaluate("document.getElementById('form_refresh').value = 'true'; document.getElementById('theform').submit();")
-            cells = page.locator("tr.table-info").last.locator("td")
-            entry["adjustments"] = money(cells.nth(1).inner_text())
-            entry["receipts"] = money(cells.nth(2).inner_text())
+            status = nav.value.status if nav.value else 0
+            if status >= 400:
+                entry["error"] = f"HTTP {status}: the report stopped with an error"
+            else:
+                cells = page.locator("tr.table-info").last.locator("td")
+                entry["adjustments"] = money(cells.nth(1).inner_text(timeout=30000))
+                entry["receipts"] = money(cells.nth(2).inner_text(timeout=30000))
         except Exception as e:
-            entry["error"] = str(e)[:200]
+            entry["error"] = str(e).splitlines()[0][:200]
         entry["t0"], entry["t1"] = t0, time.time()
         res["reports"].append(entry)
     browser.close()

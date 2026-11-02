@@ -21,7 +21,7 @@ doctor() {
         -c "${2:-true} && php /d.php --openemr=/oe --facts=/nonexistent" 2>&1 | grep -A1 "PHP security" || true
 }
 php_of() {
-    docker run --rm --entrypoint sh "$1" -c "${2:-true} >/dev/null 2>&1; php -r 'echo PHP_VERSION;'"
+    docker run --rm --cpus 1 --entrypoint sh "$1" -c "${2:-true} >/dev/null 2>&1; php -r 'echo PHP_VERSION;'"
 }
 check() {  # check NAME OUTPUT PATTERN
     if echo "$2" | grep -q -- "$3"; then echo "ok   $1"; else echo "FAIL $1"; echo "$2" | sed 's/^/       | /'; fails=$((fails+1)); fi

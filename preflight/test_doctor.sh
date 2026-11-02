@@ -166,7 +166,7 @@ refute "PASS" "17: and shows nothing"
 x "rm -rf $OE/openemr-doctor.php $OE/openemr-doctor-facts"
 
 # PHP 7.4 on a tree that says it is 8.4.1 (the image's tree isn't a volume to share).
-out=$(docker run --rm -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
+out=$(docker run --rm --cpus 1 -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
   'mkdir -p /oe && printf "<?php\n\$v_major = 8;\n\$v_minor = 4;\n\$v_patch = 1;\n\$v_realpatch = 0;\n\$v_database = 543;\n" > /oe/version.php && php /d/openemr-doctor.php --openemr=/oe --facts=/facts' || true)
 expect "^FAIL  PHP: 7.4.* is too old: OpenEMR 8.4.1 needs 8.3.0 or later" "18: PHP 7.4 is too old for 8.4.1, said plainly"
 expect "^FAIL  PHP extensions: missing: .*intl" "18: and its missing extensions, intl among them (t/25453)"
@@ -175,7 +175,7 @@ expect "^NOTE  Local changes: 1 of OpenEMR's own files differ from OpenEMR 8.4.1
 # intl before 7.0.0: required only if the install's own code uses it (5.0.2's image ships without it).
 # php:7.4-cli has no intl and no mysqli; fake trees with only version.php and one PHP file.
 tree() { printf '<?php\n$v_major = %s;\n$v_minor = %s;\n$v_patch = %s;\n$v_realpatch = 0;\n$v_database = 1;\n' "$1" "$2" "$3"; }
-intl_run() { docker run --rm -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
+intl_run() { docker run --rm --cpus 1 -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
   "mkdir -p /oe/library && printf '%s' '$1' > /oe/version.php && printf '%s' '$2' > /oe/library/x.php && php /d/openemr-doctor.php --openemr=/oe --facts=/facts" 2>&1 || true; }
 out=$(intl_run "$(tree 6 1 0)" '<?php echo 1;')
 expect "^FAIL  PHP extensions: missing: mysqli " "19: 6.1.0 without intl in its code: mysqli is missing"
@@ -257,7 +257,7 @@ rm -rf "$rel" "$empty" "$TMPDIR_SHORT"
 # here and deleted with the database.
 CERTS=$(mktemp -d); DS=$P-dbssl
 trap 'docker rm -f -v $DS >/dev/null 2>&1; rm -rf "$CERTS"; docker compose -p $P -f test-doctor-compose.yml down -v >/dev/null 2>&1' EXIT
-docker run --rm -u "$(id -u):$(id -g)" -v "$CERTS":/c -w /c --entrypoint sh alpine/openssl -c '
+docker run --rm --cpus 1 -u "$(id -u):$(id -g)" -v "$CERTS":/c -w /c --entrypoint sh alpine/openssl -c '
 openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=Test CA" -keyout ca-key.pem -out ca.pem &&
 openssl req -newkey rsa:2048 -nodes -subj "/CN=dbssl" -keyout server-key.pem -out server.csr &&
 printf "subjectAltName=DNS:dbssl\n" > ext.cnf &&
@@ -265,7 +265,7 @@ openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -d
 openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=Other CA" -keyout other-key.pem -out other-ca.pem' 2>/dev/null
 # mktemp -d makes the folder 0700; MariaDB runs as its own user and must read the files.
 chmod 755 "$CERTS"; chmod 644 "$CERTS"/*.pem
-docker run -d --name $DS --network ${P}_default --network-alias dbssl -e MARIADB_ROOT_PASSWORD=root -v "$CERTS":/certs:ro mariadb:11.8 \
+docker run -d --cpus 1 --name $DS --network ${P}_default --network-alias dbssl -e MARIADB_ROOT_PASSWORD=root -v "$CERTS":/certs:ro mariadb:11.8 \
     mariadbd --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server-cert.pem --ssl-key=/certs/server-key.pem --require-secure-transport=ON >/dev/null
 for _ in $(seq 1 40); do docker exec $DS mariadb -uroot -proot --ssl -e "SELECT 1" >/dev/null 2>&1 && break; sleep 3; done
 docker exec $DS mariadb -uroot -proot --ssl -e "SELECT 1" >/dev/null 2>&1 || { echo "FAIL the SSL database didn't start:"; docker logs $DS 2>&1 | tail -5; exit 1; }

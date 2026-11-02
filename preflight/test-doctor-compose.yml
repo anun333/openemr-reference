@@ -1,6 +1,7 @@
 # Throwaway OpenEMR 8.4.1 for test_doctor.sh. Demo credentials only; deleted after the test.
 services:
   mysql:
+    cpus: 1
     image: mariadb:11.8
     command: ['mariadbd', '--character-set-server=utf8mb4']
     environment:
@@ -10,6 +11,7 @@ services:
       interval: 5s
       retries: 40
   openemr:
+    cpus: 2
     image: openemr/openemr:8.4.1
     ports:
       - "127.0.0.1:8372:80"

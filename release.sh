@@ -7,7 +7,7 @@
 #   ./release.sh 0.3.10 --title="v0.3.10: ..." --notes=FILE    # release
 #   ./release.sh 0.3.10 --dry-run                              # everything but the tag and release
 #
-# The version must already be set in the three tools and committed (gen/check.py checks they
+# The version must already be set in the five tools and committed (gen/check.py checks they
 # agree); the tree must be clean and on main. Logs go to a folder it names. Written after
 # v0.3.8 went out with the doctor's suites run but not the upgrade suite, which runs the doctor.
 #
@@ -16,9 +16,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 REPO=anun333/openemr-reference
-ASSETS=(openemr-doctor-docker.sh openemr-doctor.php openemr-preflight.php openemr-rehearse.sh openemr-upgrade.sh openemr-utf8mb4.sql scan.php)
+ASSETS=(openemr-doctor-docker.sh openemr-doctor.php openemr-preflight.php openemr-receipt.php openemr-rehearse.sh openemr-upgrade.sh openemr-utf8mb4.sql scan.php)
 # Quick ones first; each suite takes the shared lock in test_lib.sh, so they never overlap.
-SUITES=(test_scan.sh test_update_notice.sh test_php_security.sh test_preflight.sh test_doctor.sh test_doctor_patch.sh test_upgrade.sh)
+SUITES=(test_scan.sh test_update_notice.sh test_php_security.sh test_preflight.sh test_doctor.sh test_doctor_patch.sh test_upgrade.sh test_rehearse.sh)
 
 VERSION="" TITLE="" NOTES="" DRY=0
 for arg in "$@"; do
@@ -56,11 +56,12 @@ git merge-base --is-ancestor origin/main HEAD || die "origin/main has commits th
 say "  main at $(git rev-parse --short HEAD), clean, not behind origin; $TAG is free"
 
 say "== 2. Versions"
-for f in "openemr-upgrade.sh:^SCRIPT_VERSION=" "openemr-doctor-docker.sh:^    VERSION=" "openemr-doctor.php:^define('DOCTOR_VERSION', '"; do
+for f in "openemr-upgrade.sh:^SCRIPT_VERSION=" "openemr-doctor-docker.sh:^    VERSION=" "openemr-doctor.php:^define('DOCTOR_VERSION', '" \
+         "openemr-rehearse.sh:^SCRIPT_VERSION=" "openemr-receipt.php:^const RECEIPT_VERSION = '"; do
     file="preflight/${f%%:*}" pattern="${f#*:}"
-    grep -q "${pattern}${VERSION}\(');\)\{0,1\}\$" "$file" || die "$file doesn't say $VERSION ($(grep -m1 "$pattern" "$file"))"
+    grep -q "${pattern}${VERSION}[');]*\$" "$file" || die "$file doesn't say $VERSION ($(grep -m1 "$pattern" "$file"))"
 done
-say "  the three tools say $VERSION"
+say "  the five tools say $VERSION"
 # Every suite in preflight/ is in the list, so a new one can't be skipped by forgetting it here.
 for t in preflight/test_*.sh; do
     n="$(basename "$t")"; [[ "$n" == test_lib.sh ]] && continue
@@ -70,12 +71,13 @@ done
 say "== 3. Fast checks (as CI runs them)"
 shellcheck -S warning preflight/*.sh release.sh || die "ShellCheck"
 for v in 5.5 5.6 7.0 7.4 8.1 8.3 8.5; do
-    docker run --rm -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-doctor.php >/dev/null || die "the doctor doesn't parse on PHP $v"
-    docker run --rm -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/scan.php >/dev/null || die "scan.php doesn't parse on PHP $v"
-    [[ "$v" == 5.* || "$v" == 7.0 ]] || docker run --rm -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-preflight.php >/dev/null || die "the pre-flight check doesn't parse on PHP $v"
+    docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-doctor.php >/dev/null || die "the doctor doesn't parse on PHP $v"
+    docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/scan.php >/dev/null || die "scan.php doesn't parse on PHP $v"
+    [[ "$v" == 5.* || "$v" == 7.0 ]] || docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-preflight.php >/dev/null || die "the pre-flight check doesn't parse on PHP $v"
+    [[ "$v" == 5.* || "$v" == 7.0 ]] || docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-receipt.php >/dev/null || die "the receipt doesn't parse on PHP $v"
 done
 python3 gen/check.py > "$LOGS/check.log" 2>&1 || { tail -20 "$LOGS/check.log"; die "gen/check.py (log: $LOGS/check.log)"; }
-say "  ShellCheck, PHP 5.5 to 8.5 (the doctor, scan.php, the pre-flight check from 7.4), gen/check.py (with the pinned php-upgrade-catalogue): pass"
+say "  ShellCheck, PHP 5.5 to 8.5 (the doctor, scan.php; the pre-flight check and the receipt from 7.4), gen/check.py (with the pinned php-upgrade-catalogue): pass"
 
 say "== 4. End-to-end suites, one at a time"
 for s in "${SUITES[@]}"; do

@@ -1,6 +1,7 @@
 # Throwaway OpenEMR 7.0.3 for test_preflight.sh. Demo credentials only; deleted after the test.
 services:
   mysql:
+    cpus: 1
     image: mariadb:10.6
     command: ['mysqld', '--character-set-server=utf8mb4']
     environment:
@@ -10,6 +11,7 @@ services:
       interval: 5s
       retries: 40
   openemr:
+    cpus: 2
     image: openemr/openemr:7.0.3
     tmpfs:
       - /tinybackup:size=1m
