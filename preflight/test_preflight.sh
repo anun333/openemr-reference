@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end test of openemr-preflight.php against a throwaway OpenEMR 7.0.3 (official image,
-# MariaDB 10.6), targeting the newest release with facts. Ten scenarios:
+# MariaDB 10.6), targeting 8.4.1: pinned, since its expectations name 8.4.1 and the daily update adds
+# newer releases (8.5.0 broke them while unpinned). Ten scenarios:
 #   1 as installed: expects a FAIL for missing PHP extensions, WARNs for the database and ClaimRev
 #   2 a user assigned the stock Custom.json menu, which links to removed files: Custom menus WARN
 #   3 a removed setting changed from its default: Settings WARN
@@ -28,7 +29,7 @@ docker cp scan.php $C:/tmp/scan.php
 docker exec $C mkdir -p /tmp/pf-facts
 for f in ../site/preflight/*.json; do docker cp "$f" $C:/tmp/pf-facts/; done
 q() { docker exec $D mariadb -uroot -proot openemr -e "$1"; }
-run() { docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts || true; }
+run() { docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts || true; }
 fails=0
 expect() { if echo "$out" | grep -q "$1"; then echo "ok   $2"; else echo "FAIL $2"; fails=$((fails+1)); fi; }
 refute() { if echo "$out" | grep -q "$1"; then echo "FAIL $2"; fails=$((fails+1)); else echo "ok   $2"; fi; }
@@ -53,17 +54,17 @@ expect "^WARN  Settings: .* removes settings this install has changed: configura
 q "UPDATE version SET v_database = v_database - 2"; out=$(run)
 expect "^FAIL  Previous upgrade: the code is" "4: a half-finished upgrade fails"
 docker exec $C sh -c 'mkdir -p /opt/xampp/htdocs && ln -sfn /var/www/localhost/htdocs/openemr /opt/xampp/htdocs/openemr'
-out=$(docker exec $C php /tmp/preflight.php --openemr=/opt/xampp/htdocs/openemr --facts=/tmp/pf-facts || true)
+out=$(docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/opt/xampp/htdocs/openemr --facts=/tmp/pf-facts || true)
 expect "^FAIL  XAMPP: this install runs on XAMPP" "5: an install under an xampp directory is told why, with the migration guide"
 expect "XAMPP_to_Docker_Migration" "5: the migration guide is linked"
-out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --backup-dir=/tinybackup || true)
+out=$(docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --backup-dir=/tinybackup || true)
 expect "^FAIL  Room: /tinybackup has .* free" "6: a backup disk too small for the backup fails"
 expect "put the backup on another disk with --backup-dir" "6: and says what to do"
 # A target needing a newer PHP than the old release was tested with: one maintenance window.
 docker exec $C sh -c 'rm -rf /tmp/pf-facts2 && cp -r /tmp/pf-facts /tmp/pf-facts2'
 docker exec $C php -r '$t = json_decode(file_get_contents("/tmp/pf-facts2/8.4.1.json"), true); $t["php"] = "8.9.0"; file_put_contents("/tmp/pf-facts2/8.4.1.json", json_encode($t));
   $f = json_decode(file_get_contents("/tmp/pf-facts2/7.0.3.json"), true); $f["ci_php"] = ["8.1", "8.2"]; file_put_contents("/tmp/pf-facts2/7.0.3.json", json_encode($f));'
-out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts2 || true)
+out=$(docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts2 || true)
 expect "Move to PHP 8.9 or later" "7: the plan moves PHP first when the target needs a newer one"
 expect "was tested on PHP 8.1, 8.2 only, so it may not run on PHP 8.9: do this and the next step in one maintenance window" "7: and warns when the old release may not run on it"
 expect "^PASS  Site code on the new PHP: the 0 files this site added use nothing PHP 8.3 to 8.9 removes" "7: with nothing added, the site's own code passes"
@@ -81,23 +82,23 @@ docker exec $C php -r '$t = json_decode(file_get_contents("/tmp/pf-facts3/8.4.1.
 docker exec $C sh -c 'OE=/var/www/localhost/htdocs/openemr; mkdir -p $OE/interface/modules/custom_modules/oe-module-pf-scan
 printf "%s\n" "<?php" "\$pfBox = imap_open(\"{localhost}\", \"user\", \"secret\");" "function pf_scan_nullable(int \$x = null) { return \$x; }" "if (function_exists(\"imap_close\")) { imap_close(\$pfBox); }" > $OE/custom/pf_scan_test.php
 printf "%s\n" "<?php" "\$pfSpell = pspell_new(\"en\");" > $OE/interface/modules/custom_modules/oe-module-pf-scan/index.php'
-out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts3 || true)
+out=$(docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts3 || true)
 expect "^FAIL  Site code on the new PHP: 2 uses in the 1 file this site added and its 1 module won't load or stop with an error on PHP 8.5: custom/pf_scan_test.php line 2 imap_open (error when it runs), interface/modules/custom_modules/oe-module-pf-scan/index.php line 2 pspell_new (error when it runs)" "9: an added file and an added module calling what PHP 8.4 removed fail, with their lines"
 expect "^NOTE  Site code on the new PHP: 1 use deprecated between PHP 8.3 and 8.5 still works, with a warning" "9: an implicitly nullable parameter is one deprecation, not a failure"
 refute "imap_close (error" "9: a call behind function_exists() isn't counted"
 expect "Fix the 2 uses of what PHP 8.5 removes in the code this site added (listed above), before moving PHP." "9: the plan says to fix them before moving PHP"
 docker exec $C sh -c 'mv /tmp/scan.php /tmp/scan.php.away'
-out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts3 || true)
+out=$(docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts3 || true)
 expect "^NOTE  Site code on the new PHP: scan skipped: put scan.php beside this file" "9: without scan.php beside it, the check says the scan was skipped"
 docker exec $C sh -c 'mv /tmp/scan.php.away /tmp/scan.php; OE=/var/www/localhost/htdocs/openemr; rm -rf $OE/custom/pf_scan_test.php $OE/interface/modules/custom_modules/oe-module-pf-scan'
 # Checks left out by name: each says so, doesn't run, and the summary counts it; a name that isn't one stops it.
-out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --skip=room,local-changes --skip=site-code || true)
+out=$(docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --skip=room,local-changes --skip=site-code || true)
 expect "^SKIP  Room: left out (--skip=room)" "10: --skip=room says it was left out"
 refute "^\(PASS\|WARN\|FAIL\)  Room:" "10: and the room check doesn't run"
 expect "^SKIP  Local changes: left out (--skip=local-changes)" "10: so does local-changes, from a second --skip"
 expect "3 check(s) left out with --skip, so not checked: local-changes, site-code, room" "10: the summary names what was left out"
 expect "^\(PASS\|WARN\|FAIL\)  Previous upgrade" "10: the other checks still run (this one fails here: case 4 left the database behind)"
-out=$(docker exec $C php /tmp/preflight.php --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --skip=rooms 2>&1; echo "exit $?")
+out=$(docker exec $C php /tmp/preflight.php --target=8.4.1 --openemr=/var/www/localhost/htdocs/openemr --facts=/tmp/pf-facts --skip=rooms 2>&1; echo "exit $?")
 expect "^--skip: no check named 'rooms'; the names are xampp, php, " "10: a name that isn't a check is refused, with the names"
 expect "^exit 2$" "10: and nothing runs"
 out=$(docker exec $C php /tmp/preflight.php --list-checks)
