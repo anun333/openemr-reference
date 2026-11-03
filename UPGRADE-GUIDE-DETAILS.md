@@ -73,7 +73,7 @@ Each line of "What the clinic has" and "Money" counts one thing, for the whole s
 | Document files on disk | the files those documents are, with their total size and a checksum (a fingerprint of every byte) | |
 | Document files missing | documents whose file isn't on disk | |
 | Charges (fee sheet) | everything charged on fee sheets, removed lines left out | |
-| Co-pays (fee sheet) | co-pays entered on fee sheets | |
+| Co-pays (billing lines) | co-pays kept as billing lines: the Charges screen's Copay, old data and imports (the Fee Sheet's Add Copay is a payment, counted under Payments) | |
 | Drug sales | drugs dispensed and charged | |
 | Payments, Adjustments | every payment and adjustment posted, voided ones left out | |
 | Balance | charges and drug sales, less co-pays, payments and adjustments | each patient's dashboard, Billing card, **Total Balance Due**, added up over all patients |

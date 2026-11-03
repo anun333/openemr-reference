@@ -127,7 +127,7 @@ Data: receipts of the copy before and after the upgrade (no patient data; in ...
     same Document files missing                         0
     same Document files: checksum of every file         dbe6a73554da36b3
     same Charges (fee sheet)                            33,425.00
-    same Co-pays (fee sheet)                            0.00
+    same Co-pays (billing lines)                        0.00
     same Drug sales                                     360.00
     same Payments                                       11,667.00
     same Adjustments                                    2,604.00
