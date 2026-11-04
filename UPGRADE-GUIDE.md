@@ -134,7 +134,7 @@ Scroll up through the end of what it printed and find these four lines:
 - That folder holds no patient data, except perhaps one file, `php-errors.log`, which can quote part of a record. Open it and check before you send it.
 - Never send `site.sql` or `sites.tar.gz`.
 
-**One known problem in OpenEMR itself (7.0.4 through 8.5.0):** if your clinic ever recorded co-pays from a visit's **Charges** screen (an option that's off unless "Use Charges Panel" was turned on), the report **Receipts by Payment Method** shows an error for dates that include one of those co-pays, and step 5's result will mention it. Co-pays added on the Fee Sheet don't cause it. That is a bug in OpenEMR, not a problem with your data; a fix has been offered to OpenEMR (pull request 15001). Ask whoever helps you whether you can manage without that report until it's fixed.
+**One known problem in OpenEMR itself (7.0.4 through 8.5.0):** if your clinic ever recorded co-pays from a visit's **Charges** screen (an option that's off unless "Use Charges Panel" was turned on), the report **Receipts by Payment Method** shows an error for dates that include one of those co-pays, and step 5's result will mention it. Co-pays added on the Fee Sheet don't cause it. That is a bug in OpenEMR, not a problem with your data. OpenEMR fixed it on 2026-11-04 (pull request 15001), so the next release (8.6.0) won't have it. On 8.5.0 or older, ask whoever helps you whether you can manage without that report until you upgrade to that release.
 
 ---
 

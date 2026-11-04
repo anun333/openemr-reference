@@ -42,7 +42,7 @@
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'stderr');
-const RECEIPT_VERSION = '0.5.0';
+const RECEIPT_VERSION = '0.5.1';
 const RECEIPT_FORMAT = 1;
 
 // What an upgrade is known to change, measured on rehearsals and upgrades of synthetic 7.0.3 sites to
