@@ -105,6 +105,12 @@ def tools() -> None:
     versions = set(found.values())
     check(None not in versions and len(versions) == 1,
           f"the scripts name one release to fetch their helpers from ({', '.join(f'{k} {v}' for k, v in found.items())})")
+    # The doctor and its wrapper say the day they were released, and the same home.
+    doctor, wrapper = (root / "openemr-doctor.php").read_text(), (root / "openemr-doctor-docker.sh").read_text()
+    dates = (re.search(r"^define\('DOCTOR_DATE', '(\d{4}-\d{2}-\d{2})'\);$", doctor, re.M), re.search(r"^\s*DATE=(\d{4}-\d{2}-\d{2})$", wrapper, re.M))
+    check(all(dates) and dates[0].group(1) == dates[1].group(1), f"the doctor and openemr-doctor-docker.sh say one release date ({', '.join(d.group(1) if d else 'none' for d in dates)})")
+    homes = (re.search(r"^define\('DOCTOR_HOME', '([^']+)'\);$", doctor, re.M), re.search(r"^\s*DOCTOR_HOME=\$\{OPENEMR_DOCTOR_HOME:-([^}]+)\}$", wrapper, re.M))
+    check(all(homes) and homes[0].group(1) == homes[1].group(1), f"the doctor and openemr-doctor-docker.sh name one home ({', '.join(h.group(1) if h else 'none' for h in homes)})")
 
 
 def catalogue() -> None:
@@ -130,6 +136,33 @@ def catalogue() -> None:
     scanner = (root / "preflight" / "scan.php").read_text()
     check(f"const VERSION = '{pin['version']}';" in scanner and "function upgradeScanRun(" in scanner,
           f"scan.php is the scanner, version {pin['version']}, with upgradeScanRun()")
+
+
+def php_security() -> None:
+    """PHP's security advisories (gen/php-security.json, hand-written, copied to site/preflight/): the
+    shape the doctor reads, a source for each, and never behind the list the doctor was released
+    with, so a release can't ship facts that pass a PHP its own list fails."""
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    path = root / "gen" / "php-security.json"
+    data = json.loads(path.read_text())
+    advisories = data.get("advisories") or []
+    ok = data.get("schema") == "openemr-doctor php-security 1" and advisories != []
+    for a in advisories:
+        fixed = a.get("fixed") or {}
+        ok = ok and isinstance(a.get("name"), str) and a["name"] != "" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(a.get("date"))) is not None \
+            and isinstance(a.get("cves"), list) and str(a.get("source", "")).startswith("https://") and fixed != {} \
+            and all(re.fullmatch(r"\d+\.\d+", b) and re.fullmatch(r"\d+\.\d+\.\d+", v) and v.startswith(b + ".") for b, v in fixed.items())
+    check(ok, f"gen/php-security.json is in the shape the doctor reads, each of its {len(advisories)} advisories with a source")
+    doctor = (root / "preflight" / "openemr-doctor.php").read_text()
+    built_in = re.search(r"\$phpSecurityBuiltIn = array\((.*?)\n\);", doctor, re.S)
+    pairs = re.findall(r"'(\d+\.\d+)' => '(\d+\.\d+\.\d+)'", built_in.group(1)) if built_in else []
+    key = lambda v: tuple(map(int, v.split(".")))
+    behind = [f"{b} {v}" for b, v in pairs if not any(key(a.get("fixed", {}).get(b, "0.0.0")) >= key(v) for a in advisories)]
+    check(pairs != [] and behind == [], f"the facts' advisories cover the doctor's own list ({len(pairs)} branches; behind: {', '.join(behind) or 'none'})")
+    site = root / "site" / "preflight" / "php-security.json"
+    check(site.is_file() and site.read_bytes() == path.read_bytes(), "site/preflight/php-security.json is gen/php-security.json (python3 gen/build_preflight.py copies it)")
 
 
 def skip_names() -> None:
@@ -182,6 +215,7 @@ def main() -> int:
     floors(tags)
     tools()
     catalogue()
+    php_security()
     skip_names()
     known_facts(tags)
     if "--runtime" in sys.argv:

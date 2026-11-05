@@ -13,9 +13,9 @@
  * browser on the server itself. It answers no one else. Delete it when you are done.
  *
  * It compares the install with the facts for its release (generated from OpenEMR's source and
- * downloaded from https://github.com/anun333/openemr-reference, or read from --facts=DIR on a
- * server without internet) and with what OpenEMR needs to start. It only reads:
- * nothing in the install or its database is changed. It never prints passwords or keys.
+ * downloaded from DOCTOR_FACTS below, or read from --facts=DIR on a server without internet), with
+ * what the install's own composer.json asks for, and with what OpenEMR needs to start. It only
+ * reads: nothing in the install or its database is changed. It never prints passwords or keys.
  *
  * Written for PHP 5.4 and later, so that it can explain a PHP that is too old instead of
  * failing to start on it. --skip (or ?skip= in the browser) leaves checks out by name (documents,
@@ -27,11 +27,16 @@
  */
 
 error_reporting(E_ALL);
-// The openemr-reference release this doctor belongs to (gen/check.py: the same as the scripts').
-define('DOCTOR_VERSION', '0.5.1');
-// Facts: a folder beside this file (openemr-doctor-facts/), else the generator's own output,
-// else the published copy, which is updated from OpenEMR's release tags every day.
-$factsDefault = 'https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight';
+// This copy: its version and the day it was released (gen/check.py: the same version as the scripts').
+define('DOCTOR_VERSION', '0.5.2');
+define('DOCTOR_DATE', '2026-11-05');
+// The doctor's home: where openemr-doctor-docker.sh downloads the newest doctor from, and where this
+// copy looks for a newer one of itself. OPENEMR_DOCTOR_HOME overrides it.
+define('DOCTOR_HOME', 'https://github.com/anun333/openemr-reference/releases/latest/download');
+// The release facts, a setting of their own: a folder beside this file (openemr-doctor-facts/), else
+// the generator's own output, else the published copy, updated from OpenEMR's release tags every day.
+define('DOCTOR_FACTS', 'https://raw.githubusercontent.com/anun333/openemr-reference/main/site/preflight');
+$factsDefault = DOCTOR_FACTS;
 foreach (array(dirname(__FILE__) . '/openemr-doctor-facts', dirname(__FILE__) . '/../site/preflight') as $dir) {
     if (is_file("$dir/releases.json")) {
         $factsDefault = $dir;
@@ -168,27 +173,26 @@ function readConfig($path, $names)
 }
 
 /**
- * The newest openemr-reference release, from where GitHub's /releases/latest redirects, or null
- * (offline, blocked, or anything unexpected). Headers come from the stream's metadata, which
- * every PHP the doctor supports has; $http_response_header is deprecated from 8.5.
+ * The version of the doctor at its home ($home/openemr-doctor.php), from the first 8 KB of that
+ * file, or null when it can't be read (offline, blocked, or anything unexpected).
  */
-function latestRelease()
+function homeVersion($home)
 {
-    $context = stream_context_create(array('http' => array('method' => 'HEAD', 'follow_location' => 0, 'ignore_errors' => true,
-        'timeout' => 5, 'user_agent' => 'openemr-doctor')));
-    $fp = @fopen('https://github.com/anun333/openemr-reference/releases/latest', 'r', false, $context);
+    $context = stream_context_create(array('http' => array('timeout' => 5, 'user_agent' => 'openemr-doctor')));
+    $fp = @fopen($home . '/openemr-doctor.php', 'r', false, $context);
     if ($fp === false) {
         return null;
     }
-    $meta = stream_get_meta_data($fp);
+    $head = (string)stream_get_contents($fp, 8192);
     fclose($fp);
-    $headers = isset($meta['wrapper_data']) && is_array($meta['wrapper_data']) ? $meta['wrapper_data'] : array();
-    foreach ($headers as $h) {
-        if (preg_match('#^Location:\s*\S*/releases/tag/v([0-9]+(?:\.[0-9]+)*)\s*$#i', $h, $m)) {
-            return $m[1];
-        }
-    }
-    return null;
+    return preg_match("/^define\\('DOCTOR_VERSION', '([0-9]+(?:\\.[0-9]+)*)'\\);\$/m", $head, $m) ? $m[1] : null;
+}
+
+/** How many days ago this copy was released (DOCTOR_DATE). gmmktime, which needs no time zone: PHP 5 warns without one. */
+function doctorAgeDays()
+{
+    $d = array_map('intval', explode('-', DOCTOR_DATE));
+    return max(0, (int)floor((time() - gmmktime(0, 0, 0, $d[1], $d[2], $d[0])) / 86400));
 }
 
 function versionKey($v)
@@ -208,6 +212,54 @@ function cmpVersion($a, $b)
         }
     }
     return 0;
+}
+
+/**
+ * The lowest PHP a Composer constraint allows, as X.Y.Z: '>=8.3.0' (every OpenEMR release so far),
+ * '^8.2', '~8.1', '8.2.*', '>=7.4 <8.3', '^7.4 || ^8.0'. Null when it can't tell (a form it doesn't
+ * read, or an alternative with no lower bound).
+ */
+function phpFloor($constraint)
+{
+    $floor = null;
+    $constraint = preg_replace('/(>=|<=|!=|==|>|<|=|\^|~)\s+/', '$1', trim((string)$constraint));
+    foreach (preg_split('/\s*\|\|?\s*/', $constraint) as $alternative) {
+        $low = null;
+        foreach (preg_split('/\s*,\s*|\s+/', trim($alternative)) as $term) {
+            if (preg_match('/^(<|!=)/', $term)) {
+                continue; // an upper bound, or one version left out
+            }
+            if (!preg_match('/^(?:>=|>|\^|~|==?)?v?([0-9]+)(?:\.([0-9]+))?(?:\.([0-9]+))?(?:\.\*)?$/', $term, $m)) {
+                return null;
+            }
+            $v = $m[1] . '.' . (isset($m[2]) && $m[2] !== '' ? $m[2] : '0') . '.' . (isset($m[3]) && $m[3] !== '' ? $m[3] : '0');
+            $low = $low === null || cmpVersion($v, $low) > 0 ? $v : $low;
+        }
+        if ($low === null) {
+            return null;
+        }
+        $floor = $floor === null || cmpVersion($low, $floor) < 0 ? $low : $floor;
+    }
+    return $floor;
+}
+
+/** What the install's own composer.json requires: array('php' => constraint, 'floor' => X.Y.Z or null, 'extensions' => names), or null without one. */
+function ownComposer($root)
+{
+    $raw = is_readable("$root/composer.json") ? @file_get_contents("$root/composer.json") : false;
+    $json = $raw === false ? null : json_decode($raw, true);
+    if (!is_array($json) || !isset($json['require']) || !is_array($json['require'])) {
+        return null;
+    }
+    $extensions = array();
+    foreach (array_keys($json['require']) as $name) {
+        if (strpos((string)$name, 'ext-') === 0) {
+            $extensions[] = substr((string)$name, 4);
+        }
+    }
+    sort($extensions);
+    $php = isset($json['require']['php']) ? (string)$json['require']['php'] : '';
+    return array('php' => $php, 'floor' => $php !== '' ? phpFloor($php) : null, 'extensions' => $extensions);
 }
 
 /** A php.ini size in bytes; -1 for unlimited. */
@@ -379,18 +431,27 @@ $patch = isset($code['v_realpatch']) ? (int)$code['v_realpatch'] : 0;
 $tag = isset($code['v_tag']) ? trim((string)$code['v_tag']) : '';
 
 echo "OpenEMR install doctor: $root (site $site), OpenEMR " . ($versionKnown ? "$current$tag" . ($patch ? " patch $patch" : '') : '(version unknown)') . "\n";
-echo ($web ? 'Checked by the web server\'s PHP' : 'Checked by the command-line PHP') . ', ' . PHP_VERSION . ' (' . PHP_SAPI . ")\n\n";
-debug('doctor ' . DOCTOR_VERSION);
+echo ($web ? 'Checked by the web server\'s PHP' : 'Checked by the command-line PHP') . ', ' . PHP_VERSION . ' (' . PHP_SAPI . ")\n";
+echo 'Doctor ' . DOCTOR_VERSION . ' of ' . DOCTOR_DATE . "\n\n";
+$home = getenv('OPENEMR_DOCTOR_HOME');
+$home = is_string($home) && $home !== '' ? rtrim($home, '/') : DOCTOR_HOME;
+debug('doctor ' . DOCTOR_VERSION . ' of ' . DOCTOR_DATE . ", home $home");
 
-// The doctor is pinned to its release, so say when a newer one is out; never update itself.
-// Only when the facts come from the network: a server without internet makes no extra request.
-if (preg_match('#^https?://#', $factsBase) && getenv('OPENEMR_REFERENCE_NO_UPDATE_CHECK') === false) {
-    $latest = latestRelease();
-    debug('newest openemr-reference release: ' . ($latest === null ? 'not found' : $latest));
-    if ($latest !== null && cmpVersion($latest, DOCTOR_VERSION) > 0) {
-        report('NOTE', 'Doctor', "openemr-reference $latest is out; this doctor is " . DOCTOR_VERSION,
-            'Download the new one and run it again: https://github.com/anun333/openemr-reference/releases/latest');
-    }
+// The newest doctor is at its home, and this copy never updates itself: say when the home has a
+// newer one, or, when it can't look (no internet, or told not to), how old this copy is. With the
+// facts from a local folder it doesn't look: a server without internet makes no extra request.
+$noCheck = getenv('OPENEMR_DOCTOR_NO_UPDATE_CHECK');
+$noCheck = is_string($noCheck) && $noCheck !== '';
+$homeVersion = !$noCheck && preg_match('#^https?://#', $factsBase) ? homeVersion($home) : null;
+debug('the doctor at its home: ' . ($noCheck ? 'not asked (OPENEMR_DOCTOR_NO_UPDATE_CHECK)' : ($homeVersion === null ? 'not read' : $homeVersion)));
+$age = doctorAgeDays();
+if ($homeVersion !== null && cmpVersion($homeVersion, DOCTOR_VERSION) > 0) {
+    report('NOTE', 'Doctor', "a newer doctor, $homeVersion, is at $home; this one is " . DOCTOR_VERSION . ' of ' . DOCTOR_DATE,
+        "Download $home/openemr-doctor.php and run it again.");
+} elseif ($homeVersion === null && !$noCheck) {
+    report('NOTE', 'Doctor', 'this copy is ' . ($age === 0 ? 'from today' : ($age === 1 ? '1 day old' : "$age days old")) . ' (' . DOCTOR_DATE . '), and '
+        . (preg_match('#^https?://#', $factsBase) ? "it couldn't reach $home to look for a newer one" : 'with the facts from a folder it doesn\'t look for a newer one'),
+        "A newer one may be out: the newest is $home/openemr-doctor.php.");
 }
 
 if (!$versionKnown) {
@@ -409,7 +470,7 @@ if (!$versionKnown) {
 } elseif ($releases === null) {
     $online = preg_match('#^https?://#', $factsBase);
     report('NOTE', 'Release facts', $online ? "couldn't download them from $factsBase" . (ini_get('allow_url_fopen') ? '' : ' (allow_url_fopen is off)') . (extension_loaded('openssl') ? '' : ' (openssl is missing)') : "not found at $factsBase",
-        'The checks that depend on the release (PHP range, extensions, files) are skipped; the rest still run. For a server without internet, download site/preflight from https://github.com/anun333/openemr-reference and pass --facts=that folder.');
+        'The checks that need them (files, packages, page assets, the tested PHP and databases) are skipped; the rest still run, the PHP and extension checks from this install\'s composer.json. For a server without internet, copy the facts (' . DOCTOR_FACTS . ') into a folder named openemr-doctor-facts beside this file, or pass --facts=that folder.');
 } else {
     foreach ($releases as $r) {
         if (cmpVersion($r, $current) <= 0) {
@@ -459,34 +520,95 @@ if ($f !== null && $patch > 0 && $base === $current) {
 // (t/24361, t/24365, t/24048); one newer than tested breaks too (t/24282, t/26030, t/26133).
 
 $phpShort = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+// The install's own composer.json says which PHP and extensions its code needs. It is what the
+// facts are read from, so it answers without them, and it is newer than the facts for a release
+// they don't have yet. With both, the higher PHP floor counts, and a lower one is said.
+$own = $versionKnown ? ownComposer($root) : null;
+$ownFloor = $own !== null ? $own['floor'] : null;
+debug("this install's composer.json: " . ($own === null ? 'not read' : "php '" . $own['php'] . "' (from " . ($ownFloor === null ? '?' : $ownFloor) . '), ' . count($own['extensions']) . ' extensions'));
 if (skipped('php')) {
     // left out
-} elseif ($f !== null) {
-    $need = $f['php'];
-    $tested = isset($f['ci_php']) ? $f['ci_php'] : array();
+} elseif ($f !== null || $ownFloor !== null) {
+    $need = $f !== null ? $f['php'] : $ownFloor;
+    $needBy = $f !== null ? "OpenEMR $base needs" : "this install's composer.json asks for";
+    if ($f !== null && $ownFloor !== null && cmpVersion($ownFloor, $need) > 0) {
+        $need = $ownFloor;
+        $needBy = "this install's composer.json asks for";
+    } elseif ($f !== null && $ownFloor !== null && cmpVersion($ownFloor, $need) < 0) {
+        report('NOTE', 'PHP', "this install's composer.json asks for PHP " . $own['php'] . ", lower than the $need OpenEMR $base needs",
+            "It was changed here, or comes from another release than version.php's. The doctor checks against $need.");
+    }
+    $tested = $f !== null && isset($f['ci_php']) ? $f['ci_php'] : array();
     if (cmpVersion(PHP_VERSION, $need) < 0) {
-        report('FAIL', 'PHP', PHP_VERSION . " is too old: OpenEMR $base needs $need or later",
+        report('FAIL', 'PHP', PHP_VERSION . " is too old: $needBy $need or later",
             $web ? 'This is the PHP the web server runs. Install a newer PHP and point the web server at it.'
                  : 'Install a newer PHP. If `php -v` shows a newer one than the web page does, the web server is using a different PHP: open this doctor from a browser on the server to check that one.');
     } elseif ($tested !== array() && cmpVersion($phpShort, end($tested)) > 0) {
         report('WARN', 'PHP', PHP_VERSION . " is newer than any PHP OpenEMR $base was tested with (" . implode(', ', $tested) . ')',
             'Newer PHP versions remove things older code relies on. Use a tested version, or upgrade OpenEMR.');
     } else {
-        report('PASS', 'PHP', PHP_VERSION . " (OpenEMR $base needs $need or later" . ($tested ? '; tested with ' . implode(', ', $tested) : '') . ')');
+        report('PASS', 'PHP', PHP_VERSION . " ($needBy $need or later" . ($tested ? '; tested with ' . implode(', ', $tested) : '') . ')');
     }
 } else {
-    report('NOTE', 'PHP', PHP_VERSION . ' (no release facts to compare with)');
+    report('NOTE', 'PHP', PHP_VERSION . ' (no release facts to compare with, and no composer.json that says)');
 }
 
-// PHP's php2shell advisory (2026-10-21, https://www.php.net/archive/2026.php#2026-10-21-5;
-// OpenEMR's notice, t/27152): unauthenticated remote code execution, actively exploited,
-// fixed in these releases. Distributions patch PHP without changing its number (Ubuntu 24.04
-// keeps 8.3.6), so for their builds a low number is only a warning. They don't mark the build
-// in PHP itself (PHP_EXTRA_VERSION is empty on Ubuntu and Debian): it's found in the package
-// database instead. Alpine's php8x packages, which OpenEMR's Docker images use, and PHP built
-// from source (the official php images) carry PHP's own number.
-$phpFixed = array('8.5' => '8.5.12', '8.4' => '8.4.27', '8.3' => '8.3.36', '8.2' => '8.2.35');
-$cves = 'CVE-2026-109618, CVE-2026-109619';
+// PHP's security advisories, checked against the PHP the doctor runs on. php-security.json in the
+// facts (hand-written from PHP's own announcements, each citing its page) lists them, so a new
+// advisory is a change to the facts, not to the doctor; the list below, the one this copy was
+// released with, is used without the facts. Distributions patch PHP without changing its number
+// (Ubuntu 24.04 keeps 8.3.6), so for their builds a low number is only a warning. They don't mark
+// the build in PHP itself (PHP_EXTRA_VERSION is empty on Ubuntu and Debian): it's found in the
+// package database instead. Alpine's php8x packages, which OpenEMR's Docker images use, and PHP
+// built from source (the official php images) carry PHP's own number.
+$phpSecurityBuiltIn = array(
+    // php2shell: unauthenticated remote code execution, actively exploited; OpenEMR's notice is t/27152.
+    array('name' => 'php2shell', 'date' => '2026-10-21', 'cves' => array('CVE-2026-109618', 'CVE-2026-109619'),
+        'impact' => 'remote code execution without logging in, actively exploited',
+        'source' => 'https://www.php.net/archive/2026.php#2026-10-21-5', 'notice' => 'https://community.open-emr.org/t/27152',
+        'fixed' => array('8.5' => '8.5.12', '8.4' => '8.4.27', '8.3' => '8.3.36', '8.2' => '8.2.35')),
+);
+
+/** Whether php-security.json's advisories are in the form this doctor reads. */
+function advisoriesReadable($data)
+{
+    if (!is_array($data) || !isset($data['advisories']) || !is_array($data['advisories']) || $data['advisories'] === array()) {
+        return false;
+    }
+    foreach ($data['advisories'] as $a) {
+        if (!is_array($a) || !isset($a['name'], $a['date'], $a['cves'], $a['source'], $a['fixed']) || !is_string($a['name']) || $a['name'] === ''
+            || !is_string($a['date']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $a['date']) || !is_array($a['cves'])
+            || !is_string($a['source']) || !preg_match('#^https://#', $a['source']) || !is_array($a['fixed']) || $a['fixed'] === array()) {
+            return false;
+        }
+        foreach ($a['fixed'] as $branch => $version) {
+            if (!preg_match('/^\d+\.\d+$/', (string)$branch) || !is_string($version) || strpos($version, $branch . '.') !== 0 || !preg_match('/^\d+\.\d+\.\d+$/', $version)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/** The advisories' names, CVEs and the highest fix for this branch, for the report lines. */
+function advisoryWords($list, $branch)
+{
+    $names = array();
+    $cves = array();
+    $fixed = '0';
+    $top = $list[0];
+    foreach ($list as $a) {
+        $names[] = $a['name'];
+        $cves = array_merge($cves, $a['cves']);
+        if (isset($a['fixed'][$branch]) && cmpVersion($a['fixed'][$branch], $fixed) > 0) {
+            $fixed = $a['fixed'][$branch];
+            $top = $a;
+        }
+    }
+    return array('names' => implode(' and ', $names), 'cves' => implode(', ', array_unique($cves)), 'fixed' => $fixed, 'top' => $top,
+        'impact' => isset($top['impact']) && is_string($top['impact']) && $top['impact'] !== '' ? ': ' . $top['impact'] : '');
+}
+
 $apkName = 'php' . PHP_MAJOR_VERSION . PHP_MINOR_VERSION;
 $apkDb = @is_readable('/lib/apk/db/installed') ? (string)@file_get_contents('/lib/apk/db/installed') : '';
 $fromApk = $apkDb !== '' && strpos($apkDb, "\nP:$apkName\n") !== false;
@@ -496,27 +618,58 @@ $debAt = $dpkg !== '' ? strpos("\n" . $dpkg, "\nPackage: $debName\n") : false;
 $debVersion = ($debAt !== false && preg_match('/\nVersion: (\S+)/', substr("\n" . $dpkg, $debAt + 1, 2000), $m)) ? $m[1] : '';
 $fromDistro = !$fromApk && ($debAt !== false || (@is_file('/etc/redhat-release') && strpos(PHP_BINARY, '/usr/bin/') === 0));
 $build = $debVersion !== '' ? " (package $debName $debVersion)" : ($fromDistro ? ' (a distribution build)' : '');
-if (skipped('php-security')) {
-    // left out
-} elseif (isset($phpFixed[$phpShort])) {
-    $fixed = $phpFixed[$phpShort];
-    if (cmpVersion(PHP_VERSION, $fixed) >= 0) {
-        report('PASS', 'PHP security', PHP_VERSION . " has PHP's fix for php2shell ($cves; $fixed)");
-    } elseif ($fromApk) {
-        report('FAIL', 'PHP security', PHP_VERSION . " is older than $fixed, PHP's fix for php2shell ($cves: remote code execution without logging in, actively exploited)",
-            "This PHP is Alpine's $apkName package, as in OpenEMR's Docker images. Update it in place: apk update && apk upgrade \$(apk info -q | grep '^$apkName'), then restart the container; recreating it brings the old PHP back until the image is rebuilt. If apk finds nothing newer, this image's Alpine gets no fix: move to an image OpenEMR's notice lists as fixed (https://community.open-emr.org/t/27152).");
-    } elseif ($fromDistro) {
-        report('WARN', 'PHP security', PHP_VERSION . "$build is numbered below $fixed, PHP's fix for php2shell ($cves)",
-            "Distributions fix PHP without changing its version number. Check your distribution's security notice for $cves and that its update is installed.");
-    } else {
-        report('FAIL', 'PHP security', PHP_VERSION . " is older than $fixed, PHP's fix for php2shell ($cves: remote code execution without logging in, actively exploited)",
-            "Update PHP to $fixed or later (https://www.php.net/archive/2026.php#2026-10-21-5). Until then, keep OpenEMR off the public internet.");
+if (!skipped('php-security')) {
+    $advisories = $phpSecurityBuiltIn;
+    $securityFacts = facts($factsBase, 'php-security');
+    if ($securityFacts !== null && advisoriesReadable($securityFacts)) {
+        $advisories = array_values($securityFacts['advisories']);
+    } elseif ($securityFacts !== null) {
+        report('NOTE', 'PHP security', "php-security.json in the facts isn't in a form this doctor reads, so it checks against the advisories it was released with",
+            "A newer doctor may read it: $home/openemr-doctor.php.");
     }
-} elseif (cmpVersion($phpShort, '8.2') < 0) {
-    report('WARN', 'PHP security', "PHP $phpShort gets no security fixes from PHP; the php2shell fixes (2026-10-21) went to 8.2 to 8.5 only",
-        $fromDistro ? "Check that your distribution still supports this PHP and has a notice for $cves." : 'Move to a PHP that PHP still supports (8.2 or later).');
-} else {
-    report('NOTE', 'PHP security', PHP_VERSION . ' is newer than the branches in the php2shell advisory (8.2 to 8.5)');
+    debug('PHP security: ' . count($advisories) . ' advisories, ' . ($advisories === $phpSecurityBuiltIn ? "this doctor's own list" : 'from php-security.json'));
+    $affected = array();
+    $covered = array();
+    $newest = $advisories[0];
+    foreach ($advisories as $a) {
+        if (isset($a['fixed'][$phpShort])) {
+            $covered[] = $a;
+            if (cmpVersion(PHP_VERSION, $a['fixed'][$phpShort]) < 0) {
+                $affected[] = $a;
+            }
+        }
+        $newest = strcmp($a['date'], $newest['date']) > 0 ? $a : $newest;
+    }
+    $branches = array_keys($newest['fixed']);
+    usort($branches, 'cmpVersion');
+    $oldest = $branches[0];
+    $span = $oldest . ' to ' . end($branches);
+    if ($affected !== array()) {
+        $w = advisoryWords($affected, $phpShort);
+        $fixed = $w['fixed'];
+        if ($fromApk) {
+            report('FAIL', 'PHP security', PHP_VERSION . " is older than $fixed, PHP's fix for {$w['names']} ({$w['cves']}{$w['impact']})",
+                "This PHP is Alpine's $apkName package, as in OpenEMR's Docker images. Update it in place: apk update && apk upgrade \$(apk info -q | grep '^$apkName'), then restart the container; recreating it brings the old PHP back until the image is rebuilt. If apk finds nothing newer, this image's Alpine gets no fix: "
+                . (isset($w['top']['notice']) && is_string($w['top']['notice']) ? "move to an image OpenEMR's notice lists as fixed ({$w['top']['notice']})." : "move to an image with PHP $fixed or later."));
+        } elseif ($fromDistro) {
+            report('WARN', 'PHP security', PHP_VERSION . "$build is numbered below $fixed, PHP's fix for {$w['names']} ({$w['cves']})",
+                "Distributions fix PHP without changing its version number. Check your distribution's security notice for {$w['cves']} and that its update is installed.");
+        } else {
+            report('FAIL', 'PHP security', PHP_VERSION . " is older than $fixed, PHP's fix for {$w['names']} ({$w['cves']}{$w['impact']})",
+                "Update PHP to $fixed or later ({$w['top']['source']}). Until then, keep OpenEMR off the public internet.");
+        }
+    } elseif (cmpVersion($phpShort, $oldest) < 0) {
+        report('WARN', 'PHP security', "PHP $phpShort gets no security fixes from PHP; the {$newest['name']} fixes ({$newest['date']}) went to $span only",
+            $fromDistro ? 'Check that your distribution still supports this PHP and has a notice for ' . implode(', ', $newest['cves']) . '.' : "Move to a PHP that PHP still supports ($oldest or later).");
+    } elseif ($covered !== array()) {
+        $parts = array();
+        foreach ($covered as $a) {
+            $parts[] = $a['name'] . ' (' . implode(', ', $a['cves']) . '; ' . $a['fixed'][$phpShort] . ')';
+        }
+        report('PASS', 'PHP security', PHP_VERSION . " has PHP's " . (count($parts) === 1 ? 'fix' : 'fixes') . ' for ' . implode(' and ', $parts));
+    } else {
+        report('NOTE', 'PHP security', PHP_VERSION . " is newer than the branches in the {$newest['name']} advisory ($span)");
+    }
 }
 if (!$web) {
     report('NOTE', 'Which PHP', 'this is the command-line PHP (' . PHP_BINARY . ', settings from ' . (php_ini_loaded_file() ?: 'no php.ini') . ')',
@@ -548,8 +701,22 @@ if (cmpVersion($current, '7.0.0') >= 0) {
     $baseline[] = 'intl';
     $intlWhy = ' and intl, which this install\'s code uses';
 }
-$wanted = ($f !== null && $f['extensions'] !== array()) ? $f['extensions'] : $baseline;
-$wantedFrom = ($f !== null && $f['extensions'] !== array()) ? " by $base" : ($f !== null ? " ($base's composer.json lists none, so OpenEMR setup's own four$intlWhy)" : " (OpenEMR setup's own four$intlWhy)");
+// The release's list, from the facts; else, or when the facts are another release's, the install's
+// own composer.json; else setup's own.
+if ($f !== null && $f['extensions'] !== array() && !$approx) {
+    $wanted = $f['extensions'];
+    $wantedFrom = " by $base";
+} elseif ($own !== null && $own['extensions'] !== array()) {
+    $wanted = $own['extensions'];
+    $wantedFrom = " by this install's composer.json";
+} elseif ($f !== null && $f['extensions'] !== array()) {
+    $wanted = $f['extensions'];
+    $wantedFrom = " by $base";
+} else {
+    $wanted = $baseline;
+    $wantedFrom = $f !== null ? " ($base's composer.json lists none, so OpenEMR setup's own four$intlWhy)"
+        : ($own !== null ? " (this install's composer.json lists none, so OpenEMR setup's own four$intlWhy)" : " (OpenEMR setup's own four$intlWhy)");
+}
 $missing = array();
 foreach ($wanted as $ext) {
     if (!extension_loaded($ext)) {

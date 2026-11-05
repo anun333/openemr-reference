@@ -62,6 +62,9 @@ for f in "openemr-upgrade.sh:^SCRIPT_VERSION=" "openemr-doctor-docker.sh:^    VE
     grep -q "${pattern}${VERSION}[');]*\$" "$file" || die "$file doesn't say $VERSION ($(grep -m1 "$pattern" "$file"))"
 done
 say "  the five tools say $VERSION"
+# The doctor and its wrapper print the day they were released (gen/check.py: the same day in both).
+grep -q "^define('DOCTOR_DATE', '$(date +%F)');\$" preflight/openemr-doctor.php || die "openemr-doctor.php's DOCTOR_DATE isn't today ($(date +%F)): set it, and DATE in openemr-doctor-docker.sh"
+say "  the doctor says it was released today, $(date +%F)"
 # Every suite in preflight/ is in the list, so a new one can't be skipped by forgetting it here.
 for t in preflight/test_*.sh; do
     n="$(basename "$t")"; [[ "$n" == test_lib.sh ]] && continue
@@ -71,10 +74,10 @@ done
 say "== 3. Fast checks (as CI runs them)"
 shellcheck -S warning preflight/*.sh release.sh || die "ShellCheck"
 for v in 5.5 5.6 7.0 7.4 8.1 8.3 8.5; do
-    docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-doctor.php >/dev/null || die "the doctor doesn't parse on PHP $v"
-    docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/scan.php >/dev/null || die "scan.php doesn't parse on PHP $v"
-    [[ "$v" == 5.* || "$v" == 7.0 ]] || docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-preflight.php >/dev/null || die "the pre-flight check doesn't parse on PHP $v"
-    [[ "$v" == 5.* || "$v" == 7.0 ]] || docker run --rm --cpus 1 -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-receipt.php >/dev/null || die "the receipt doesn't parse on PHP $v"
+    docker run --rm --cpus 1 --memory 256m --memory-swap 256m -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-doctor.php >/dev/null || die "the doctor doesn't parse on PHP $v"
+    docker run --rm --cpus 1 --memory 256m --memory-swap 256m -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/scan.php >/dev/null || die "scan.php doesn't parse on PHP $v"
+    [[ "$v" == 5.* || "$v" == 7.0 ]] || docker run --rm --cpus 1 --memory 256m --memory-swap 256m -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-preflight.php >/dev/null || die "the pre-flight check doesn't parse on PHP $v"
+    [[ "$v" == 5.* || "$v" == 7.0 ]] || docker run --rm --cpus 1 --memory 256m --memory-swap 256m -v "$PWD:/app" -w /app "php:$v-cli" php -l preflight/openemr-receipt.php >/dev/null || die "the receipt doesn't parse on PHP $v"
 done
 python3 gen/check.py > "$LOGS/check.log" 2>&1 || { tail -20 "$LOGS/check.log"; die "gen/check.py (log: $LOGS/check.log)"; }
 say "  ShellCheck, PHP 5.5 to 8.5 (the doctor, scan.php; the pre-flight check and the receipt from 7.4), gen/check.py (with the pinned php-upgrade-catalogue): pass"

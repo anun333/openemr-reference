@@ -1,0 +1,20 @@
+{
+  "schema": "openemr-doctor php-security 1",
+  "about": "PHP security advisories the install doctor checks the PHP it runs on against. Written by hand: the CVEs and the fixed releases from PHP's own announcement (source), the name and the impact from OpenEMR's notice (notice) where there is one. fixed: the first release on each PHP branch with the fix. build_preflight.py copies this file to site/preflight/php-security.json, which the doctor downloads with the release facts; without it, the doctor uses the list it was released with. A new advisory is a new entry here.",
+  "advisories": [
+    {
+      "name": "php2shell",
+      "date": "2026-10-21",
+      "cves": ["CVE-2026-109618", "CVE-2026-109619"],
+      "impact": "remote code execution without logging in, actively exploited",
+      "source": "https://www.php.net/archive/2026.php#2026-10-21-5",
+      "notice": "https://community.open-emr.org/t/27152",
+      "fixed": {
+        "8.2": "8.2.35",
+        "8.3": "8.3.36",
+        "8.4": "8.4.27",
+        "8.5": "8.5.12"
+      }
+    }
+  ]
+}

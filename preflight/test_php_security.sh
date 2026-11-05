@@ -5,7 +5,8 @@
 # low after a fixed update; and branches PHP no longer fixes (8.1, 5.6). The doctor runs against
 # a folder holding only version.php, so no OpenEMR install is needed. Each expectation follows
 # the PHP the container actually runs, so a rebuilt image turns a FAIL case into a PASS case
-# instead of breaking the test. Everything runs in containers deleted at the end.
+# instead of breaking the test. Then the advisories as data (6): php-security.json in the facts
+# replaces the doctor's own list. Everything runs in containers deleted at the end.
 set -euo pipefail
 cd "$(dirname "$0")"
 . ./test_lib.sh
@@ -17,11 +18,11 @@ fails=0
 
 # doctor IMAGE [SHELL_PREFIX]: the doctor's PHP security lines, run with the image's PHP.
 doctor() {
-    docker run --rm --cpus 1 -v "$PWD/openemr-doctor.php:/d.php:ro" -v "$work:/oe:ro" --entrypoint sh "$1" \
+    docker run --rm --cpus 1 --memory 1g --memory-swap 1g -v "$PWD/openemr-doctor.php:/d.php:ro" -v "$work:/oe:ro" --entrypoint sh "$1" \
         -c "${2:-true} && php /d.php --openemr=/oe --facts=/nonexistent" 2>&1 | grep -A1 "PHP security" || true
 }
 php_of() {
-    docker run --rm --cpus 1 --entrypoint sh "$1" -c "${2:-true} >/dev/null 2>&1; php -r 'echo PHP_VERSION;'"
+    docker run --rm --cpus 1 --memory 1g --memory-swap 1g --entrypoint sh "$1" -c "${2:-true} >/dev/null 2>&1; php -r 'echo PHP_VERSION;'"
 }
 check() {  # check NAME OUTPUT PATTERN
     if echo "$2" | grep -q -- "$3"; then echo "ok   $1"; else echo "FAIL $1"; echo "$2" | sed 's/^/       | /'; fails=$((fails+1)); fi
@@ -81,6 +82,36 @@ fi
 # 5. Branches PHP no longer fixes: a warning, without claiming they are affected.
 check "5: PHP 8.1 gets no fixes from PHP" "$(doctor php:8.1-cli)" "^WARN  PHP security: PHP 8.1 gets no security fixes from PHP"
 check "5: PHP 5.6 runs the check too" "$(doctor php:5.6-cli)" "^WARN  PHP security: PHP 5.6 gets no security fixes from PHP"
+
+# 6. The advisories are data: php-security.json in the facts replaces the doctor's own list, so a
+# new advisory needs no new doctor. A made-up one, fixed in a release no PHP has yet (x.y.99), must
+# fail the PHP the same image passes on the doctor's own list; one the doctor can't read is said,
+# and the doctor's own list is used.
+facts=$(mktemp -d)
+trap 'rm -rf "$work" "$facts"' EXIT
+chmod 755 "$facts"
+img=php:8.5-cli
+v=$(php_of $img); b=${v%.*}
+advisory() {  # advisory NAME FIXED: one advisory for this branch, as in gen/php-security.json
+    printf '{"name": "%s", "date": "2026-12-01", "cves": ["CVE-2026-0001"], "impact": "made up for the test", "source": "https://example.org/advisory", "fixed": {"%s": "%s"}}' "$1" "$b" "$2"
+}
+sec() {  # sec IMAGE: the doctor's PHP security lines, with the facts folder above
+    docker run --rm --cpus 1 --memory 512m --memory-swap 512m -v "$PWD/openemr-doctor.php:/d.php:ro" -v "$work:/oe:ro" -v "$facts:/f:ro" --entrypoint php "$1" \
+        /d.php --openemr=/oe --facts=/f 2>&1 | grep -A1 "PHP security" || true
+}
+printf '{"schema": "openemr-doctor php-security 1", "advisories": [%s]}\n' "$(advisory test-advisory "$b.99")" > "$facts/php-security.json"
+check "6: an advisory in the facts, fixed in $b.99, fails PHP $v" "$(sec $img)" "^FAIL  PHP security: $v is older than $b.99, PHP's fix for test-advisory (CVE-2026-0001: made up for the test)"
+check "6: with the advisory's own page" "$(sec $img)" "Update PHP to $b.99 or later (https://example.org/advisory)"
+printf '{"schema": "openemr-doctor php-security 1", "advisories": [%s, %s]}\n' "$(advisory older-one "$b.0")" "$(advisory test-advisory "$b.99")" > "$facts/php-security.json"
+check "6: with two, the one PHP $v lacks is named, not the one it has" "$(sec $img)" "^FAIL  PHP security: $v is older than $b.99, PHP's fix for test-advisory ("
+printf '{"schema": "openemr-doctor php-security 1", "advisories": [%s]}\n' "$(advisory passed-one "$b.0")" > "$facts/php-security.json"
+check "6: and one it has passes, by name" "$(sec $img)" "^PASS  PHP security: $v has PHP's fix for passed-one (CVE-2026-0001; $b.0)"
+printf '{"advisories": [{"name": "broken", "fixed": "8.5.99"}]}\n' > "$facts/php-security.json"
+out=$(sec $img)
+check "6: a php-security.json the doctor can't read is said" "$out" "^NOTE  PHP security: php-security.json in the facts isn't in a form this doctor reads"
+check "6: and the doctor's own list is used (php2shell)" "$out" "^\(PASS\|FAIL\)  PHP security: $v .*php2shell"
+cp ../site/preflight/php-security.json "$facts/php-security.json"
+check "6: the published php-security.json reads the same as the doctor's own list" "$(sec $img)" "$(doctor $img | head -1)"
 
 echo
 if [ "$fails" -eq 0 ]; then echo "all PHP security checks passed"; else echo "$fails failed"; exit 1; fi

@@ -1,13 +1,15 @@
 """Writes the compact per-release facts the pre-flight check reads (site/preflight/<release>.json):
 requirements, CI-tested PHP and databases, modules, settings (key, section, label, default),
 PHP files, upgrade scripts, Composer install paths and page assets; and, for the install
-doctor, the files each package ships from git (site/preflight/<release>-files.json).
-Built from data/, like the pages.
+doctor, the files each package ships from git (site/preflight/<release>-files.json), and PHP's
+security advisories (site/preflight/php-security.json, copied from gen/php-security.json, which is
+written by hand). Built from data/, like the pages.
 """
 
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from build_pages import load
 from sources import DATA, SITE
@@ -89,6 +91,8 @@ def main() -> None:
         for name, data in files.items():
             (out / f"{name}.json").write_text(json.dumps(data, separators=(",", ":"), ensure_ascii=False) + "\n")
     (out / "releases.json").write_text(json.dumps([r["release"] for r in releases]) + "\n")
+    # PHP's security advisories, hand-written in gen/ with their sources, beside the release facts.
+    (out / "php-security.json").write_bytes((Path(__file__).resolve().parent / "php-security.json").read_bytes())
     print(f"{len(releases)} release fact files in {out}")
 
 

@@ -37,7 +37,7 @@
 # browser image) and the pinned Playwright package from PyPI. The target must be 8.2.0 or later
 # (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.5.1
+SCRIPT_VERSION=0.5.2
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 PLAYWRIGHT_IMAGE=mcr.microsoft.com/playwright/python:v1.63.0-noble
 PLAYWRIGHT_PIP=playwright==1.63.0
@@ -915,7 +915,7 @@ say "  running the install doctor on the upgraded copy..."
 docker cp "$DOCTOR_TOOL" "$APP:/tmp/openemr-doctor.php"
 [[ -z "$SCAN_TOOL" ]] || docker cp "$SCAN_TOOL" "$APP:/tmp/scan.php"
 docker exec "$APP" chmod 644 /tmp/openemr-doctor.php
-set +e; docker exec -u apache -e OPENEMR_REFERENCE_NO_UPDATE_CHECK=1 "$APP" php /tmp/openemr-doctor.php --openemr="$OE" --site=default > "$OUT/doctor.txt" 2>&1; doctor_rc=$?; set -e
+set +e; docker exec -u apache -e OPENEMR_DOCTOR_NO_UPDATE_CHECK=1 "$APP" php /tmp/openemr-doctor.php --openemr="$OE" --site=default > "$OUT/doctor.txt" 2>&1; doctor_rc=$?; set -e
 doctor_fails=$(grep '^FAIL ' "$OUT/doctor.txt" | grep -v '^FAIL  PHP security' || true)
 
 # The access check: OpenEMR itself reads the upgraded copy back.

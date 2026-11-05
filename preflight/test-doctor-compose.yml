@@ -2,6 +2,8 @@
 services:
   mysql:
     cpus: 1
+    mem_limit: 2g
+    memswap_limit: 2g
     image: mariadb:11.8
     command: ['mariadbd', '--character-set-server=utf8mb4']
     environment:
@@ -12,6 +14,8 @@ services:
       retries: 40
   openemr:
     cpus: 2
+    mem_limit: 3g
+    memswap_limit: 3g
     image: openemr/openemr:8.4.1
     ports:
       - "127.0.0.1:8372:80"
