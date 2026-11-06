@@ -180,6 +180,20 @@ def skip_names() -> None:
         check(names != [] and names == listed, f"the README lists {tool}'s {len(names)} --skip names, in its order ({len(listed)} listed)")
 
 
+def example_names() -> None:
+    """Every example name for the doctor's browser mode that the doctor's own text or the README shows
+    is on the doctor's list of names it refuses ($doctorExampleNames): an example copied as is would
+    otherwise be a key anyone can read."""
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    doctor = (root / "preflight" / "openemr-doctor.php").read_text()
+    m = re.search(r"\$doctorExampleNames = array\((.*?)\);", doctor, re.S)
+    listed = set(re.findall(r"'([^']+)'", m.group(1))) if m else set()
+    shown = set(re.findall(r"openemr-doctor-[A-Za-z0-9]{12,}\.php", doctor + (root / "README.md").read_text()))
+    check(listed != set() and shown <= listed, f"the doctor refuses every example name it or the README shows ({sorted(shown - listed) or 'all listed'})")
+
+
 def runtime(tag: str, app: str, db: str) -> None:
     php = r"""$ignoreAuth = true; $_GET['site'] = 'default'; $sessionAllowWrite = true;
 require '/var/www/localhost/htdocs/openemr/interface/globals.php';
@@ -217,6 +231,7 @@ def main() -> int:
     catalogue()
     php_security()
     skip_names()
+    example_names()
     known_facts(tags)
     if "--runtime" in sys.argv:
         i = sys.argv.index("--runtime")

@@ -37,7 +37,7 @@
 # browser image) and the pinned Playwright package from PyPI. The target must be 8.2.0 or later
 # (sql_upgrade.php runs from the command line from 8.2.0).
 set -euo pipefail
-SCRIPT_VERSION=0.5.3
+SCRIPT_VERSION=0.5.4
 REFERENCE_BASE="${OPENEMR_REFERENCE_BASE:-https://github.com/anun333/openemr-reference/releases/download/v$SCRIPT_VERSION}"
 PLAYWRIGHT_IMAGE=mcr.microsoft.com/playwright/python:v1.63.0-noble
 PLAYWRIGHT_PIP=playwright==1.63.0

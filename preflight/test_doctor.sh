@@ -200,8 +200,16 @@ expect "^PASS  Encryption keys" "16: and the keys"
 refute "Error display: PHP prints" "16: the web server's display_errors (Off in the image) is read, not the doctor's own"
 expect "Delete $BN" "16: and asks to be deleted, by its name"
 out=$(docker exec $C curl -s http://localhost/openemr-doctor.php)
-expect "Rename this file with a random part of 12 or more letters and digits, such as openemr-doctor-[0-9a-f]\{16\}\.php" "17: under its own name it asks to be renamed first"
+expect "Rename this file with a random part of 12 or more letters and digits of your own (not an example's), such as openemr-doctor-[0-9a-f]\{16\}\.php" "17: under its own name it asks to be renamed first, suggesting 16 hex characters"
 refute "PASS" "17: and shows nothing"
+s1=$(echo "$out" | grep -o 'openemr-doctor-[0-9a-f]\{16\}\.php'); s2=$(docker exec $C curl -s http://localhost/openemr-doctor.php | grep -o 'openemr-doctor-[0-9a-f]\{16\}\.php')
+[ -n "$s1" ] && [ "$s1" != "$s2" ] && echo "ok   17: each suggestion is a fresh name" || { echo "FAIL 17: the same suggestion twice ($s1, $s2)"; fails=$((fails+1)); }
+EX=$(sed -n "s/^\$doctorExampleNames = array('\([^']*\)'.*/\1/p" openemr-doctor.php)
+docker cp openemr-doctor.php $C:$OE/$EX; x "chown apache $OE/$EX"
+out=$(docker exec $C curl -s http://localhost/$EX)
+expect "Rename this file" "17: under the example name the instructions show ($EX), it asks to be renamed too"
+refute "PASS" "17: and shows nothing"
+x "rm -f $OE/$EX"
 out=$(docker exec $C curl -s -H 'X-Forwarded-For: 203.0.113.9' http://localhost/$BN)
 expect "only answers a browser on this server" "17: refused through a proxy"
 out=$(curl -s http://127.0.0.1:8372/$BN)
