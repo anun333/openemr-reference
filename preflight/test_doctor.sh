@@ -210,6 +210,13 @@ out=$(docker exec $C curl -s http://localhost/$EX)
 expect "Rename this file" "17: under the example name the instructions show ($EX), it asks to be renamed too"
 refute "PASS" "17: and shows nothing"
 x "rm -f $OE/$EX"
+# Without PHP's secure generator (PHP 5, or random_bytes switched off) no name is suggested, only how to choose one.
+for v in "5.6-cli" "8.4-cli -d disable_functions=random_bytes"; do
+    out=$(docker run --rm --cpus 1 --memory 256m --memory-swap 256m --network none -v "$PWD:/d:ro" --entrypoint sh "php:${v%% *}" -c \
+      "php ${v#*-cli} -S 127.0.0.1:8080 -t /d >/dev/null 2>&1 & sleep 2; php -r 'echo file_get_contents(\"http://127.0.0.1:8080/openemr-doctor.php\", false, stream_context_create(array(\"http\" => array(\"ignore_errors\" => true))));'" 2>&1 || true)
+    expect "of your own (not an example's), chosen at random, and open that name" "17: on php:$v the doctor asks for a random name of your own"
+    refute "such as openemr-doctor-" "17: and suggests none"
+done
 out=$(docker exec $C curl -s -H 'X-Forwarded-For: 203.0.113.9' http://localhost/$BN)
 expect "only answers a browser on this server" "17: refused through a proxy"
 out=$(curl -s http://127.0.0.1:8372/$BN)
