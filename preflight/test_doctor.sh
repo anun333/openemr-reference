@@ -45,7 +45,7 @@ q() { docker exec $D mariadb -uroot -proot openemr -N -e "SET SESSION sql_mode='
 x() { docker exec $C sh -c "$1"; }
 run() { docker exec -u apache $C php /tmp/doctor.php --openemr=$OE --facts=/tmp/facts "$@" || true; }
 fails=0
-expect() { if echo "$out" | grep -q -- "$1"; then echo "ok   $2"; else echo "FAIL $2"; echo "$out" | grep -E "^(PASS|WARN|FAIL|NOTE) " | sed 's/^/       | /'; fails=$((fails+1)); fi; }
+expect() { if echo "$out" | grep -q -- "$1"; then echo "ok   $2"; else echo "FAIL $2"; echo "$out" | grep -E "^(PASS|WARN|FAIL|NOTE) " | sed 's/^/       | /' || echo "       | (no result lines: $(echo "$out" | head -c 300))"; fails=$((fails+1)); fi; }
 refute() { if echo "$out" | grep -q -- "$1"; then echo "FAIL $2"; fails=$((fails+1)); else echo "ok   $2"; fi; }
 
 # A fresh install has no keys until something is encrypted: encrypt a value the way OpenEMR does.
