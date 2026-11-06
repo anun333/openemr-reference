@@ -2,16 +2,22 @@
 # End-to-end test of openemr-doctor.php against a throwaway OpenEMR 8.4.1 (official image,
 # MariaDB 11.8). It first runs on the install as it is, then breaks one thing at a time the
 # way the forum reports describe, checks the doctor names it, and puts it back:
-#   files lost from templates/, a vendor package, the built assets, the theme stylesheet;
-#   OpenEMR's PHP-error display on; a switched-on module with no files; the keys folder
-#   emptied, and a key from another install; a document without its file, and one moved
+#   files lost from templates/ (and a folder where a file should be), a vendor package, the built
+#   assets, the theme stylesheet; PHP's own error display and OpenEMR's; a switched-on module with
+#   no files; the keys folder emptied, a key from another install, a database without one of a
+#   drive key's pair, and tables the database refuses; a document without its file, and one moved
 #   from another root; a half-finished upgrade; a wrong password, a missing site, setup not
-#   finished; an edited file, one that no longer parses, and one calling each() (scan.php); then the browser mode (local
-#   only), PHP 7.4, too old for 8.4.1, when intl is required before 7.0.0, and
-#   openemr-doctor-docker.sh (its exit code, sites/ on a volume of a container that never started,
-#   facts beside the doctor, how it finds OpenEMR's folder); the install's own composer.json without
-#   facts and with them; then MySQL over SSL: a database that only accepts it, its CA,
-#   a connection by IP, the wrong CA, a client certificate without its key, a CA that isn't PEM.
+#   finished, a sqlconf.php that doesn't parse; an edited file, one that no longer parses, one the
+#   doctor can't read, and one calling each() (scan.php); --skip, also when the doctor stops early;
+#   then the browser mode (local only, under a name of your own), PHP 7.4, too old for 8.4.1, when
+#   intl is required before 7.0.0, a version.php that doesn't parse, and
+#   openemr-doctor-docker.sh (its exit code; a running container checked inside, with sites/ on a
+#   volume too; a container that never started, from a throwaway container on both its networks;
+#   0600 copies and facts beside the doctor; WEB_USER; how it finds OpenEMR's folder); the
+#   install's own composer.json without facts and with them, upper bounds included; then MySQL
+#   over SSL: a database that only accepts it, its CA, a connection by IP, the wrong CA, a client
+#   certificate without its key, a CA that isn't PEM, and a certificate whose DNS name isn't the
+#   host though its Common Name is.
 # Everything runs in containers that are deleted at the end. Synthetic data only.
 # Needs Docker and the facts in ../site/preflight (python3 gen/build_preflight.py).
 set -euo pipefail
@@ -59,6 +65,9 @@ expect "^PASS  Encryption keys: 2 in the keys folder, and they match" "1: keys v
 expect "^WARN  Modules: Composer installs oe-module-claimrev-connect" "1: the image's missing ClaimRev is reported"
 expect "^NOTE  Setup scripts: removed after setup, as the Docker image does" "1: the image's removed setup scripts are a note"
 refute "^FAIL" "1: no failures on a healthy install"
+refute "Error display: PHP prints" "1: the image's php.ini has display_errors Off, and the doctor's own setting isn't read as the site's"
+out=$(docker exec -u apache $C php -d display_errors=1 -d error_reporting=-1 /tmp/doctor.php --openemr=$OE --facts=/tmp/facts || true)
+expect "^NOTE  Error display: PHP prints warnings and deprecation notices into pages" "1: display_errors On in this PHP's settings is reported"
 
 x "mv $OE/templates/interface/main/tabs /tmp/tabs"; out=$(run)
 expect "^FAIL  Files: .* missing, in templates/interface" "2: lost template files fail (t/25717)"
@@ -69,6 +78,9 @@ x "mv /tmp/adodb $OE/vendor/adodb"
 x "mv $OE/public/assets/jquery /tmp/jquery"; out=$(run)
 expect "^FAIL  Page assets: 1 of the 3 .*assets/jquery/" "4: a missing built asset fails (t/26790)"
 x "mv /tmp/jquery $OE/public/assets/jquery"
+x "mv $OE/interface/main/about_page.php /tmp/about_page.away && mkdir $OE/interface/main/about_page.php"; out=$(run)
+expect "^FAIL  Files: 1 files of the OpenEMR 8.4.1 package are missing, in interface/main (1). For example: interface/main/about_page.php" "4b: a folder where a file should be counts as missing"
+x "rmdir $OE/interface/main/about_page.php && mv /tmp/about_page.away $OE/interface/main/about_page.php"
 x "mv $OE/Documentation /tmp/Documentation"; out=$(run)
 expect "^PASS  Files: all .* optional ones" "5: missing documentation is optional"
 x "mv /tmp/Documentation $OE/Documentation"
@@ -81,6 +93,11 @@ expect "^FAIL  Local changes: 1 edited file of OpenEMR's own doesn't parse with 
 expect "^NOTE  Local changes: 2 of OpenEMR's own files differ" "5b: both edited files are named"
 x "cp -p /tmp/about_page.php $OE/interface/main/about_page.php && cp -p /tmp/main_screen.php $OE/interface/main/main_screen.php"
 out=$(run); expect "^PASS  Local changes: all" "5b: restored files pass again"
+x "stat -c %a $OE/interface/main/about_page.php > /tmp/about_page.mode && chmod 000 $OE/interface/main/about_page.php"; out=$(run)
+expect "^WARN  Local changes: 1 of OpenEMR's own files can't be read by [^,]*, so they weren't compared: interface/main/about_page.php" "5b: a file the doctor's user can't read is said"
+refute "^NOTE  Local changes: .*differ" "5b: and not counted as edited"
+refute "Local changes on this PHP" "5b: nor scanned as an empty file"
+x "chmod \$(cat /tmp/about_page.mode) $OE/interface/main/about_page.php"
 # An edit that parses but calls what PHP 8.0 removed fails only when its line runs: scan.php finds it.
 # A call behind function_exists() isn't counted, and without scan.php beside the doctor it says so.
 x "cat > $OE/interface/main/about_page.php <<'PHPX'
@@ -107,6 +124,9 @@ expect "^PASS  Database version" "5d: the other checks still run"
 out=$(docker exec -u apache $C php /tmp/doctor.php --openemr=$OE --facts=/tmp/facts --skip=document 2>&1; echo "exit $?")
 expect "^--skip: no check named 'document' to skip; the names are php, " "5d: a name that isn't a check is refused, with the names"
 expect "^exit 2$" "5d: and nothing runs"
+out=$(run --site=nosuch --skip=documents)
+expect "^SKIP  Documents: left out (--skip=documents)" "5d: a check left out is said even when the doctor stops before it"
+expect "1 check(s) left out with --skip, so not checked: documents" "5d: and the summary names it"
 
 q "UPDATE globals SET gl_value='style_gone.css' WHERE gl_name='css_header'"; out=$(run)
 expect "^FAIL  Theme: the chosen theme public/themes/style_gone.css is missing" "6: a missing theme fails"
@@ -126,6 +146,17 @@ x "php -r '\$k=random_bytes(32); \$iv=random_bytes(16); \$c=openssl_encrypt(rand
 expect "^FAIL  Encryption keys: the keys folder and the database don't belong together: sevenb" "10: a key from another install fails"
 x "cp -p /tmp/keys/sevenb $S/documents/logs_and_misc/methods/sevenb"
 out=$(run); expect "^PASS  Encryption keys: 2 .* match" "10: keys restored"
+q "CREATE TABLE keys_saved AS SELECT * FROM \`keys\` WHERE name = 'sevena'; DELETE FROM \`keys\` WHERE name = 'sevena'"; out=$(run)
+expect "^FAIL  Encryption keys: the keys folder and the database don't belong together: sevena, sevenb" "10b: without the database's sevena, OpenEMR can't decrypt either drive key"
+q "INSERT INTO \`keys\` SELECT * FROM keys_saved; DROP TABLE keys_saved"
+q "RENAME TABLE \`keys\` TO keys_away"; out=$(run)
+expect "^FAIL  Encryption keys: the database refused the query this check needs (error 1146" "10c: a query the database refuses fails, with its error"
+refute "^FAIL  Encryption keys: the keys folder has keys" "10c: not read as a database without keys"
+q "RENAME TABLE keys_away TO \`keys\`"
+q "RENAME TABLE documents TO documents_away"; out=$(run)
+expect "^FAIL  Documents: the database refused the query this check needs (error 1146" "10c: so does the documents query"
+refute "^PASS  Documents" "10c: instead of passing as no documents"
+q "RENAME TABLE documents_away TO documents"
 
 q "INSERT INTO documents (id, type, url, path_depth, storagemethod, deleted, foreign_id, date) VALUES (990001, 'file_url', 'file://$S/documents/1/doctor-test.pdf', 1, 0, 0, 1, NOW())"; out=$(run)
 expect "^WARN  Documents: 1 of 1 documents checked have no file .*990001" "11: a document without its file warns (t/26815)"
@@ -151,21 +182,32 @@ x "touch $OE/setup.php"; out=$(run --site=unfinished)
 expect "^NOTE  Setup: sites/unfinished/sqlconf.php says setup hasn't finished" "15: with setup.php in place it says to open it"
 x "rm -f $OE/setup.php"
 x "rm -rf $OE/sites/unfinished"
+x "cp -a $S $OE/sites/broken && sed -i '2i this is not php;' $OE/sites/broken/sqlconf.php"; out=$(run --site=broken)
+expect "^FAIL  Setup: sites/broken/sqlconf.php doesn't parse (a syntax error on line 2)" "15b: a sqlconf.php that doesn't parse fails, with its line"
+expect "^Fix the 1 failed check" "15b: and the doctor still ends with its summary"
+x "rm -rf $OE/sites/broken"
 
-# Browser mode: in the OpenEMR folder, facts beside it, local requests only.
+# Browser mode: in the OpenEMR folder, facts beside it, local requests only, and only under a name
+# with a random part (a proxy on the server that adds no forwarding header makes everyone local).
+BN=openemr-doctor-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n').php
+docker cp openemr-doctor.php $C:$OE/$BN
 docker cp openemr-doctor.php $C:$OE/openemr-doctor.php
-x "mkdir -p $OE/openemr-doctor-facts && cp /tmp/facts/* $OE/openemr-doctor-facts/ && chown -R apache $OE/openemr-doctor.php $OE/openemr-doctor-facts"
-out=$(docker exec $C curl -s http://localhost/openemr-doctor.php)
+x "mkdir -p $OE/openemr-doctor-facts && cp /tmp/facts/* $OE/openemr-doctor-facts/ && chown -R apache $OE/$BN $OE/openemr-doctor.php $OE/openemr-doctor-facts"
+out=$(docker exec $C curl -s http://localhost/$BN)
 expect "Checked by the web server's PHP" "16: the browser mode runs as the web server"
 expect "^PASS  Documents folder: the web server can write it" "16: and checks what the web server can write"
 expect "^PASS  Encryption keys" "16: and the keys"
-expect "Delete openemr-doctor.php" "16: and asks to be deleted"
-out=$(docker exec $C curl -s -H 'X-Forwarded-For: 203.0.113.9' http://localhost/openemr-doctor.php)
+refute "Error display: PHP prints" "16: the web server's display_errors (Off in the image) is read, not the doctor's own"
+expect "Delete $BN" "16: and asks to be deleted, by its name"
+out=$(docker exec $C curl -s http://localhost/openemr-doctor.php)
+expect "Rename this file with a random part of 12 or more letters and digits, such as openemr-doctor-[0-9a-f]\{16\}\.php" "17: under its own name it asks to be renamed first"
+refute "PASS" "17: and shows nothing"
+out=$(docker exec $C curl -s -H 'X-Forwarded-For: 203.0.113.9' http://localhost/$BN)
 expect "only answers a browser on this server" "17: refused through a proxy"
-out=$(curl -s http://127.0.0.1:8372/openemr-doctor.php)
+out=$(curl -s http://127.0.0.1:8372/$BN)
 expect "only answers a browser on this server" "17: refused from outside the container"
 refute "PASS" "17: and shows nothing"
-x "rm -rf $OE/openemr-doctor.php $OE/openemr-doctor-facts"
+x "rm -rf $OE/$BN $OE/openemr-doctor.php $OE/openemr-doctor-facts"
 
 # PHP 7.4 on a tree that says it is 8.4.1 (the image's tree isn't a volume to share).
 out=$(docker run --rm --cpus 1 --memory 512m --memory-swap 512m -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
@@ -186,6 +228,16 @@ out=$(intl_run "$(tree 6 1 0)" '<?php echo Normalizer::normalize("a");')
 expect "^FAIL  PHP extensions: missing: .*intl" "19: 6.1.0 whose code uses Normalizer: intl is required"
 out=$(intl_run "$(tree 7 0 3)" '<?php echo 1;')
 expect "^FAIL  PHP extensions: missing: .*intl" "19: 7.0.3 requires intl, as before"
+# A folder the doctor can't open, in the tree it reads for intl before 7.0.0, run as nobody: the
+# folder is passed over instead of stopping the doctor; and with php-extensions left out, no reading.
+out=$(docker run --rm --cpus 1 --memory 512m --memory-swap 512m -v "$PWD:/d:ro" -v "$PWD/../site/preflight:/facts:ro" php:7.4-cli sh -c \
+  "mkdir -p /oe/library/locked && printf '%s' '$(tree 6 1 0)' > /oe/version.php && echo '<?php echo 1;' > /oe/library/x.php && chmod 000 /oe/library/locked && chroot --userspec=65534:65534 / php /d/openemr-doctor.php --openemr=/oe --facts=/facts" 2>&1 || true)
+expect "^FAIL  PHP extensions: missing: mysqli " "19: a folder it can't open is passed over, and the checks go on"
+refute "UnexpectedValueException" "19: without stopping the doctor"
+# A version.php that doesn't parse is the Version check's failure, with its line (PHP 7 and later).
+out=$(intl_run "$(printf '<?php\n$v_major = 8\n$v_minor = 4;\n')" '<?php echo 1;')
+expect "^FAIL  Version: version.php doesn't parse (line 3: " "19: a version.php that doesn't parse fails, with its line"
+expect "OpenEMR (version unknown)" "19: and the version is unknown"
 
 # 19b. The install's own composer.json: without facts it gives the PHP floor and the extensions; with
 # facts, a higher floor in it counts (a release newer than the facts) and a lower one is said.
@@ -202,20 +254,24 @@ for c in '^7.3 || ^8.0:PASS.*asks for 7.3.0' '>= 7.4.0:PASS.*asks for 7.4.0' '~8
     out=$(own_run "${c%%:*}" --facts=/nonexistent)
     expect "^${c#*:}" "19b: composer.json's php '${c%%:*}' is read as ${c#*:}"
 done
+out=$(own_run '>=7.2 <7.4' --facts=/nonexistent)
+expect "^WARN  PHP: 7.4.[0-9]* is outside what this install's composer.json allows (php '>=7.2 <7.4')" "19b: an upper bound in composer.json that this PHP is past warns"
+out=$(own_run '^7.3 || ^8.0' --facts=/nonexistent)
+refute "^WARN  PHP: " "19b: and '^7.3 || ^8.0' allows 7.4"
 out=$(own_run '>=8.4.0' --facts=/facts)
 expect "^FAIL  PHP: 7.4.* is too old: this install's composer.json asks for 8.4.0 or later" "19b: with facts, a higher floor in composer.json counts"
 out=$(own_run '>=7.2.0' --facts=/facts)
 expect "^NOTE  PHP: this install's composer.json asks for PHP >=7.2.0, lower than the 8.3.0 OpenEMR 8.4.1 needs" "19b: and a lower one is said"
 expect "^FAIL  PHP: 7.4.* is too old: OpenEMR 8.4.1 needs 8.3.0 or later" "19b: while the release's floor still counts"
 
-# openemr-doctor-docker.sh on this compose project: sites/ isn't on a volume here, so it runs inside the container.
+# openemr-doctor-docker.sh on this compose project: the container is running, so it runs inside it.
 out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openemr-doctor.php bash openemr-doctor-docker.sh 2>&1 || true)
 expect "OpenEMR install doctor: /var/www/localhost/htdocs/openemr (site default), OpenEMR 8.4.1" "20: openemr-doctor-docker.sh finds the OpenEMR container"
 expect "^PASS  Database version" "20: and, without a sites/ volume, runs inside it with the database checks"
 refute "^FAIL" "20: with no failures"
 V=$(sed -n "s/^    VERSION=//p" openemr-doctor-docker.sh)   # the release the script fetches from
 expect "openemr-doctor-docker.sh $V: container $C, image openemr/openemr:8.4.1, running" "20: it says which container and image it checks"
-expect "sites/ is inside the container: running the doctor in it" "20: and how it runs the doctor"
+expect "the container is running: running the doctor in it" "20: and how it runs the doctor"
 expect "OpenEMR is in /var/www/localhost/htdocs/openemr (its version.php)" "20: it finds OpenEMR's folder by its version.php"
 expect "openemr-doctor-docker.sh $V: released [0-9-]*\$" "20: it says its version and date"
 out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=openemr-doctor.php bash openemr-doctor-docker.sh >/dev/null 2>&1; echo "exit $?")
@@ -231,22 +287,37 @@ expect "/nowhere doesn't look like an OpenEMR folder" "20b: so a wrong one is sa
 expect "^exit 2$" "20b: with exit code 2 (it couldn't check)"
 
 # 20c. sites/ on a volume, as in OpenEMR's compose files, and the container never started: the
-# doctor runs from a throwaway container of the same image with its volumes, on its network. The
+# doctor runs from a throwaway container of the same image with its volumes, on its networks. The
 # volume gets this install's sites/; the image's PHP may predate the php2shell fix, so that check is
-# left out here (the in-place update is in the running container, not the image).
-VC=$P-volume; VV=$P-sites
+# left out here (the in-place update is in the running container, not the image). The container is
+# on two networks and the database only on the second, which sorts last: the doctor joins both.
+VC=$P-volume; VV=$P-sites; VN=$P-aaa
 docker volume create $VV >/dev/null
+docker network create $VN >/dev/null
 docker cp $C:$OE/sites/. - | docker run --rm -i --memory 256m --memory-swap 256m -v $VV:/dst alpine:3 tar -xf - -C /dst
-docker create --name $VC --memory 1g --memory-swap 1g --network ${P}_default -v $VV:$OE/sites openemr/openemr:8.4.1 >/dev/null
+docker create --name $VC --memory 1g --memory-swap 1g --network $VN -v $VV:$OE/sites openemr/openemr:8.4.1 >/dev/null
+docker network connect ${P}_default $VC
 out=$(CONTAINER=$VC DOCTOR=openemr-doctor.php SKIP=php-security bash openemr-doctor-docker.sh 2>&1; echo "exit $?")
-docker rm -f -v $VC >/dev/null; docker volume rm $VV >/dev/null
+docker rm -f -v $VC >/dev/null
 expect "container $VC, image openemr/openemr:8.4.1, created" "20c: a container that never started"
 expect "OpenEMR is in /var/www/localhost/htdocs/openemr (its version.php)" "20c: its folder found in the image, with the volume"
-expect "sites/ is on a volume: running the doctor in a throwaway container of the same image, with its volumes, on network ${P}_default" "20c: runs the doctor beside it"
-expect "^PASS  Database: connected to mysql:3306" "20c: reaching the database on the container's network"
+expect "the container isn't running (created) and sites/ is on a volume: running the doctor in a throwaway container of the same image, with its volumes, on networks $VN, ${P}_default" "20c: runs the doctor beside it, on both its networks"
+expect "changes made inside the container itself (a PHP updated in place, an edited file) aren't checked" "20c: and says what a throwaway container can't see"
+expect "^PASS  Database: connected to mysql:3306" "20c: reaching the database on the network it is on"
 expect "^PASS  Database version" "20c: and checking it"
 expect "^PASS  Files: all" "20c: and the image's files"
 expect "^exit 0$" "20c: with the doctor's exit code"
+docker ps -a --no-trunc --format '{{.Command}}' | grep -q '/tools/openemr-doctor.php' && { echo "FAIL 20c: a throwaway container was left"; fails=$((fails+1)); } || echo "ok   20c: the throwaway container is gone"
+# 20d. Running, with sites/ on a volume: the doctor runs inside it, so a change made in the container
+# (an edited file in its own layer) is seen. The container runs the image without OpenEMR's start.
+docker run -d --name $VC --memory 1g --memory-swap 1g --network ${P}_default -v $VV:$OE/sites --entrypoint sleep openemr/openemr:8.4.1 900 >/dev/null
+docker exec $VC sh -c "printf '\n' >> $OE/interface/main/about_page.php"
+out=$(CONTAINER=$VC DOCTOR=openemr-doctor.php SKIP=php-security bash openemr-doctor-docker.sh 2>&1; echo "exit $?")
+docker rm -f -v $VC >/dev/null; docker volume rm $VV >/dev/null; docker network rm $VN >/dev/null
+expect "the container is running: running the doctor in it" "20d: a running container with sites/ on a volume is checked inside"
+expect "^NOTE  Local changes: 1 of OpenEMR's own files differ from OpenEMR 8.4.1 as released: interface/main/about_page.php" "20d: so a file edited in the container is seen"
+expect "^PASS  Database version" "20d: with the database checks"
+expect "^exit 0$" "20d: and the doctor's exit code"
 
 # Compared with another release than the one installed, missing files are notes: a build from the
 # development branch (a -dev tag), and a release newer than the facts. Scenario 2 is the control:
@@ -309,17 +380,21 @@ rm -rf "$rel" "$empty" "$TMPDIR_SHORT"
 
 # 27b. A server without internet: the doctor, scan.php and openemr-doctor-facts/ copied beside each
 # other. The wrapper hands the folder to the doctor, which reads its facts from it and says how old it is.
+# The copies are 0600, as a copy can end up: the wrapper hands the container readable ones.
 air=$(mktemp -d); chmod 755 "$air"
 cp openemr-doctor.php scan.php "$air/" && mkdir "$air/openemr-doctor-facts"
 for f in releases.json 8.4.1.json 8.4.1-files.json 8.4.1-hashes.json php-changes.json php-security.json; do cp "../site/preflight/$f" "$air/openemr-doctor-facts/"; done
-chmod -R a+rX "$air"
+chmod -R a+rX "$air"; chmod 600 "$air/openemr-doctor.php" "$air/scan.php"
 out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=$air/openemr-doctor.php OPENEMR_DOCTOR_NO_UPDATE_CHECK=1 bash openemr-doctor-docker.sh --debug 2>&1 || true)
 expect "release facts: $air/openemr-doctor-facts, beside the doctor" "27b: facts beside a doctor of your own are handed to it"
-expect "^DEBUG .* facts 8.4.1-files.json: [0-9]* bytes from /tmp/openemr-doctor-facts" "27b: and the doctor reads them there"
+expect "^DEBUG .* facts 8.4.1-files.json: [0-9]* bytes from /tmp/openemr-doctor\.[A-Za-z0-9]*/openemr-doctor-facts" "27b: and the doctor reads them there, in a folder of this run's own"
 expect "^PASS  Files: all" "27b: with every check that needs them"
+expect "^PASS  Local changes: all" "27b: a 0600 doctor and scan.php of your own still run"
 refute "^+ openemr-doctor-docker.sh:[0-9]*: curl" "27b: and nothing is downloaded"
+x "test -z \"\$(ls -d /tmp/openemr-doctor.* 2>/dev/null)\"" && echo "ok   27b: nothing left in the container" || { echo "FAIL 27b: a /tmp/openemr-doctor.* folder left in the container"; fails=$((fails+1)); }
+out=$(COMPOSE_FILE=test-doctor-compose.yml COMPOSE_PROJECT_NAME=$P DOCTOR=$air/openemr-doctor.php OPENEMR_DOCTOR_NO_UPDATE_CHECK=1 WEB_USER=root bash openemr-doctor-docker.sh --debug 2>&1 || true)
+expect "^+ openemr-doctor-docker.sh:[0-9]*: docker exec -u root " "27b: WEB_USER names the user the doctor runs as"
 rm -rf "$air"
-x "test ! -e /tmp/openemr-doctor-facts" && echo "ok   27b: nothing left in the container" || { echo "FAIL 27b: /tmp/openemr-doctor-facts left in the container"; fails=$((fails+1)); }
 
 # 27c. How openemr-doctor-docker.sh finds OpenEMR's folder: the script it runs in the image, on
 # fake trees. A known web root first; else a version.php of OpenEMR's (it sets $v_database) found
@@ -346,13 +421,20 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=Test CA" -keyout ca
 openssl req -newkey rsa:2048 -nodes -subj "/CN=dbssl" -keyout server-key.pem -out server.csr &&
 printf "subjectAltName=DNS:dbssl\n" > ext.cnf &&
 openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 7 -extfile ext.cnf -out server-cert.pem &&
+printf "subjectAltName=DNS:dbother\n" > ext2.cnf &&
+openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 7 -extfile ext2.cnf -out server2-cert.pem &&
 openssl req -x509 -newkey rsa:2048 -nodes -days 7 -subj "/CN=Other CA" -keyout other-key.pem -out other-ca.pem' 2>/dev/null
 # mktemp -d makes the folder 0700; MariaDB runs as its own user and must read the files.
 chmod 755 "$CERTS"; chmod 644 "$CERTS"/*.pem
 docker run -d --cpus 1 --memory 1g --memory-swap 1g --name $DS --network ${P}_default --network-alias dbssl -e MARIADB_ROOT_PASSWORD=root -v "$CERTS":/certs:ro mariadb:11.8 \
     mariadbd --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server-cert.pem --ssl-key=/certs/server-key.pem --require-secure-transport=ON >/dev/null
-for _ in $(seq 1 40); do docker exec $DS mariadb -uroot -proot --ssl -e "SELECT 1" >/dev/null 2>&1 && break; sleep 3; done
-docker exec $DS mariadb -uroot -proot --ssl -e "SELECT 1" >/dev/null 2>&1 || { echo "FAIL the SSL database didn't start:"; docker logs $DS 2>&1 | tail -5; exit 1; }
+# Ready once the real server listens on 3306: the image's first start runs a temporary server on its
+# socket alone, which answers and then stops.
+ssl_db_ready() {
+    for _ in $(seq 1 60); do docker logs $DS 2>&1 | grep -q "port: 3306" && docker exec $DS mariadb -uroot -proot --ssl -e "SELECT 1" >/dev/null 2>&1 && return 0; sleep 3; done
+    echo "FAIL the SSL database didn't start:"; docker logs $DS 2>&1 | tail -5; exit 1
+}
+ssl_db_ready
 docker exec $DS mariadb -uroot -proot --ssl -e "CREATE USER 'oe'@'%' IDENTIFIED BY 'oe'; CREATE DATABASE oe; GRANT ALL ON oe.* TO 'oe'@'%'"
 DSIP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $DS)
 # A site on the SSL database: its host, then the certificate files to put in its documents/certificates.
@@ -377,5 +459,16 @@ expect "^FAIL  Database SSL: documents/certificates has mysql-cert without mysql
 echo "not a certificate" > "$CERTS/junk.txt"; ssl_site ssljunk dbssl "$CERTS/junk.txt" mysql-ca; out=$(run --site=ssljunk)
 expect "^FAIL  Database SSL: documents/certificates/mysql-ca isn't a PEM certificate" "33: a mysql-ca that isn't PEM fails"
 x "rm -rf $OE/sites/sslneed $OE/sites/sslok $OE/sites/sslip $OE/sites/sslotherca $OE/sites/sslhalf $OE/sites/ssljunk"
+# The database again with a certificate whose Common Name is dbssl but whose one DNS name is dbother:
+# PHP checks a certificate's DNS names when it has any, and the Common Name only when it has none.
+docker rm -f -v $DS >/dev/null
+docker run -d --cpus 1 --memory 1g --memory-swap 1g --name $DS --network ${P}_default --network-alias dbssl -e MARIADB_ROOT_PASSWORD=root -v "$CERTS":/certs:ro mariadb:11.8 \
+    mariadbd --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server2-cert.pem --ssl-key=/certs/server-key.pem --require-secure-transport=ON >/dev/null
+ssl_db_ready
+docker exec $DS mariadb -uroot -proot --ssl -e "CREATE USER 'oe'@'%' IDENTIFIED BY 'oe'; CREATE DATABASE oe; GRANT ALL ON oe.* TO 'oe'@'%'"
+ssl_site sslcn dbssl "$CERTS/ca.pem" mysql-ca; out=$(run --site=sslcn)
+expect "^FAIL  Database: can't connect with sites/sslcn/sqlconf.php over SSL (error 2002" "34: a certificate whose DNS name isn't the host is refused, though its Common Name is"
+expect "names 'dbother', not 'dbssl'" "34: and the doctor names the DNS name, not the Common Name PHP doesn't check"
+x "rm -rf $OE/sites/sslcn"
 
 echo; [ $fails -eq 0 ] && echo "PASSED" || { echo "FAILED: $fails"; exit 1; }

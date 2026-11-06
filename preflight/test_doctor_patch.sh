@@ -2,7 +2,9 @@
 # openemr-doctor.php on a patched older release: the official OpenEMR 7.0.3 image, which is
 # 7.0.3 patch 4 (MariaDB 10.6). Patch 4 deleted files 7.0.3 had, so the doctor must compare
 # with the patch's file list; 7.0.3's composer.json lists no extensions, so it must fall back
-# to setup's own; and up to 8.0 the error-display setting is user_debug.
+# to setup's own; up to 8.0 the error-display setting is user_debug; and the database's patch
+# number behind the code's is a failure when sql/patch.sql has statements, a note when it has
+# none, and a database ahead of the code warns.
 # Containers are deleted at the end. Needs Docker and the facts in ../site/preflight.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -42,6 +44,18 @@ expect "^FAIL  Database version: patch 4's files are in place but the database i
 expect "Open sql_patch.php in the browser to finish the patch\.$" "3: and says to open sql_patch.php"
 docker exec $C rm -f $OE/sql_patch.php; out=$(run)
 expect "copy it from the patch first; it was removed" "3: or, once removed, to copy it back first"
+# A patch that changes nothing in the database: sql/patch.sql with its header comments alone, as
+# 7.0.3 patches 1 to 3 and 8.0.0 patches 1 to 3 shipped it. Only the patch number is behind, which
+# OpenEMR's Docker image leaves as it is: a note, not a failure. 7.0.3 patch 4's own patch.sql,
+# above, has statements, so that stays a failure, though its database version is the same.
+docker exec $C sh -c "cp -p $OE/sql/patch.sql /tmp/patch.sql.orig && grep -E '^(--|\$)' /tmp/patch.sql.orig > $OE/sql/patch.sql"; out=$(run)
+expect "^NOTE  Database version: patch 4's files are in place and the database says patch 3, but sql/patch.sql changes nothing in the database, so only the patch number is behind" "3b: a patch without database changes, applied only as files, is a note"
+refute "^FAIL  Database version" "3b: not a failure"
+docker exec $C sh -c "cp -p /tmp/patch.sql.orig $OE/sql/patch.sql"
+# The database at a later patch than the code: the code was put back to an earlier patch.
+q "UPDATE version SET v_realpatch = 5"; out=$(run)
+expect "^WARN  Database version: the database is at patch 5 but the code is at patch 4" "3c: a database at a later patch than the code warns"
+refute "^PASS  Database version" "3c: instead of saying they match"
 q "UPDATE version SET v_realpatch = 4"
 docker exec $C rm /tmp/facts/7.0.3-p4-files.json; out=$(run)
 expect "^NOTE  Files: the file list for OpenEMR 7.0.3 patch 4 (7.0.3-p4-files.json) isn't in the facts" "4: a missing file list is said, not skipped"
